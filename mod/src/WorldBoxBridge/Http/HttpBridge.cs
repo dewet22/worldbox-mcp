@@ -499,6 +499,27 @@ internal sealed class HttpBridge : IDisposable
                 exception: ExceptionInfo.From(tex)
             );
         }
+        catch (WorldBoxBridge.Commands.Action.BridgeRejectionException brex)
+        {
+            // Structured rejection from a command — map directly to its error code.
+            var status = brex.Code switch
+            {
+                ErrorCode.UnknownAsset => 400,
+                ErrorCode.OutOfBounds => 400,
+                ErrorCode.BadArgs => 400,
+                ErrorCode.GameRejected => 422,
+                _ => 500,
+            };
+            return ErrorResponse(
+                status,
+                "Rejected",
+                brex.Code,
+                brex.Message,
+                commandName: name,
+                args: args,
+                didYouMean: brex.DidYouMean
+            );
+        }
         catch (Exception ex)
         {
             return ErrorResponse(

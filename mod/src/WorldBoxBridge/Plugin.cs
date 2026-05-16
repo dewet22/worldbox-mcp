@@ -4,6 +4,7 @@ using BepInEx;
 using BepInEx.Logging;
 using UnityEngine;
 using WorldBoxBridge.Commands;
+using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Commands.Discovery;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
@@ -50,7 +51,7 @@ public sealed class Plugin : BaseUnityPlugin
             var assetCatalog = new AssetCatalog(gameRefs, Logger);
 
             var registry = new CommandRegistry();
-            RegisterCommands(registry, version, config, assetCatalog);
+            RegisterCommands(registry, version, config, assetCatalog, gameRefs);
             Logger.LogInfo($"{registry.Count} commands registered.");
 
             _bridge = new HttpBridge(Logger, config, registry, version);
@@ -96,11 +97,12 @@ public sealed class Plugin : BaseUnityPlugin
     /// Wires every command into the registry. Adding a new command means adding one line here
     /// and one new class under <c>Commands/</c>.
     /// </summary>
-    private static void RegisterCommands(
+    private void RegisterCommands(
         CommandRegistry registry,
         VersionInfo version,
         BridgeConfig config,
-        AssetCatalog assetCatalog
+        AssetCatalog assetCatalog,
+        GameRefs gameRefs
     )
     {
         registry.Register(new HealthCommand(version, config));
@@ -110,10 +112,9 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ListActorsCommand(assetCatalog));
         registry.Register(new ListPowersCommand(assetCatalog));
 
-        // Phase 3 action primitives land here next:
-        // registry.Register(new PaintTileCommand(assetCatalog));
-        // registry.Register(new SpawnCommand(assetCatalog));
-        // registry.Register(new InvokePowerCommand(assetCatalog));
+        // Phase 3 — generic actions. invoke_power covers spawn-by-race + every
+        // disaster + global toggles via the game's unified GodPower model.
+        registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, Logger));
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max);
