@@ -10,7 +10,9 @@ using WorldBoxBridge.Commands.Discovery;
 using WorldBoxBridge.Commands.Read;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
+using WorldBoxBridge.Session;
 using WorldBoxBridge.Threading;
+using SessionState = WorldBoxBridge.Session.Session;
 
 namespace WorldBoxBridge;
 
@@ -57,7 +59,15 @@ public sealed class Plugin : BaseUnityPlugin
             RegisterCommands(registry, version, config, assetCatalog, gameRefs, worldAccess);
             Logger.LogInfo($"{registry.Count} commands registered.");
 
-            _bridge = new HttpBridge(Logger, config, registry, version);
+            // Phase 1 of multi-agent v0.3: legacy single-token session.
+            // Phase 2 will swap this for an agents.toml-driven Session when the file exists.
+            var session = SessionState.Legacy(config.Token.Value);
+            Logger.LogInfo(
+                $"Session bootstrapped: scenario={session.ScenarioPreset}, "
+                    + $"agents={session.Agents.Count}, legacy_mode={session.Agents.IsLegacyMode}"
+            );
+
+            _bridge = new HttpBridge(Logger, config, registry, version, session);
             _bridge.Start();
 
             Logger.LogInfo("Ready. Kill-switch: set enabled=false in WorldBoxBridge.cfg to hot-disable.");

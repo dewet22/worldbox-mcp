@@ -8,6 +8,8 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Action;
 
 /// <summary>
@@ -100,7 +102,7 @@ internal sealed class SpawnCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         var entityId = (string?)args["entity_id"];
         if (string.IsNullOrWhiteSpace(entityId))

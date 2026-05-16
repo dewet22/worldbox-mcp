@@ -7,6 +7,8 @@ using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Read;
 
 /// <summary>
@@ -40,7 +42,7 @@ internal sealed class GetTileCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
         {

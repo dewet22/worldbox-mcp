@@ -4,6 +4,8 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Threading;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Read;
 
 /// <summary>
@@ -33,7 +35,7 @@ internal sealed class GetWorldStateCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         var width = _world.Width ?? 0;
         var height = _world.Height ?? 0;

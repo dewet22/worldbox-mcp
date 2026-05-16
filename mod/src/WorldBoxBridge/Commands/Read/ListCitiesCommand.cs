@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Read;
 
 /// <summary>Lists every city alive — optionally filtered by kingdom id.</summary>
@@ -42,7 +44,7 @@ internal sealed class ListCitiesCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         var filterKingdomId = args.Value<long?>("kingdom_id");
 

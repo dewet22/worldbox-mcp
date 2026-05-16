@@ -4,6 +4,8 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Threading;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Discovery;
 
 /// <summary>Lists every tile type registered by the running game.</summary>
@@ -35,7 +37,7 @@ internal sealed class ListTilesCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         // HttpBridge already marshalled us onto the main thread (we declare
         // RequiresMainThread = true) — re-dispatching would deadlock.

@@ -1,0 +1,49 @@
+using System;
+
+namespace WorldBoxBridge.Session;
+
+/// <summary>
+/// One game world = one Session. Holds the agent roster, scenario preset, and global
+/// switches that affect how every command behaves (fog-of-war, turn ordering, …).
+/// </summary>
+/// <remarks>
+/// v0.3 ships with a single Session singleton constructed at <see cref="WorldBoxBridge.Plugin.Awake"/>.
+/// Multi-session routing is deferred to a later release — see plan §6.
+/// </remarks>
+public sealed class Session
+{
+    public Session(
+        AgentRegistry agents,
+        string scenarioPreset,
+        bool partialIntel,
+        bool turnBased)
+    {
+        Agents = agents ?? throw new ArgumentNullException(nameof(agents));
+        ScenarioPreset = scenarioPreset ?? "sandbox";
+        PartialIntel = partialIntel;
+        TurnBased = turnBased;
+        CreatedUtc = DateTime.UtcNow;
+    }
+
+    public AgentRegistry Agents { get; }
+    public string ScenarioPreset { get; }
+    public bool PartialIntel { get; }
+    public bool TurnBased { get; }
+    public DateTime CreatedUtc { get; }
+
+    /// <summary>
+    /// Wraps an authenticated <see cref="Agent"/> in a <see cref="RequestContext"/> with this
+    /// session's per-scenario flags. Called by <c>HttpBridge.Authenticate</c>.
+    /// </summary>
+    public RequestContext ContextFor(Agent agent) =>
+        new(agent, ScenarioPreset, PartialIntel);
+
+    /// <summary>Legacy single-token bootstrap. Used when no agents.toml is present.</summary>
+    public static Session Legacy(string token) =>
+        new(
+            agents: AgentRegistry.Legacy(token),
+            scenarioPreset: "sandbox",
+            partialIntel: false,
+            turnBased: false
+        );
+}

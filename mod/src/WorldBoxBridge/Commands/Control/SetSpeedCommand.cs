@@ -7,6 +7,8 @@ using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Control;
 
 /// <summary>
@@ -61,7 +63,7 @@ internal sealed class SetSpeedCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         var speedId = (string?)args["speed_id"];
         if (string.IsNullOrWhiteSpace(speedId))

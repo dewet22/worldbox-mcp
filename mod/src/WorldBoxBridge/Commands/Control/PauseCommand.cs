@@ -7,6 +7,8 @@ using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Control;
 
 /// <summary>
@@ -37,7 +39,7 @@ internal abstract class PausedCommandBase : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         var configType = _refs.Type("Config");
         if (configType == null)

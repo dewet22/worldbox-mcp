@@ -2,6 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
+using WorldBoxBridge.Session;
 using WorldBoxBridge.Threading;
 
 namespace WorldBoxBridge.Commands;
@@ -36,7 +37,7 @@ internal sealed class HealthCommand : ICommand
         );
     public bool RequiresMainThread => false;
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         object payload = new
         {

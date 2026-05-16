@@ -9,6 +9,8 @@ using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Control;
 
 /// <summary>
@@ -63,7 +65,7 @@ internal sealed class SaveWorldCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         var folder = args.Value<string?>("folder");
         var compress = args.Value<bool?>("compress") ?? true;

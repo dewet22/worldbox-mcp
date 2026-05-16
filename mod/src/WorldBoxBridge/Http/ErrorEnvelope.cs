@@ -20,6 +20,11 @@ public static class ErrorCode
     public const string GameCrash = "GAME_CRASH";
     public const string MainThreadTimeout = "MAIN_THREAD_TIMEOUT";
     public const string Internal = "INTERNAL";
+
+    // v0.3 multi-agent additions:
+    public const string PermissionDenied = "PERMISSION_DENIED";
+    public const string FactionScopeViolation = "FACTION_SCOPE_VIOLATION";
+    public const string TurnNotYours = "TURN_NOT_YOURS";
 }
 
 public sealed class SuccessEnvelope

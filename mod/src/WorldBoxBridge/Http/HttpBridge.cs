@@ -11,7 +11,9 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Commands;
 using WorldBoxBridge.Reflection;
+using WorldBoxBridge.Session;
 using WorldBoxBridge.Threading;
+using SessionState = WorldBoxBridge.Session.Session;
 
 namespace WorldBoxBridge.Http;
 
@@ -44,6 +46,7 @@ internal sealed class HttpBridge : IDisposable
     private readonly BridgeConfig _config;
     private readonly CommandRegistry _registry;
     private readonly VersionInfo _version;
+    private readonly SessionState _session;
     private readonly TcpListener _listener;
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
@@ -63,13 +66,15 @@ internal sealed class HttpBridge : IDisposable
         ManualLogSource log,
         BridgeConfig config,
         CommandRegistry registry,
-        VersionInfo version
+        VersionInfo version,
+        SessionState session
     )
     {
         _log = log;
         _config = config;
         _registry = registry;
         _version = version;
+        _session = session;
         // Mono Unity quirk: IPAddress.Parse("127.0.0.1") does not always behave the same as
         // the IPAddress.Loopback constant. Several Unity dev threads document the listener
         // silently failing to bind with Parse'd addresses where the constant works fine.
@@ -112,7 +117,8 @@ internal sealed class HttpBridge : IDisposable
         );
         _log.LogInfo(
             $"listening on http://{_config.Host.Value}:{_config.Port.Value} "
-                + $"(commands={_registry.Count}, token=<configured>)"
+                + $"(commands={_registry.Count}, agents={_session.Agents.Count}, "
+                + $"scenario={_session.ScenarioPreset}, legacy_mode={_session.Agents.IsLegacyMode})"
         );
         // Use a dedicated NON-background thread.
         //   - Mono's thread pool inside Unity has shown odd behavior with long-lived tasks.
@@ -383,25 +389,27 @@ internal sealed class HttpBridge : IDisposable
                 "WorldBoxBridge is disabled. Set enabled = true in WorldBoxBridge.cfg."
             );
         }
-        if (!IsAuthorized(req))
+        var ctx = Authenticate(req);
+        if (ctx == null)
         {
             return ErrorResponse(
                 401,
                 "Unauthorized",
                 ErrorCode.Unauthorized,
-                "Missing or invalid X-WB-Token header."
+                "Missing or invalid credential. Send either 'Authorization: Bearer <token>' "
+                    + "or the legacy 'X-WB-Token: <token>' header."
             );
         }
 
         var path = req.Path.Split('?')[0];
         if (path == "/health" && req.Method == "GET")
         {
-            return await ExecuteCommandAsync("health", new JObject(), cancellationToken)
+            return await ExecuteCommandAsync("health", new JObject(), ctx.Value, cancellationToken)
                 .ConfigureAwait(false);
         }
         if (path == "/cmd" && req.Method == "POST")
         {
-            return await HandleCommandAsync(req, cancellationToken).ConfigureAwait(false);
+            return await HandleCommandAsync(req, ctx.Value, cancellationToken).ConfigureAwait(false);
         }
         if (path == "/capabilities" && req.Method == "GET")
         {
@@ -418,6 +426,7 @@ internal sealed class HttpBridge : IDisposable
 
     private async Task<HttpResponse> HandleCommandAsync(
         HttpRequest req,
+        RequestContext ctx,
         CancellationToken cancellationToken
     )
     {
@@ -448,12 +457,13 @@ internal sealed class HttpBridge : IDisposable
             );
         }
         var args = body["args"] as JObject ?? new JObject();
-        return await ExecuteCommandAsync(name!, args, cancellationToken).ConfigureAwait(false);
+        return await ExecuteCommandAsync(name!, args, ctx, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<HttpResponse> ExecuteCommandAsync(
         string name,
         JObject args,
+        RequestContext ctx,
         CancellationToken cancellationToken
     )
     {
@@ -471,19 +481,22 @@ internal sealed class HttpBridge : IDisposable
 
         try
         {
+            // Capture ctx in locals so the closure passed to MainThreadDispatcher captures the
+            // struct by value (instance is small; struct copies dodge a closure-allocation surprise).
+            var capturedCtx = ctx;
             object? result;
             if (command.RequiresMainThread)
             {
                 result = await MainThreadDispatcher
                     .RunOnMainThreadAsync(
-                        () => command.ExecuteAsync(args, cancellationToken).GetAwaiter().GetResult(),
+                        () => command.ExecuteAsync(args, capturedCtx, cancellationToken).GetAwaiter().GetResult(),
                         cancellationToken: cancellationToken
                     )
                     .ConfigureAwait(false);
             }
             else
             {
-                result = await command.ExecuteAsync(args, cancellationToken).ConfigureAwait(false);
+                result = await command.ExecuteAsync(args, ctx, cancellationToken).ConfigureAwait(false);
             }
             return SuccessResponse(result);
         }
@@ -508,6 +521,9 @@ internal sealed class HttpBridge : IDisposable
                 ErrorCode.OutOfBounds => 400,
                 ErrorCode.BadArgs => 400,
                 ErrorCode.GameRejected => 422,
+                ErrorCode.PermissionDenied => 403,
+                ErrorCode.FactionScopeViolation => 403,
+                ErrorCode.TurnNotYours => 409,
                 _ => 500,
             };
             return ErrorResponse(
@@ -642,32 +658,42 @@ internal sealed class HttpBridge : IDisposable
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Auth
+    // Auth — extracts a bearer credential from either the new
+    // 'Authorization: Bearer <token>' header (multi-agent) or the legacy
+    // 'X-WB-Token: <token>' header (v0.1–v0.2 single-tenant clients).
+    // Looks the token up in the AgentRegistry; returns a RequestContext on
+    // success, null otherwise. Constant-time lookup happens inside the
+    // registry — see AgentRegistry.FixedTimeEquals.
     // ──────────────────────────────────────────────────────────────────────
 
-    private bool IsAuthorized(HttpRequest req)
+    private RequestContext? Authenticate(HttpRequest req)
     {
-        var presented = req.GetHeader("X-WB-Token");
+        var presented = ExtractToken(req);
         if (string.IsNullOrEmpty(presented))
         {
-            return false;
+            return null;
         }
-        return FixedTimeEquals(presented!, _config.Token.Value);
+        var agent = _session.Agents.TryAuthenticate(presented);
+        if (agent == null)
+        {
+            return null;
+        }
+        return _session.ContextFor(agent);
     }
 
-    /// <summary>Constant-time string comparison to avoid timing oracles on the token.</summary>
-    private static bool FixedTimeEquals(string a, string b)
+    private static string? ExtractToken(HttpRequest req)
     {
-        if (a.Length != b.Length)
+        var auth = req.GetHeader("Authorization");
+        if (!string.IsNullOrEmpty(auth))
         {
-            return false;
+            const string prefix = "Bearer ";
+            if (auth!.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return auth.Substring(prefix.Length).Trim();
+            }
         }
-        var diff = 0;
-        for (var i = 0; i < a.Length; i++)
-        {
-            diff |= a[i] ^ b[i];
-        }
-        return diff == 0;
+        var legacy = req.GetHeader("X-WB-Token");
+        return string.IsNullOrEmpty(legacy) ? null : legacy;
     }
 
     // ──────────────────────────────────────────────────────────────────────

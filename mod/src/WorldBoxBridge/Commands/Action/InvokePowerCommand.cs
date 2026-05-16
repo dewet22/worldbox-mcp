@@ -7,6 +7,8 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Action;
 
 /// <summary>
@@ -72,7 +74,7 @@ internal sealed class InvokePowerCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         var powerId = (string?)args["power_id"];
         if (string.IsNullOrWhiteSpace(powerId))

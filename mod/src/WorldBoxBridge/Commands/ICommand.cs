@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands;
 
@@ -12,6 +13,7 @@ public enum CommandCategory
     Action,
     Read,
     Control,
+    Bus,
 }
 
 /// <summary>
@@ -41,5 +43,10 @@ public interface ICommand
     /// </remarks>
     bool RequiresMainThread { get; }
 
-    Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken);
+    /// <summary>
+    /// Executes the command. <paramref name="ctx"/> identifies the calling agent and carries
+    /// session-level scope (role, faction claim, fog-of-war flag). Commands should call
+    /// <see cref="RequestContext.Require"/> early to enforce per-role gating.
+    /// </summary>
+    Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken);
 }

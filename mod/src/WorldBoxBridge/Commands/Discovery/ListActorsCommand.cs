@@ -4,6 +4,8 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Threading;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Discovery;
 
 /// <summary>Lists every actor (race / animal / monster / mythical) registered by the game.</summary>
@@ -39,7 +41,7 @@ internal sealed class ListActorsCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         // HttpBridge already marshalled us onto the main thread.
         var items = _catalog.ListAssets("actor_library", ExtraFields);

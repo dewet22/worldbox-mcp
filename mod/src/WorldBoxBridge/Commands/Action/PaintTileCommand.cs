@@ -7,6 +7,8 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 
+using WorldBoxBridge.Session;
+
 namespace WorldBoxBridge.Commands.Action;
 
 /// <summary>
@@ -90,7 +92,7 @@ internal sealed class PaintTileCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
         {
