@@ -83,3 +83,8 @@ scratch/scenario_out/
 
 # Scenario output (regenerated on each run)
 examples/scenarios/output/
+
+# Local dev tools (not committed)
+actionlint.exe
+actionlint
+
