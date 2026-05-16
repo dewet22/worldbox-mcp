@@ -49,7 +49,7 @@
 ### `WorldBoxBridge` (BepInEx C# plugin)
 
 - Hosts a `System.Net.HttpListener` bound to `127.0.0.1`, authenticated with a per-install token.
-- Dispatches incoming JSON commands onto Unity's main thread via a `ConcurrentQueue<Action>` drained from `MonoBehaviour.Update()`.
+- Dispatches incoming JSON commands onto Unity's main thread via a `ConcurrentQueue<Action>` drained from a delegate injected into Unity's `PlayerLoop` (not a `MonoBehaviour`). On WorldBox 0.51.2, BepInEx-created `MonoBehaviour` GameObjects get destroyed shortly after Awake — the PlayerLoop hook is part of the engine's tick table and survives that.
 - Resolves all WorldBox types via cached reflection — never `using WorldBox.*` directly — so the mod survives game updates as long as core types keep their names.
 - Maps every command to game APIs that live inside `Assembly-CSharp.dll`.
 

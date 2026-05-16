@@ -13,5 +13,5 @@ internal static class PluginInfo
     /// SemVer string. Kept in sync with WorldBoxBridge.csproj's &lt;Version&gt; by release-please.
     /// Update both together.
     /// </summary>
-    public const string Version = "0.1.0";
+    public const string Version = "0.1.1";
 }

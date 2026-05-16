@@ -8,20 +8,20 @@ Make sure you've already installed the in-game mod and that WorldBox is running 
 
 ## Add the server
 
-### Option A — from PyPI (once v0.1.0 is released)
-
 ```bash
 claude mcp add worldbox -- uvx worldbox-mcp
 ```
 
-### Option B — from a local clone (today, while PyPI release pending)
+This one line installs the latest `worldbox-mcp` package from PyPI on demand via `uvx`. No
+clone, no Python install, no virtualenv to manage. The server runs in stdio mode and
+auto-discovers the BepInEx config token under your WorldBox install.
+
+If you need an unreleased commit (for example to test a fix that hasn't shipped yet):
 
 ```bash
 git clone https://github.com/fullya99/worldbox-mcp.git ~/code/worldbox-mcp
 claude mcp add worldbox -- uv run --project ~/code/worldbox-mcp/server worldbox-mcp
 ```
-
-Both forms produce the same stdio server. The local form is preferred while developing the mod or running unreleased commits.
 
 ## Verify
 

@@ -4,9 +4,9 @@ title: worldbox-mcp
 
 # worldbox-mcp
 
-> _<!-- TODO(pitch): one-line tagline. Same as README. -->_
+> **Give your AI agent god-mode in [WorldBox](https://www.superworldbox.com/).** Spawn dragons. Burn continents. Run civilization speedruns. From a conversation.
 
-`worldbox-mcp` is an open-source bridge that lets any MCP-compatible AI client — **Claude Code, OpenCode, Codex, Cursor, Continue, and more** — directly control the game [WorldBox](https://www.superworldbox.com/).
+`worldbox-mcp` is an open-source bridge that lets any MCP-compatible AI client — **Claude Code, OpenCode, Codex, Cursor, Continue, and more** — directly control the live game.
 
 It ships as two open-source components:
 
@@ -21,9 +21,21 @@ It ships as two open-source components:
 - 🧩 **[Compatibility](compatibility.md)** — WorldBox × mod version matrix
 - 🤝 **[Contributing](contributing.md)** — code, docs, issues
 
+## Twenty tools across five categories
+
+| Category | Tools |
+|---|---|
+| Meta | `worldbox_health`, `worldbox_capabilities` |
+| Discovery | `worldbox_list_tiles` (20), `worldbox_list_actors` (322), `worldbox_list_powers` (339) |
+| Action | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` |
+| Read | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_screenshot` |
+| Control | `worldbox_pause`, `worldbox_resume`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` |
+
+See [command-reference.md](command-reference.md) for arguments and return shapes.
+
 ## Design principles
 
-- **100% game coverage** through three generic primitives (`paint_tile`, `spawn`, `invoke_power`) backed by the game's own asset registry — see [protocol.md](protocol.md).
+- **100% game coverage** through three generic action primitives (`paint_tile`, `spawn`, `invoke_power`) backed by the game's own asset registry — see [protocol.md](protocol.md).
 - **Survives game updates**: zero static binding to WorldBox internals; everything resolves through cached reflection with explicit logging when a symbol disappears.
 - **Local-only by design**: HTTP bound to `127.0.0.1`, per-install random auth token, no telemetry.
 - **Production-grade**: typed, tested, signed releases, automated CI/CD.

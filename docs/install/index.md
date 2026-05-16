@@ -47,7 +47,15 @@ curl http://127.0.0.1:8723/health \
 You should see:
 
 ```json
-{ "ok": true, "unity_version": "2022.3.60f1", "tick": 1234 }
+{
+  "ok": true,
+  "mod_version": "0.1.1",
+  "worldbox_version": "0.51.2",
+  "unity_version": "2022.3.60f1",
+  "assembly_csharp_sha256": "51d275f0…",
+  "tick": 1234,
+  "enabled": true
+}
 ```
 
 ## Step 2 — Plug into your AI client

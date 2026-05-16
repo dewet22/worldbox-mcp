@@ -4,36 +4,114 @@ title: Command reference
 
 # Command reference
 
-!!! info "Auto-generated"
-    This page is generated from the mod's `GET /capabilities` response at release time. To regenerate locally:
+20 MCP tools, grouped by category. Asset ids (tile / actor / power / speed) come from the
+running game's registry — call the discovery tools to enumerate them; never hardcode.
 
-    ```bash
-    uv run python scripts/gen-docs.py > docs/command-reference.md
-    ```
+The agent can also dump this list at runtime by calling **`worldbox_capabilities`**, which
+returns the live JSON-Schema for every registered command. That's the source of truth — this
+page tracks it but may lag.
 
-> _Stub. This page becomes meaningful once Phase 3 (action primitives) lands and `scripts/gen-docs.py` exists._
+---
 
-## Categories
+## Meta — basics
 
-The tool surface is grouped into four categories:
+| Tool | What it returns |
+|---|---|
+| `worldbox_health` | Plugin liveness + mod version + WorldBox version + Unity version + `Assembly-CSharp.dll` SHA256 + current tick. **Call this first.** |
+| `worldbox_capabilities` | The full live tool list with JSON-Schema. **Call this second** if you want to know what's actually available in the build you're talking to. |
 
-| Category | Purpose | Tools (planned) |
+---
+
+## Discovery — what asset ids does this build accept?
+
+| Tool | Returns |
+|---|---|
+| `worldbox_list_tiles` | All `TileType` ids (e.g. `sand`, `soil_high`, `lava0`, `deep_ocean`, …). On stock 0.51.x: 20 entries. Inputs for `worldbox_paint_tile`. |
+| `worldbox_list_actors` | All `ActorAsset` ids (`human`, `elf`, `dragon`, `wolf`, …). 322 on stock 0.51.x. Inputs for `worldbox_spawn`. |
+| `worldbox_list_powers` | All `GodPower` ids (spawn-by-race + disasters + toggles). 339 on stock 0.51.x. Inputs for `worldbox_invoke_power`. |
+
+---
+
+## Action — modify the world
+
+| Tool | Args | Effect |
 |---|---|---|
-| **Discovery** | Introspect the game's asset registry. | `list_tiles`, `list_actors`, `list_powers` |
-| **Action** | Modify the world. Three generic primitives cover 100% of game actions. | `paint_tile`, `spawn`, `invoke_power` |
-| **Read** | Inspect world state. | `get_world_state`, `get_tile`, `get_actor`, `list_kingdoms`, `list_cities`, `query_actors`, `screenshot` |
-| **Control** | Affect simulation flow. | `pause`, `resume`, `set_speed`, `time_skip`, `generate_world`, `save_world`, `load_world`, `camera_goto` |
+| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal — every spawn-by-race, every disaster, every toggle. Returns `accepted: bool`. Some UI-only powers (`plague`, `volcano`) have no `click_action` delegate and return `GAME_REJECTED`. |
+| `worldbox_spawn` | `entity_id`, `x`, `y`, `count=1`, `adult=false`, `spawn_height=6` | Spawn actors **not exposed as GodPowers** — `dragon`, `cthulhu`, `kraken`, specific animals. Wild kingdom auto-assigned via `ActorAsset.kingdom_id_wild`. |
+| `worldbox_paint_tile` | `x`, `y`, `tile_id?`, `top_id?`, `radius=0` | Paints a Euclidean disc. Provide `tile_id` (ground), `top_id` (decoration), or both. Out-of-map cells silently skipped. |
 
-Plus a meta tool `capabilities()` which is the source of truth for everything else.
+---
 
-## Discovery first
+## Read — observe the world
 
-The fundamental design choice: rather than hardcoding ~200 command variants, three primitives accept a string asset id resolved at runtime against the game's own registry. Use the discovery tools to enumerate what's valid in your current WorldBox build:
+| Tool | Returns |
+|---|---|
+| `worldbox_get_world_state` | `{width, height, seed, tick, paused, population_alive, population_lifetime, kingdoms_alive, kingdoms_ever_created, cities_alive, cities_ever_created}` |
+| `worldbox_get_tile` | `{x, y, tile_id, top_id, height, actors[], actor_count}` |
+| `worldbox_list_kingdoms` | Alive kingdoms (filter via `include_wild`): `{id, name, race, king_name, capital_id, cities_count, units_count, wild}`. |
+| `worldbox_list_cities` | Alive cities (optional `kingdom_id` filter): `{id, name, kingdom_id, kingdom_name, leader_name, building_count, unit_count}`. |
+| `worldbox_query_actors` | Filtered actor list: args `{race?, kingdom_id?, in_rect?, alive=true, limit=500, offset=0}`. Default limit 500, max 5000. Pagination via `offset` + `has_more`. |
+| `worldbox_screenshot` | `{format: "png", width, height, base64, bytes}`. Last completed frame. PNGs at 1080p are 400-600 KB. |
 
+---
+
+## Control — simulation flow + world lifecycle
+
+| Tool | What for |
+|---|---|
+| `worldbox_pause` | Freeze the world before building a scenario. Returns `previous_paused` so you can detect state change. |
+| `worldbox_resume` | Unpause. |
+| `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id (`slow_mo`, `x1`, `x2`, `x3`, `x5`, `x10`, `x15`, `x20`). Higher = simulation runs faster than real time. |
+| `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async — poll `get_world_state` until `tick` advances. |
+| `worldbox_save_world` | Required `folder` (absolute path). Save format compatible with in-game load UI. Refuses if no world loaded. |
+| `worldbox_load_world` | One of `path` (file on disk) or `bytes_b64` (base64 zipped save). Async. |
+
+---
+
+## Error model
+
+Every error response follows this shape:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "<UPPERCASE_CODE>",
+    "message": "<human-readable>",
+    "command": "<name>",
+    "args": { ... },
+    "did_you_mean": ["..."],   // only for UNKNOWN_ASSET
+    "exception": { "type": "...", "message": "...", "stack_top": "..." }
+  }
+}
 ```
-list_tiles()  → [{id, display_name, category}, ...]
-list_actors() → [{id, display_name, race, kingdom_default}, ...]
-list_powers() → [{id, display_name, target_type, required_args}, ...]
+
+| Code | Meaning |
+|---|---|
+| `UNKNOWN_COMMAND` | No tool with that name. Call `worldbox_capabilities`. |
+| `BAD_ARGS` | JSON shape doesn't match the tool's schema. |
+| `UNKNOWN_ASSET` | An asset id wasn't found in the live registry. Use the included `did_you_mean` (Levenshtein top-5) to self-correct. |
+| `OUT_OF_BOUNDS` | `(x, y)` outside the current map dimensions. |
+| `GAME_REJECTED` | Game logic refused the action (e.g. spawning a land animal on water, or `plague`/`volcano` which lack a `click_action` delegate). |
+| `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. |
+| `MAIN_THREAD_TIMEOUT` | A command exceeded 30s on Unity's main thread. Safety valve so the game doesn't hang. |
+| `UNAUTHORIZED` | Missing or wrong `X-WB-Token` header. Should never happen if `worldbox-mcp` auto-discovered your config. |
+| `DISABLED` | `enabled = false` in `BepInEx/config/WorldBoxBridge.cfg`. The kill-switch is engaged. |
+
+---
+
+## Discovery first, action second
+
+The fundamental design choice: rather than hardcoding ~200 command variants per asset type,
+three action primitives accept a string id resolved at runtime against the game's own
+registry. **Always call the discovery tools to learn what's valid in this build** — they're
+your version-proof contract:
+
+```text
+list_tiles()  → [{id, color_hex?, has_biome_tags?}, ...]
+list_actors() → [{id, race?, asset_type?}, ...]
+list_powers() → [{id, tab_id?, target_type?}, ...]
 ```
 
-Asset ids returned here are valid inputs for the action primitives in the same session.
+Asset ids returned here are valid inputs for the action primitives **in the same session**.
+After a WorldBox update, re-call them — new dragons / tiles / disasters may have arrived.

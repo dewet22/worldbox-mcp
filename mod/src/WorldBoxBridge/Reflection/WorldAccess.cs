@@ -33,7 +33,6 @@ internal sealed class WorldAccess
     private FieldInfo? _mapStatsField;
     private MethodInfo? _isPausedMethod;
 
-    private readonly Dictionary<Type, MethodInfo?> _getSimpleListByType = new();
     private readonly Dictionary<TypeMemberKey, FieldInfo?> _fieldCache = new();
     private readonly Dictionary<TypeMemberKey, PropertyInfo?> _propertyCache = new();
     private readonly Dictionary<TypeMemberKey, MethodInfo?> _methodCache = new();
@@ -192,34 +191,46 @@ internal sealed class WorldAccess
     }
 
     /// <summary>
-    /// Enumerates the live objects managed by <paramref name="manager"/> by calling its
-    /// inherited <c>getSimpleList()</c>. Returns null if the method can't be located.
+    /// Enumerates the live objects managed by <paramref name="manager"/>.
     /// </summary>
+    /// <remarks>
+    /// All WorldBox managers (<c>ActorManager</c>, <c>KingdomManager</c>, <c>CityManager</c>, …)
+    /// derive from <c>CoreSystemManager&lt;T, TData&gt;</c> which implements <c>IEnumerable&lt;T&gt;</c>
+    /// with the underlying storage being a <c>HashSet&lt;T&gt;</c>. Iterating via the
+    /// non-generic <see cref="IEnumerable"/> interface works uniformly across the two manager
+    /// hierarchies (<c>SimSystemManager</c> for actors, <c>MetaSystemManager</c> for
+    /// kingdoms / cities). The earlier reflection-on-<c>getSimpleList()</c> only worked for
+    /// the SimSystem half — the MetaSystem managers don't define that method.
+    /// </remarks>
     public IList? GetSimpleList(object manager)
     {
-        var t = manager.GetType();
-        if (!_getSimpleListByType.TryGetValue(t, out var mi))
+        // Snapshot via IEnumerable — works for every CoreSystemManager subclass.
+        if (manager is IEnumerable enumerable)
         {
-            // Walk the type hierarchy — getSimpleList is defined on SimSystemManager<,>.
-            for (var cur = t; cur != null && mi == null; cur = cur.BaseType)
+            var list = new List<object>();
+            foreach (var item in enumerable)
             {
-                mi = cur.GetMethod(
-                    "getSimpleList",
-                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance,
-                    binder: null,
-                    types: Type.EmptyTypes,
-                    modifiers: null
-                );
+                if (item != null)
+                {
+                    list.Add(item);
+                }
             }
-            _getSimpleListByType[t] = mi;
-            if (mi == null)
-            {
-                _log.LogWarning(
-                    $"[WorldAccess] getSimpleList() not found on {t.FullName} or any base."
-                );
-            }
+            return list;
         }
-        return mi?.Invoke(manager, Array.Empty<object>()) as IList;
+        _log.LogWarning(
+            $"[WorldAccess] {manager.GetType().FullName} does not implement IEnumerable — can't enumerate."
+        );
+        return null;
+    }
+
+    /// <summary>
+    /// Reads the <c>Count</c> property exposed by <c>CoreSystemManager</c>. Returns null if
+    /// the property isn't present in this game build.
+    /// </summary>
+    public int? GetManagerCount(object manager)
+    {
+        var prop = CachedProperty(manager.GetType(), "Count");
+        return prop?.GetValue(manager) as int?;
     }
 
     // ──────────────────────────────────────────────────────────────────────

@@ -4,7 +4,8 @@ Status legend: ✅ tested & green · ⚠️ partial (specific commands disabled)
 
 | WorldBox version | Unity | Scripting backend | Mod version | Status | Notes |
 |---|---|---|---|---|---|
-| 0.x.x | 2022.3.60f1 | Mono | 0.1.x | _pending v0.1.0 release_ | Initial target |
+| **0.51.2** | 2022.3.60f1 | Mono | **0.1.1** | ✅ | Full validation: 20 tools, end-to-end agentic loop (`examples/scenarios/ecology_smoke.py`). Assembly-CSharp.dll SHA256 `51d275f0…df6dd69f`. |
+| 0.51.2 | 2022.3.60f1 | Mono | 0.1.0 | ⚠️ | `list_kingdoms` / `list_cities` / `get_world_state.{kingdoms,cities}_alive` return 0 even when alive — fixed in 0.1.1. |
 
 ## Reading the matrix
 

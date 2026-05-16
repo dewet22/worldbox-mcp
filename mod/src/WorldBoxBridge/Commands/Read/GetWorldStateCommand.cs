@@ -43,9 +43,9 @@ internal sealed class GetWorldStateCommand : ICommand
         var units = _world.UnitsManager;
         var kingdoms = _world.KingdomsManager;
         var cities = _world.CitiesManager;
-        var population = units != null ? CountList(units) : 0;
-        var nbKingdoms = kingdoms != null ? CountList(kingdoms) : 0;
-        var nbCities = cities != null ? CountList(cities) : 0;
+        var population = units != null ? (_world.GetManagerCount(units) ?? 0) : 0;
+        var nbKingdoms = kingdoms != null ? (_world.GetManagerCount(kingdoms) ?? 0) : 0;
+        var nbCities = cities != null ? (_world.GetManagerCount(cities) ?? 0) : 0;
 
         long mapStatsPopulation = 0;
         long kingdomsCreated = 0;
@@ -85,9 +85,4 @@ internal sealed class GetWorldStateCommand : ICommand
         );
     }
 
-    private int CountList(object manager)
-    {
-        var list = _world.GetSimpleList(manager);
-        return list?.Count ?? 0;
-    }
 }
