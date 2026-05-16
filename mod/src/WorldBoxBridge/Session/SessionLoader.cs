@@ -109,17 +109,17 @@ internal static class SessionLoader
         };
         var perms = PermissionDefaults.For(role);
 
-        int? kingdomClaim = null;
+        long? kingdomClaim = null;
         var claim = ao.Value<string?>("kingdom_claim")?.Trim();
         if (!string.IsNullOrEmpty(claim))
         {
-            // "auto:N" → resolved at world-load time (Phase 3 picks the Nth alive kingdom).
+            // "auto:N" → resolved at world-load time (a later phase picks the Nth alive kingdom).
             // "id:N"   → hard kingdom id, recorded immediately.
             // We store the numeric resolution only for "id:N"; "auto:N" is parked as null here
             // and resolved by ResolveAutoKingdomClaims() when the world is ready.
             if (claim!.StartsWith("id:", StringComparison.OrdinalIgnoreCase))
             {
-                if (!int.TryParse(claim.Substring(3), out var kid))
+                if (!long.TryParse(claim.Substring(3), out var kid))
                 {
                     throw new InvalidDataException(
                         $"agent '{id}' kingdom_claim '{claim}' — expected 'id:<int>'."

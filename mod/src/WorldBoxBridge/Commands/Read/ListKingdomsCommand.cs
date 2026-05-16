@@ -48,6 +48,11 @@ internal sealed class ListKingdomsCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ReadOwnFaction);
+        // Intentional: kingdoms list is NEVER fog-of-war filtered. Agents need to know
+        // what factions exist for diplomacy / threat awareness, even in PvP. Per-faction
+        // city + unit details *are* scoped (see list_cities, query_actors).
+
         var includeWild = args.Value<bool?>("include_wild") ?? false;
 
         var manager = _world.KingdomsManager;

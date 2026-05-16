@@ -78,6 +78,7 @@ internal sealed class GenerateWorldCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ControlWorld);
         var mb = _world.MapBoxInstance;
         if (mb == null)
         {

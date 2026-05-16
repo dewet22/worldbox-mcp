@@ -104,6 +104,7 @@ internal sealed class SpawnCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.RequireAny(Permission.ActionFaction, Permission.ActionGlobal);
         var entityId = (string?)args["entity_id"];
         if (string.IsNullOrWhiteSpace(entityId))
         {

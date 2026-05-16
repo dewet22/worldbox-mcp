@@ -65,6 +65,7 @@ internal sealed class LoadWorldCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ControlWorld);
         var path = args.Value<string?>("path");
         var bytesB64 = args.Value<string?>("bytes_b64");
 

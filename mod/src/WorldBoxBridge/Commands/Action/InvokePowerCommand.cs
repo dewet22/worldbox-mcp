@@ -76,6 +76,7 @@ internal sealed class InvokePowerCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.RequireAny(Permission.ActionFaction, Permission.ActionGlobal);
         var powerId = (string?)args["power_id"];
         if (string.IsNullOrWhiteSpace(powerId))
         {
@@ -203,24 +204,5 @@ internal sealed class InvokePowerCommand : ICommand
     }
 }
 
-/// <summary>
-/// Throws a structured rejection that <c>HttpBridge</c> maps to a precise error envelope —
-/// rather than a generic 500. The HttpBridge catches BridgeRejectionException at the top of
-/// the executor and serialises its fields directly.
-/// </summary>
-internal sealed class BridgeRejectionException : Exception
-{
-    public BridgeRejectionException(
-        string code,
-        string message,
-        System.Collections.Generic.IReadOnlyList<string>? didYouMean = null
-    )
-        : base(message)
-    {
-        Code = code;
-        DidYouMean = didYouMean;
-    }
-
-    public string Code { get; }
-    public System.Collections.Generic.IReadOnlyList<string>? DidYouMean { get; }
-}
+// BridgeRejectionException moved to its own file (BridgeRejectionException.cs) so the test
+// project can link it without dragging in Unity references.

@@ -67,6 +67,7 @@ internal sealed class SaveWorldCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ControlWorld);
         var folder = args.Value<string?>("folder");
         var compress = args.Value<bool?>("compress") ?? true;
 

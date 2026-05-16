@@ -41,6 +41,7 @@ internal abstract class PausedCommandBase : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ControlWorld);
         var configType = _refs.Type("Config");
         if (configType == null)
         {

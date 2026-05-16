@@ -46,6 +46,7 @@ internal sealed class ListCitiesCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ReadOwnFaction);
         var filterKingdomId = args.Value<long?>("kingdom_id");
 
         var manager = _world.CitiesManager;
@@ -71,6 +72,11 @@ internal sealed class ListCitiesCommand : ICommand
                 }
                 var kingdom = _world.Read(city, "kingdom");
                 var kid = kingdom != null ? _world.Read(kingdom, "id") as long? : null;
+                // Fog-of-war: hide cities of kingdoms this agent can't see (PvP scoping).
+                if (kid.HasValue && !ctx.CanSeeKingdom(kid.Value))
+                {
+                    continue;
+                }
                 if (filterKingdomId.HasValue && kid != filterKingdomId)
                 {
                     continue;

@@ -94,6 +94,9 @@ internal sealed class PaintTileCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        // Terraforming is genuinely global (no per-kingdom semantics in WorldBox) — gate on
+        // ActionGlobal so FactionPlayers can't reshape opponents' territory.
+        ctx.Require(Permission.ActionGlobal);
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
         {
             throw new ArgumentException("x and y are required integers.");

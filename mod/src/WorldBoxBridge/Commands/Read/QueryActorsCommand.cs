@@ -80,6 +80,7 @@ internal sealed class QueryActorsCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ReadOwnFaction);
         var raceFilter = args.Value<string?>("race");
         var kingdomFilter = args.Value<long?>("kingdom_id");
         var aliveOnly = args.Value<bool?>("alive") ?? true;
@@ -157,6 +158,11 @@ internal sealed class QueryActorsCommand : ICommand
 
             var kingdom = _world.Read(actor, "kingdom");
             var kid = kingdom != null ? _world.Read(kingdom, "id") as long? : null;
+            // Fog-of-war: hide actors of kingdoms this agent can't see (PvP scoping).
+            if (kid.HasValue && !ctx.CanSeeKingdom(kid.Value))
+            {
+                continue;
+            }
             if (kingdomFilter.HasValue && kid != kingdomFilter)
             {
                 continue;

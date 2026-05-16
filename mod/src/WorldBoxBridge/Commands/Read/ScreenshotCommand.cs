@@ -35,6 +35,9 @@ internal sealed class ScreenshotCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        // Screenshot leaks the entire map at once — gate it on ReadAll so FactionPlayers
+        // under partial_intel can't bypass their fog-of-war by snapping a picture.
+        ctx.Require(Permission.ReadAll);
         Texture2D? tex = null;
         try
         {

@@ -65,6 +65,7 @@ internal sealed class SetSpeedCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
+        ctx.Require(Permission.ControlWorld);
         var speedId = (string?)args["speed_id"];
         if (string.IsNullOrWhiteSpace(speedId))
         {

@@ -3,29 +3,7 @@ using Newtonsoft.Json;
 
 namespace WorldBoxBridge.Http;
 
-/// <summary>Stable, normalized error codes returned to clients.</summary>
-/// <remarks>
-/// These strings are part of the public protocol contract (see docs/protocol.md).
-/// Renaming an existing code is a breaking change. Adding a new code is backwards-compatible.
-/// </remarks>
-public static class ErrorCode
-{
-    public const string Unauthorized = "UNAUTHORIZED";
-    public const string Disabled = "DISABLED";
-    public const string UnknownCommand = "UNKNOWN_COMMAND";
-    public const string BadArgs = "BAD_ARGS";
-    public const string UnknownAsset = "UNKNOWN_ASSET";
-    public const string OutOfBounds = "OUT_OF_BOUNDS";
-    public const string GameRejected = "GAME_REJECTED";
-    public const string GameCrash = "GAME_CRASH";
-    public const string MainThreadTimeout = "MAIN_THREAD_TIMEOUT";
-    public const string Internal = "INTERNAL";
-
-    // v0.3 multi-agent additions:
-    public const string PermissionDenied = "PERMISSION_DENIED";
-    public const string FactionScopeViolation = "FACTION_SCOPE_VIOLATION";
-    public const string TurnNotYours = "TURN_NOT_YOURS";
-}
+// ErrorCode constants moved to ErrorCode.cs (no Newtonsoft.Json dependency, linkable from tests).
 
 public sealed class SuccessEnvelope
 {

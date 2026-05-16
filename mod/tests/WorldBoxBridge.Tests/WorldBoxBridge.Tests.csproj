@@ -24,10 +24,14 @@
   <!-- Linked sources: only files that have zero dependencies on Unity / BepInEx / Newtonsoft. -->
   <ItemGroup>
     <Compile Include="..\..\src\WorldBoxBridge\AssetSuggester.cs" Link="Linked\AssetSuggester.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Http\ErrorCode.cs" Link="Linked\Http\ErrorCode.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Commands\Action\BridgeRejectionException.cs" Link="Linked\Commands\Action\BridgeRejectionException.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\AgentRole.cs" Link="Linked\Session\AgentRole.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Permission.cs" Link="Linked\Session\Permission.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Agent.cs" Link="Linked\Session\Agent.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\AgentRegistry.cs" Link="Linked\Session\AgentRegistry.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Session\RequestContext.cs" Link="Linked\Session\RequestContext.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Session\Session.cs" Link="Linked\Session\Session.cs" />
   </ItemGroup>
 
 </Project>
