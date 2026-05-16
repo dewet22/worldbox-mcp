@@ -36,8 +36,24 @@ async def test_health_returns_envelope(address: BridgeAddress) -> None:
             health = await client.health()
             assert health["mod_version"] == "0.1.0"
             assert health["tick"] == 42
-            # Token must be forwarded as X-WB-Token header.
-            assert route.calls.last.request.headers["X-WB-Token"] == "t"
+            # v0.3: token is forwarded as 'Authorization: Bearer <token>' (unified with HTTP/MCP
+            # ecosystem). The C# bridge still accepts the legacy X-WB-Token header for
+            # compatibility, but the Python client no longer emits it.
+            assert route.calls.last.request.headers["Authorization"] == "Bearer t"
+            assert "X-WB-Token" not in route.calls.last.request.headers
+
+
+async def test_per_call_token_override(address: BridgeAddress) -> None:
+    """Phase 2.5: a single BridgeClient can carry traffic from many agents by passing
+    a token kwarg per call. This lets a future multi-tenant front-end forward each
+    MCP client's bearer through to the bridge without rebuilding the httpx client."""
+    async with BridgeClient(address) as client:
+        with respx.mock(base_url=address.base_url) as mock:
+            route = mock.get("/health").mock(
+                return_value=httpx.Response(200, json={"ok": True, "mod_version": "0.x"})
+            )
+            await client.health(token="other-agent-token")
+            assert route.calls.last.request.headers["Authorization"] == "Bearer other-agent-token"
 
 
 async def test_call_unwraps_result(address: BridgeAddress) -> None:

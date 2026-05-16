@@ -2,6 +2,13 @@
 
 Wraps :mod:`httpx` with the bridge's auth header and unified error decoding. One instance
 per server lifetime; the underlying httpx client is reused for connection pooling.
+
+Auth — v0.3 multi-agent: each request sends ``Authorization: Bearer <token>``. The token
+is taken from :attr:`BridgeAddress.token` by default (single-process / stdio mode) but
+can be overridden per-call via the ``token`` kwarg (multi-tenant front-ends in Phase 2.5).
+The legacy ``X-WB-Token`` header is **not** sent — the C# bridge accepts both, but the
+unified Authorization path keeps the wire format consistent with the broader MCP / HTTP
+ecosystem.
 """
 
 from __future__ import annotations
@@ -13,7 +20,6 @@ import httpx
 from .config import BridgeAddress
 from .errors import BridgeError, BridgeErrorEnvelope, TransportError
 
-TOKEN_HEADER: Final[str] = "X-WB-Token"
 DEFAULT_TIMEOUT: Final[float] = 35.0  # Bridge has a 30s per-action timeout; leave room.
 
 
@@ -38,10 +44,12 @@ class BridgeClient:
         self._address = address
         self._timeout = timeout
         self._owns_client = client is None
+        # No baked-in Authorization header — every request injects one explicitly so
+        # callers can override per-call (Phase 2.5 multi-tenant) without rebuilding
+        # the httpx client.
         self._client = client or httpx.AsyncClient(
             base_url=address.base_url,
             timeout=timeout,
-            headers={TOKEN_HEADER: address.token},
         )
 
     async def __aenter__(self) -> "BridgeClient":
@@ -54,18 +62,30 @@ class BridgeClient:
         if self._owns_client:
             await self._client.aclose()
 
-    async def health(self) -> dict[str, Any]:
+    async def health(self, *, token: str | None = None) -> dict[str, Any]:
         """GET /health → bridge metadata."""
-        return await self._request("GET", "/health")
+        return await self._request("GET", "/health", token=token)
 
-    async def capabilities(self) -> dict[str, Any]:
+    async def capabilities(self, *, token: str | None = None) -> dict[str, Any]:
         """GET /capabilities → list of registered commands + schemas."""
-        return await self._request("GET", "/capabilities", envelope=False)
+        return await self._request("GET", "/capabilities", envelope=False, token=token)
 
-    async def call(self, command: str, args: dict[str, Any] | None = None) -> dict[str, Any]:
-        """POST /cmd → execute a named command."""
+    async def call(
+        self,
+        command: str,
+        args: dict[str, Any] | None = None,
+        *,
+        token: str | None = None,
+    ) -> dict[str, Any]:
+        """POST /cmd → execute a named command.
+
+        ``token`` overrides the agent credential for this single call. Used by the
+        Phase 2.5 multi-tenant front-end so one shared :class:`BridgeClient` can carry
+        traffic from several distinct agents (each agent's bearer is extracted from its
+        own MCP client connection and forwarded here).
+        """
         payload = {"name": command, "args": args or {}}
-        return await self._request("POST", "/cmd", json=payload)
+        return await self._request("POST", "/cmd", json=payload, token=token)
 
     async def _request(
         self,
@@ -74,9 +94,12 @@ class BridgeClient:
         *,
         json: dict[str, Any] | None = None,
         envelope: bool = True,
+        token: str | None = None,
     ) -> dict[str, Any]:
+        effective_token = token or self._address.token
+        headers = {"Authorization": f"Bearer {effective_token}"}
         try:
-            response = await self._client.request(method, path, json=json)
+            response = await self._client.request(method, path, json=json, headers=headers)
         except httpx.TimeoutException as exc:
             msg = f"Bridge did not respond within {self._timeout}s ({method} {path})."
             raise TransportError(msg, cause=exc) from exc

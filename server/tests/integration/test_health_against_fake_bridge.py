@@ -34,7 +34,15 @@ class FakeBridge:
         self.app.router.add_post("/cmd", self._cmd)
 
     async def _check_auth(self, request: web.Request) -> web.Response | None:
-        if request.headers.get("X-WB-Token") != self.token:
+        # Mirror the real C# bridge: accept Authorization: Bearer <token> (v0.3 path)
+        # OR the legacy X-WB-Token header (kept for v0.1/v0.2 single-tenant clients).
+        presented: str | None = None
+        auth = request.headers.get("Authorization", "")
+        if auth.lower().startswith("bearer "):
+            presented = auth[7:].strip()
+        elif legacy := request.headers.get("X-WB-Token"):
+            presented = legacy
+        if presented != self.token:
             return web.json_response(
                 {"ok": False, "error": {"code": "UNAUTHORIZED", "message": "bad token"}},
                 status=401,
