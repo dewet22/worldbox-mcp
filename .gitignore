@@ -77,3 +77,9 @@ docs/site/
 
 # Pre-commit
 .pre-commit-cache/
+
+# Scenario output (regenerated on each run)
+scratch/scenario_out/
+
+# Scenario output (regenerated on each run)
+examples/scenarios/output/
