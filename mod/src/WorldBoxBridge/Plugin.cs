@@ -129,10 +129,13 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new QueryActorsCommand(worldAccess));
         registry.Register(new ScreenshotCommand());
 
-        // Control — simulation flow.
+        // Control — simulation flow + world lifecycle.
         registry.Register(new PauseCommand(gameRefs));
         registry.Register(new ResumeCommand(gameRefs));
         registry.Register(new SetSpeedCommand(assetCatalog, gameRefs));
+        registry.Register(new GenerateWorldCommand(worldAccess, Logger));
+        registry.Register(new SaveWorldCommand(gameRefs, worldAccess));
+        registry.Register(new LoadWorldCommand(gameRefs));
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max);
