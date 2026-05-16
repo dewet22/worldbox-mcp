@@ -34,7 +34,12 @@ public interface ICommand
     /// Whether this command needs to run on Unity's main thread. Pure metadata or filesystem
     /// commands can return false and run directly on the HTTP thread for lower latency.
     /// </summary>
-    bool RequiresMainThread => true;
+    /// <remarks>
+    /// No default value provided: the compiler error reminds command authors to make a conscious
+    /// decision per command. (.NET Framework 4.6.2 doesn't support default interface methods
+    /// anyway.)
+    /// </remarks>
+    bool RequiresMainThread { get; }
 
     Task<object?> ExecuteAsync(JObject args, CancellationToken cancellationToken);
 }

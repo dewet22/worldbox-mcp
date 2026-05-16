@@ -1,0 +1,132 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "worldbox-mcp"
+version = "0.1.0"
+description = "MCP server that lets any AI agent control WorldBox via the WorldBoxBridge BepInEx mod."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "fullya99 and contributors" }]
+keywords = ["mcp", "model-context-protocol", "worldbox", "ai-agent", "claude", "openai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Games/Entertainment",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "mcp>=1.0",
+    "httpx>=0.27",
+    "pydantic>=2.7",
+    "structlog>=24.4",
+    "anyio>=4.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "mypy>=1.13",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5.0",
+    "respx>=0.21",
+    "aiohttp>=3.10",
+]
+
+[project.urls]
+Homepage = "https://github.com/fullya99/worldbox-mcp"
+Documentation = "https://fullya99.github.io/worldbox-mcp/"
+Issues = "https://github.com/fullya99/worldbox-mcp/issues"
+Source = "https://github.com/fullya99/worldbox-mcp"
+Changelog = "https://github.com/fullya99/worldbox-mcp/blob/main/CHANGELOG.md"
+
+[project.scripts]
+worldbox-mcp = "worldbox_mcp.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/worldbox_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/worldbox_mcp", "README.md", "../LICENSE"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "C4",       # comprehensions
+    "UP",       # pyupgrade
+    "RUF",      # ruff
+    "SIM",      # simplify
+    "ARG",      # unused args
+    "ANN",      # type annotations
+    "ASYNC",    # async patterns
+    "PT",       # pytest
+    "RET",      # returns
+    "TCH",      # type-checking imports
+    "TID",      # tidy imports
+]
+ignore = [
+    "ANN401",   # allow Any in some places (MCP boundaries)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN", "ARG", "PT011"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = ["mcp.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+]
+asyncio_mode = "auto"
+markers = [
+    "e2e: end-to-end tests against a real running WorldBox + mod (skipped by default)",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["worldbox_mcp"]
+omit = ["src/worldbox_mcp/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
