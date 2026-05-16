@@ -88,3 +88,18 @@ def register(server: "FastMCP", client: "BridgeClient") -> None:
     )
     async def worldbox_turn_advance() -> dict[str, Any]:
         return await client.call("turn_advance")
+
+    @server.tool(
+        name="worldbox_objective_status",
+        description=(
+            "Scoreboard primitive. Returns each registered agent's declared objectives "
+            "(from agents.json) AND a snapshot of live kingdom metrics (id, name, units, "
+            "cities, wild flag). The bridge intentionally does NOT compute scores — the "
+            "calling agent interprets the metrics against the objective kinds (wipe_kingdom, "
+            "maximize_pop, survive, etc.) to derive its own evaluation. This stays robust "
+            "across game-mechanics changes and supports both competitive and cooperative "
+            "framings of the same metric. Read-only."
+        ),
+    )
+    async def worldbox_objective_status() -> dict[str, Any]:
+        return await client.call("objective_status")

@@ -125,6 +125,7 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new WhoAmICommand());
         registry.Register(new SessionInfoCommand(session));
         registry.Register(new TurnAdvanceCommand(session));
+        registry.Register(new ObjectiveStatusCommand(session, worldAccess));
 
         // Bus — inter-agent messaging.
         registry.Register(new SendMessageCommand(session));

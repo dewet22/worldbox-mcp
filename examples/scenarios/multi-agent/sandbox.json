@@ -1,0 +1,18 @@
+{
+  "_comment": "Sandbox scenario — N co-gods on the same world, no fog-of-war, no factions, no turns. Closest to the legacy single-token mode but with multiple identities so each agent sees its own messages. Useful for collaborative exploration or for tests where you want N clients without any of the PvP / coop constraints.",
+  "scenario": "sandbox",
+  "partial_intel": false,
+  "turn_based": false,
+  "agents": [
+    {
+      "id": "alpha",
+      "token": "<replace-with-secure-48-char-token-for-alpha>",
+      "role": "god"
+    },
+    {
+      "id": "beta",
+      "token": "<replace-with-secure-48-char-token-for-beta>",
+      "role": "god"
+    }
+  ]
+}

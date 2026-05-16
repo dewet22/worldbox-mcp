@@ -34,6 +34,7 @@
     <Compile Include="..\..\src\WorldBoxBridge\Session\Session.cs" Link="Linked\Session\Session.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\TurnOrder.cs" Link="Linked\Session\TurnOrder.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\MessageBus.cs" Link="Linked\Session\MessageBus.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Session\Objective.cs" Link="Linked\Session\Objective.cs" />
   </ItemGroup>
 
 </Project>

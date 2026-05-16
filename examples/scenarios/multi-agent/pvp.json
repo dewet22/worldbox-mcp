@@ -1,0 +1,28 @@
+{
+  "_comment": "PvP scenario — 2 rival AI factions on the same world with fog-of-war. Replace the placeholder tokens with output from `scripts/install-mod.ps1 --generate-tokens 2` before going live. Drop this file at <worldbox>/BepInEx/config/WorldBoxBridge.agents.json and restart the game.",
+  "scenario": "pvp",
+  "partial_intel": true,
+  "turn_based": false,
+  "agents": [
+    {
+      "id": "athena",
+      "token": "<replace-with-secure-48-char-token-for-athena>",
+      "role": "faction_player",
+      "kingdom_claim": "auto:0",
+      "objectives": [
+        { "id": "survive",  "label": "Outlast ares",        "kind": "survive" },
+        { "id": "dominate", "label": "Wipe ares' kingdom",  "kind": "wipe_kingdom",   "target": "auto:1" }
+      ]
+    },
+    {
+      "id": "ares",
+      "token": "<replace-with-secure-48-char-token-for-ares>",
+      "role": "faction_player",
+      "kingdom_claim": "auto:1",
+      "objectives": [
+        { "id": "survive",  "label": "Outlast athena",       "kind": "survive" },
+        { "id": "dominate", "label": "Wipe athena's kingdom", "kind": "wipe_kingdom",  "target": "auto:0" }
+      ]
+    }
+  ]
+}

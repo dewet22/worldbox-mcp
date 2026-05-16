@@ -1,0 +1,32 @@
+{
+  "_comment": "Cooperative scenario — 2-3 AIs each focused on a different system of the same shared world. No fog-of-war, no factions, no turn-taking. Each agent is a co-god of the simulation. Use the message bus for handoffs ('I just triggered a famine, you handle the migration response').",
+  "scenario": "coop",
+  "partial_intel": false,
+  "turn_based": false,
+  "agents": [
+    {
+      "id": "ecology",
+      "token": "<replace-with-secure-48-char-token-for-ecology-ai>",
+      "role": "god",
+      "objectives": [
+        { "id": "biodiversity", "label": "Maintain at least 3 races alive across the map", "kind": "freeform" }
+      ]
+    },
+    {
+      "id": "civilization",
+      "token": "<replace-with-secure-48-char-token-for-civilization-ai>",
+      "role": "god",
+      "objectives": [
+        { "id": "growth", "label": "Push the global population above 1500", "kind": "reach_pop", "target": "1500" }
+      ]
+    },
+    {
+      "id": "disasters",
+      "token": "<replace-with-secure-48-char-token-for-disasters-ai>",
+      "role": "god",
+      "objectives": [
+        { "id": "drama", "label": "Trigger one catastrophic event per 5000 ticks", "kind": "freeform" }
+      ]
+    }
+  ]
+}

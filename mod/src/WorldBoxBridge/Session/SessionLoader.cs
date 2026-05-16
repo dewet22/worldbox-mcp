@@ -166,7 +166,24 @@ internal static class SessionLoader
                 );
             }
         }
-        return new Agent(id!, token!, role, kingdomClaim, perms);
+        // Optional objectives per agent — informational metadata, the evaluator lives client-side.
+        var objectives = new List<Objective>();
+        if (ao["objectives"] is JArray oArr)
+        {
+            foreach (var ot in oArr)
+            {
+                if (ot is not JObject obj) continue;
+                var objId = obj.Value<string?>("id") ?? $"obj{objectives.Count}";
+                var label = obj.Value<string?>("label") ?? objId;
+                var kind = obj.Value<string?>("kind") ?? "freeform";
+                var target = obj.Value<string?>("target");
+                objectives.Add(new Objective(objId, label, kind, target));
+            }
+        }
+        var objectiveSet = objectives.Count > 0
+            ? new ObjectiveSet(objectives)
+            : null;
+        return new Agent(id!, token!, role, kingdomClaim, perms, objectiveSet);
     }
 
     private static bool DefaultPartialIntel(string scenario) =>
