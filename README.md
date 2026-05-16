@@ -1,37 +1,66 @@
 # worldbox-mcp
 
-> _<!-- TODO(pitch): one-sentence tagline that hooks. Example: "Give your AI agent god-mode in WorldBox." Keep it under 80 chars. -->_
+> **Give your AI agent god-mode in [WorldBox](https://www.superworldbox.com/).**
+> Spawn dragons. Burn continents. Run civilization speedruns. From a conversation.
 
 [![CI](https://github.com/fullya99/worldbox-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/fullya99/worldbox-mcp/actions/workflows/ci.yml)
-[![PyPI version](https://img.shields.io/pypi/v/worldbox-mcp.svg)](https://pypi.org/project/worldbox-mcp/)
-[![PyPI downloads](https://img.shields.io/pypi/dm/worldbox-mcp.svg)](https://pypi.org/project/worldbox-mcp/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![MCP](https://img.shields.io/badge/MCP-compatible-blue)](https://modelcontextprotocol.io)
+[![BepInEx](https://img.shields.io/badge/BepInEx-5.4.23-orange)](https://bepinex.org/)
 
-**worldbox-mcp** lets any [MCP](https://modelcontextprotocol.io)-compatible AI client (Claude Code, OpenCode, Codex, Cursor, Continue, …) directly control the game [WorldBox](https://www.superworldbox.com/). Spawn dragons, paint terrain, trigger meteors, query civilizations — all from a conversation.
+`worldbox-mcp` is a two-piece bridge that lets any [MCP](https://modelcontextprotocol.io)-compatible AI client — Claude Code, OpenCode, Codex, Cursor, Continue, … — directly control the live game [WorldBox](https://www.superworldbox.com/).
 
-<!-- TODO(demo): replace with real 15s demo GIF once Phase 1 works -->
-![demo](examples/demo.gif)
+**19 tools** spanning discovery, action, observation, and simulation control. The agent observes the world, chooses what to do, acts on it, then observes the outcome — a full agentic loop running against an actual running game.
+
+---
+
+## What it does
+
+```
+> You: "Build me a Roman empire surrounded by hostile dragons, fast-forward
+        50 years of evolution, then tell me who's still alive."
+
+> Agent:
+    pause()
+    list_actors() → finds 'human', 'dragon'
+    list_tiles()  → finds 'soil_high', 'sand'
+    paint_tile(soil_high, x=80, y=80, radius=10)       # founder territory
+    spawn(human, x=80, y=80, count=15, adult=True)     # the empire
+    spawn(dragon, x=200, y=80, count=4, adult=True)    # the threat
+    set_speed("x5")
+    resume()
+    # ... waits ~10 seconds for 50 years of simulation ...
+    screenshot()
+    query_actors(race="human", alive=True)
+    list_kingdoms()
+    → "After 50 years, the Romans built 2 cities. The dragons
+       razed the western one but the eastern capital Aletalda
+       still stands with 47 citizens."
+```
+
+The whole exchange is real — `examples/scenarios/ecology_smoke.py` runs a stripped-down version of it as a smoke test.
 
 ## How it works
 
 ```
-┌─────────────┐  MCP stdio  ┌──────────────────┐  HTTP localhost  ┌─────────────────────┐
-│  AI Client  ├────────────►│ worldbox-mcp     ├─────────────────►│ WorldBoxBridge      │
-│ (any MCP)   │             │ (Python server)  │                  │ BepInEx C# plugin   │
-└─────────────┘             └──────────────────┘                  │ inside WorldBox     │
-                                                                  └─────────────────────┘
+┌─────────────┐  MCP stdio  ┌──────────────────┐  HTTP 127.0.0.1   ┌─────────────────────┐
+│  AI client  ├────────────►│ worldbox-mcp     ├──────────────────►│ WorldBoxBridge      │
+│ (any MCP)   │             │ (Python on PyPI) │                   │ BepInEx C# plugin   │
+└─────────────┘             └──────────────────┘                   │ inside worldbox.exe │
+                                                                   └──────────────────────┘
 ```
 
-Two components, both open source:
-1. **`WorldBoxBridge`** — a BepInEx plugin (C#) injected into WorldBox that exposes a local HTTP API to the game's internals.
-2. **`worldbox-mcp`** — a Python MCP server distributed via PyPI that translates MCP tool calls into HTTP requests.
+- **`WorldBoxBridge`** — a [BepInEx 5](https://bepinex.org/) plugin (C#) injected into WorldBox that exposes a local, auth-protected HTTP API to the game's internals.
+- **`worldbox-mcp`** — a Python MCP server distributed via PyPI (`uvx worldbox-mcp`) that translates MCP tool calls into HTTP requests against the mod.
+
+The mod uses **only reflection** to access game types — no static binding — so it survives WorldBox updates as long as core class names stay stable. All asset ids (tile types, actor races, powers, world speeds) are discovered at runtime from the running build, so the catalog is always correct.
 
 ## Quickstart
 
 ### 1. Install the in-game mod
 
-Requires WorldBox installed and **Experimental Mode** enabled in-game (Settings → Experimental Mode).
+Requires WorldBox installed (Steam) and **Experimental Mode** enabled in-game (Settings → Experimental Mode).
 
 ```powershell
 # Windows
@@ -43,14 +72,18 @@ iex (irm https://raw.githubusercontent.com/fullya99/worldbox-mcp/main/scripts/in
 curl -fsSL https://raw.githubusercontent.com/fullya99/worldbox-mcp/main/scripts/install-mod.sh | bash
 ```
 
-Launch WorldBox once. The mod auto-generates a config + token at `<worldbox>/BepInEx/config/WorldBoxBridge.cfg`.
+This downloads BepInEx + the latest `WorldBoxBridge.dll`, installs both into your WorldBox folder, and generates a per-install random auth token. Launch WorldBox once and look for this line in `BepInEx/LogOutput.log`:
+
+```
+[Info: WorldBoxBridge] listening on http://127.0.0.1:8723
+```
 
 ### 2. Plug it into your AI client
 
-The MCP server runs via `uvx` — no install required.
+The MCP server runs via `uvx` (zero install) thanks to the [uv](https://docs.astral.sh/uv/) tooling.
 
 <details>
-<summary><strong>Claude Code</strong></summary>
+<summary><strong>Claude Code</strong> — one command</summary>
 
 ```bash
 claude mcp add worldbox -- uvx worldbox-mcp
@@ -106,52 +139,61 @@ mcpServers:
 ```
 </details>
 
-See [docs/install/](docs/install/) for any other MCP-compatible client.
+Any other MCP-compatible client: see [`docs/install/manual.md`](docs/install/manual.md). The server also supports a `--http` flag for Streamable HTTP transport.
 
 ### 3. Try it
 
+In your agent client:
+
 ```
-> Build me a Roman empire surrounded by hostile dragons and let evolution run for 50 years.
+> Call worldbox_health to verify the bridge is connected.
+> Now list_actors and pick a few interesting races, then build me
+  a small ecology experiment near the center of the map.
 ```
 
-## What can it do?
+## The 19 tools
 
-Three generic primitives cover **100% of WorldBox actions** through the game's own asset registry:
+| Category | Tools | What for |
+|---|---|---|
+| **Meta** | `worldbox_health`, `worldbox_capabilities` | Liveness + introspection |
+| **Discovery** | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers` | Enumerate asset ids the running game exposes — ~20 tiles, ~320 actors, ~340 powers on stock 0.51.x |
+| **Action** | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` | Modify the world: trigger powers, spawn creatures, paint terrain |
+| **Read** | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_screenshot` | Observe before deciding |
+| **Control** | `worldbox_pause`, `worldbox_resume`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` | Simulation flow + world lifecycle |
 
-| Tool | Covers |
-|---|---|
-| `paint_tile(x, y, tile_id, radius?)` | Every terrain type (water, lava, sand, grass variants, forests, roads, …) |
-| `spawn(entity_id, x, y, count?, kingdom_id?)` | Every actor (humans, elves, orcs, dragons, demons, titans, kraken, cthulhu, all animals…) |
-| `invoke_power(power_id, x?, y?, args?)` | Every disaster + global toggle (meteor, nuke, volcano, tsunami, plague, peace, civ on/off, …) |
+Each tool has rich docstrings the agent reads at startup to decide when to call what. Asset ids that don't exist trigger `UNKNOWN_ASSET` errors with **Levenshtein `did_you_mean` suggestions** drawn from the live catalog.
 
-Plus discovery (`list_tiles`, `list_actors`, `list_powers`), read-only inspection (`get_world_state`, `query_actors`, `screenshot`), and global control (`pause`, `set_speed`, `time_skip`, `generate_world`, `save_world`, `load_world`, `camera_goto`).
+Full reference: **[docs/command-reference.md](docs/command-reference.md)** (auto-generated from `capabilities()`).
 
-→ Full reference: [docs/command-reference.md](docs/command-reference.md) (auto-generated from `capabilities()`)
+## Design principles
+
+- **Survives game updates.** Every game type/method is resolved by reflection with caching and explicit warnings if a symbol disappears — a renamed class disables only the affected command, not the whole bridge. The mod also reports the WorldBox version and the SHA256 of `Assembly-CSharp.dll` in every `/health` so bug reports are traceable.
+- **100% coverage through 3 primitives.** `invoke_power` alone covers ~270 actions because the in-game GodPower model unifies spawns, disasters, and toggles. `spawn` reaches the actor catalog directly for non-power creatures. `paint_tile` handles terrain. The discovery tools tell the agent what's valid right now in this build.
+- **Local-only by design.** The HTTP bridge binds **only** to `127.0.0.1` — `0.0.0.0` is refused at startup. Auth is a per-install random token in `BepInEx/config/WorldBoxBridge.cfg`. Constant-time token comparison. No telemetry, no remote endpoints.
+- **Production-grade.** Typed (mypy strict + C# nullable enabled), tested (17 unit + integration tests in CI), formatted (ruff + csharpier), signed releases via `release-please`, automated CI/CD across Win/Linux/Mac × Py 3.11–3.13.
 
 ## Compatibility
 
-| WorldBox version | Mod version | Status |
-|---|---|---|
-| 0.x (Unity 2022.3.60f1, Mono) | 0.1.x | ✅ Tested |
+| WorldBox version | Unity | Mod version | Status |
+|---|---|---|---|
+| 0.51.2 | 2022.3.60f1 (Mono) | 0.1.x | ✅ validated end-to-end |
 
-See [docs/compatibility.md](docs/compatibility.md) for the full matrix.
+A daily CI cron monitors WorldBox releases on Steam and opens a tracking issue when a new version ships — so update breakage gets caught the day-of. See [`docs/compatibility.md`](docs/compatibility.md).
 
-## Documentation
+## Architecture deep-dive
 
-Full docs: **<https://fullya99.github.io/worldbox-mcp/>**
-
-- [Architecture](docs/architecture.md)
-- [Protocol spec](docs/protocol.md)
-- [Command reference](docs/command-reference.md)
-- [Game API notes](docs/game-api-notes.md)
-- [Contributing](CONTRIBUTING.md)
+- [`docs/architecture.md`](docs/architecture.md) — component layout, thread model, lifecycle
+- [`docs/protocol.md`](docs/protocol.md) — exact HTTP/JSON contract between server and mod
+- [`docs/game-api-notes.md`](docs/game-api-notes.md) — reflection paths into WorldBox's internals (lives alongside the code, updated per game version)
+- [`docs/development.md`](docs/development.md) — local dev setup + testing
+- [`examples/scenarios/ecology_smoke.py`](examples/scenarios/ecology_smoke.py) — runnable end-to-end demo script
 
 ## Contributing
 
-Issues, PRs, and adding new commands are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues, PRs, new commands welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). The shortest path to a useful contribution: pick a power id from `list_powers` that has interesting arguments (like a disaster with a radius), and add a typed convenience wrapper around `invoke_power` for it.
 
 ## License
 
 [MIT](LICENSE) © 2026 fullya99
 
-> _worldbox-mcp is an unofficial community project and is not affiliated with or endorsed by Maxim Karpenko or Superworldbox._
+> _worldbox-mcp is an unofficial community project and is not affiliated with or endorsed by the WorldBox developers._
