@@ -1,0 +1,257 @@
+# CLAUDE.md — context for future Claude Code sessions
+
+Auto-loaded by Claude Code when working in this repo. Read this first; it'll save you 30+ minutes of re-discovery.
+
+---
+
+## What this project is
+
+**`worldbox-mcp`** is a two-piece bridge that lets any MCP-compatible AI client (Claude Code, OpenCode, Codex, Cursor, Continue, …) directly control the live game **[WorldBox](https://www.superworldbox.com/)** (Unity 2022.3.60f1, Mono backend).
+
+Two components, shipped from this monorepo:
+
+1. **`WorldBoxBridge`** (`mod/`): C# BepInEx 5 plugin (.NET Framework 4.6.2) injected into `worldbox.exe`. Exposes a local-only authenticated HTTP API on `127.0.0.1:8723` to the game's internals via reflection.
+2. **`worldbox-mcp`** (`server/`): Python 3.11+ MCP server, distributed on **[PyPI](https://pypi.org/project/worldbox-mcp/)** as `worldbox-mcp`. Auto-discovers the mod's auth token, proxies MCP tool calls to the bridge.
+
+End user runs `claude mcp add worldbox -- uvx worldbox-mcp` (or equivalent for their client). The server spawns on demand via `uvx`, talks HTTP to the bridge, no manual install or Python virtualenv needed.
+
+**20 MCP tools** across meta / discovery / action / read / control — see `docs/command-reference.md` for the live list.
+
+---
+
+## Repo layout (the parts that matter)
+
+```
+mod/                                   BepInEx C# plugin
+├── WorldBoxBridge.sln
+├── Directory.Build.props              Nullable + warnings-as-errors + WorldBoxManagedDir resolution
+├── Directory.Packages.props           Central NuGet versions
+├── NuGet.config                       Explicit nuget.org + bepinex.dev feeds
+├── src/WorldBoxBridge/
+│   ├── Plugin.cs                      BepInEx entry — wires config, dispatcher, registry, HTTP
+│   ├── BridgeConfig.cs                Token + host + port + enabled (BepInEx ConfigFile)
+│   ├── PluginInfo.cs                  Version constant (kept in sync with csproj manually for now)
+│   ├── Http/
+│   │   ├── HttpBridge.cs              TcpListener-based HTTP/1.1 (NOT HttpListener — see Gotchas)
+│   │   └── ErrorEnvelope.cs           Unified JSON error shape + ErrorCode constants
+│   ├── Threading/
+│   │   └── MainThreadDispatcher.cs    Injects callback into Unity PlayerLoop.Update
+│   ├── Reflection/
+│   │   ├── GameRefs.cs                Cached Type.GetType lookups, fail-soft
+│   │   ├── AssetCatalog.cs            Generic enumeration of AssetManager.* libraries
+│   │   ├── WorldAccess.cs             MapBox.instance + units/kingdoms/cities accessors
+│   │   └── VersionDetector.cs         Game version + Assembly-CSharp SHA256
+│   ├── Commands/
+│   │   ├── ICommand.cs                Command interface + CommandCategory enum
+│   │   ├── CommandRegistry.cs         name → ICommand registry
+│   │   ├── HealthCommand.cs           Meta
+│   │   ├── Discovery/                 list_tiles, list_actors, list_powers
+│   │   ├── Action/                    invoke_power, spawn, paint_tile (+ BridgeRejectionException)
+│   │   ├── Read/                      get_world_state, get_tile, list_kingdoms, list_cities,
+│   │   │                                query_actors, screenshot
+│   │   └── Control/                   pause, resume, set_speed, generate_world, save_world,
+│   │                                    load_world
+│   └── AssetSuggester.cs              Levenshtein for did_you_mean
+└── tests/WorldBoxBridge.Tests/        xUnit, net8, linked-sources (no Unity dep)
+
+server/                                Python MCP server
+├── pyproject.toml                     Hatchling, deps: mcp, httpx, pydantic, structlog
+├── src/worldbox_mcp/
+│   ├── __init__.py                    __version__
+│   ├── __main__.py                    CLI: stdio (default), --http, --self-check
+│   ├── server.py                      FastMCP factory + tool registration
+│   ├── transport.py                   stdio / Streamable HTTP selector
+│   ├── client.py                      httpx async wrapper around HttpBridge
+│   ├── config.py                      Env + auto-discover BepInEx config
+│   ├── errors.py                      BridgeError + TransportError
+│   └── tools/
+│       ├── meta.py                    worldbox_health, worldbox_capabilities
+│       ├── discovery.py               worldbox_list_*
+│       ├── action.py                  worldbox_invoke_power / spawn / paint_tile
+│       ├── read.py                    worldbox_get_* / list_* / query_actors / screenshot
+│       └── control.py                 worldbox_pause / resume / set_speed / generate / save / load
+└── tests/                             pytest (unit + integration with fake bridge + e2e)
+
+docs/                                  MkDocs Material — published at fullya99.github.io/worldbox-mcp
+├── index.md
+├── architecture.md
+├── protocol.md                        HTTP/JSON spec
+├── command-reference.md               20 tools + error codes
+├── game-api-notes.md                  ★ verified reflection paths into WorldBox internals
+├── compatibility.md                   WorldBox × mod version matrix
+├── development.md                     local dev + testing
+└── install/                           One page per client (claude-code, opencode, codex, cursor, continue, manual)
+
+examples/
+├── client-configs/                    JSON snippets to paste into each client
+├── prompts/                           Demo prompts (godmode-ecology, build-civilization, …)
+└── scenarios/ecology_smoke.py         End-to-end agentic loop using only MCP tools
+
+scratch/                               Decompiled Assembly-CSharp.dll types — gitignored
+                                       Regenerate via the ilspycmd one-liners below.
+
+scripts/
+├── install-mod.ps1 / .sh              Downloads BepInEx + DLL release, generates token
+├── dev-setup.ps1                      winget .NET SDK 8 + uv (Windows dev bootstrap)
+└── verify-install.ps1                 Post-install sanity check
+```
+
+---
+
+## Day-to-day commands
+
+All assume the repo root as cwd.
+
+```bash
+# Build mod (requires .NET SDK 8 and a local WorldBox install at WORLDBOX_DIR)
+cd mod
+WORLDBOX_DIR='X:\GAMES\steamapps\common\worldbox' dotnet build --configuration Release
+
+# Test mod (no game needed — linked-source pattern)
+cd mod && dotnet test
+
+# Deploy mod to running install (Windows)
+Get-Process worldbox | Stop-Process -Force
+Copy-Item mod/src/WorldBoxBridge/bin/Release/WorldBoxBridge.dll \
+          'X:\GAMES\steamapps\common\worldbox\BepInEx\plugins\WorldBoxBridge.dll' -Force
+Start-Process 'X:\GAMES\steamapps\common\worldbox\worldbox.exe'
+
+# Sync Python server deps + run tests
+cd server && uv sync --all-extras && uv run pytest tests/unit tests/integration
+
+# Self-check the Python MCP server (no bridge needed)
+cd server && uv run worldbox-mcp --self-check --no-bridge-required
+
+# Run the e2e ecology scenario against a live game
+cd server && uv run python ../examples/scenarios/ecology_smoke.py
+
+# Decompile a game type — drop output into scratch/ for grepping
+$env:DOTNET_ROOT="$env:USERPROFILE\.dotnet"; $env:DOTNET_ROLL_FORWARD='Major'
+$env:PATH="$env:USERPROFILE\.dotnet;$env:USERPROFILE\.dotnet\tools;"+$env:PATH
+ilspycmd -t MapBox -r 'X:\GAMES\steamapps\common\worldbox\worldbox_Data\Managed' \
+  'X:\GAMES\steamapps\common\worldbox\worldbox_Data\Managed\Assembly-CSharp.dll' > scratch/MapBox.cs
+# Generic types use backtick-arity, e.g. ilspycmd -t 'AssetLibrary`1' ...
+```
+
+---
+
+## Conventions
+
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/) **in English**. `feat:` / `fix:` / `docs:` / `chore:` / `ci:` / `test:` / `refactor:` / `perf:`. release-please reads them to bump SemVer + write CHANGELOG.
+- **C# style**: `<Nullable>enable</Nullable>` + `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`. Format via `csharpier`.
+- **Python style**: `ruff` (format + lint) + `mypy --strict`. Type-annotate everything; `Any` only at MCP boundaries.
+- **No `[email protected]` in workflows**: use real action refs like `pre-commit/[email protected]`. Cloudflare email-obfuscation has bitten us — `actionlint` catches it.
+- **No `System.ValueTuple`**: not always loadable under Unity Mono on net462. Use plain `readonly struct` for multi-value returns / dict keys.
+- **All Unity API calls go through `MainThreadDispatcher.RunOnMainThreadAsync`**. Anything else corrupts game state silently.
+
+---
+
+## Adding a new MCP tool — 5-minute checklist
+
+1. **Mod side** (`mod/src/WorldBoxBridge/Commands/<Category>/<Name>Command.cs`):
+   - Implement `ICommand`. Pick a `CommandCategory`. Set `RequiresMainThread`.
+   - Reuse `AssetCatalog.Resolve` for any asset-id input (gives free `did_you_mean`).
+   - Reuse `WorldAccess` for `MapBox` / `units` / `kingdoms` / `cities` access.
+   - Throw `BridgeRejectionException` (in `Commands.Action` namespace) for structured errors. HttpBridge maps it to the right HTTP status + envelope.
+2. **Register** in `mod/src/WorldBoxBridge/Plugin.cs#RegisterCommands` (one line).
+3. **Python side** (`server/src/worldbox_mcp/tools/<category>.py`):
+   - Add a `@server.tool(name="worldbox_<your_name>", description=...)` function.
+   - **Description matters**: it's what Claude reads to decide when to call your tool. Be concrete about inputs/outputs and edge cases.
+4. **Update** `docs/command-reference.md` with the new tool in its category table.
+5. **Build + deploy + smoke-test** with the cheat-sheet commands above.
+
+---
+
+## Game API gotchas (the hard-won lessons)
+
+These are bugs / mismatches we hit and fixed. **If something in the reflection layer breaks, check these first.**
+
+1. **`System.Net.HttpListener` silently doesn't bind** under Unity 2022.3 Mono. `IsListening == true` but `netstat` shows no port. Use `TcpListener` + a hand-rolled HTTP/1.1 parser — that's why `HttpBridge.cs` looks like it does. See [Unity Discussions #755558](https://discussions.unity.com/t/httplistener-ignores-port-on-some-windows-platform-s/755558).
+
+2. **`new TcpListener(IPAddress.Parse("127.0.0.1"), port)` silently fails to bind**. The `Parse` path produces an `IPAddress` instance Mono treats differently from the static constant. Always use `IPAddress.Loopback` (or `IPAddress.IPv6Loopback` / `IPAddress.Any` if you actually want those). `BridgeConfig.AssertLoopbackOnly` + `HttpBridge`'s host-to-IPAddress switch enforces this.
+
+3. **BepInEx `MonoBehaviour` GameObjects get destroyed shortly after Awake** on this game. Our `MainThreadDispatcher` does NOT live on a MonoBehaviour — it injects a delegate directly into Unity's `PlayerLoop` Update phase (`UnityEngine.LowLevel.PlayerLoop.SetPlayerLoop`). The `PlayerLoop` entry is part of the engine's tick table and survives lifecycle quirks.
+
+4. **`SimSystemManager<,>` has `getSimpleList()`; `MetaSystemManager<,>` does NOT.** Both manager families inherit from `CoreSystemManager<,>` which implements `IEnumerable<T>`. To iterate any manager (Actor / Kingdom / City) **use the `IEnumerable` interface**, not `getSimpleList` reflection — that's the `WorldAccess.GetSimpleList` body. Same goes for `Count` — it's a property on `CoreSystemManager`.
+
+5. **`System.ValueTuple` isn't always loadable under Unity Mono** (out-of-band on net462). Tuple syntax in method signatures, field types, or dictionary keys can cause `TypeLoadException` at first JIT. Replace with `readonly struct`. We have `WorldAccess.MapDimensions`, `AssetCatalog.TypeFieldKey`, `HttpBridge.HeaderReadResult` for that reason.
+
+6. **`Type.GetMethod(name, flags)` without explicit arg types throws `AmbiguousMatchException`** as soon as the named method has overloads. `Actor.getName` and `WorldTile.setTileType` both have multiple overloads. `WorldAccess.CachedMethod` enumerates `GetMethods()` and filters manually instead of using the convenience overload.
+
+7. **Game powers without a `click_action` delegate**: some entries in `AssetManager.powers` are UI-only (`plague`, `volcano`). They open submenus in-game. `invoke_power` returns `GAME_REJECTED` for these. Workaround for full coverage is on the v0.3+ roadmap.
+
+8. **`SaveManager.saveWorldToDirectory` NREs if no world is loaded** (calls deep into `World.world.items.diagnostic()`). `SaveWorldCommand` pre-flights with `_world.Width > 0` and returns `GAME_REJECTED` with a clear message.
+
+9. **`Application.unityVersion` reports `"2022.3.60f1"` but the build is `2022.3.60.6251517` (per BepInEx log)**. The mod uses `Application.unityVersion` (the public-facing string) in `/health`.
+
+---
+
+## Live entity vs asset library — two registry families
+
+Don't confuse them.
+
+| Asset library | Live entity manager |
+|---|---|
+| `AssetManager.tiles` — TileType templates | `MapBox.instance.tiles_map[x,y]` — actual WorldTile instances |
+| `AssetManager.actor_library` — ActorAsset templates | `MapBox.instance.units` — ActorManager of live Actor instances |
+| `AssetManager.kingdoms` — KingdomAsset templates (race definitions) | `MapBox.instance.kingdoms` — KingdomManager of live Kingdom instances |
+| Iterated via `AssetLibrary<T>.list` field | Iterated via `IEnumerable<T>` (CoreSystemManager) |
+
+`list_tiles` / `list_actors` / `list_powers` query the asset library side.
+`list_kingdoms` / `list_cities` / `query_actors` / `get_world_state` query the live entity side.
+
+---
+
+## Release process
+
+1. Land work on `main` with Conventional Commits.
+2. **release-please** ([googleapis/release-please-action](https://github.com/googleapis/release-please)) runs on every push to `main`. It opens (or updates) a PR titled `chore(main): release X.Y.Z` containing the version bumps in `pyproject.toml` / `csproj` / `.release-please-manifest.json` plus the auto-generated `CHANGELOG.md` section. `feat:` bumps minor; `fix:` bumps patch; `feat!:` bumps major.
+3. **Merge that PR**. release-please then:
+   - Tags `vX.Y.Z`
+   - Creates a GitHub Release with the CHANGELOG body
+   - Sets `release_created=true` on the action outputs
+4. The same `release.yml` workflow has dependent jobs gated on `release_created==true`:
+   - `publish-pypi` — builds wheel/sdist with `uv build` and publishes via [PyPI trusted publisher](https://docs.pypi.org/trusted-publishers/). Environment `pypi` (configured both in repo and on pypi.org).
+   - `build-and-attach-mod` — Windows runner, `dotnet build`, ZIP + SHA256 + GH release upload.
+5. **Limitation**: `build-and-attach-mod` currently fails because the CI runner doesn't have the WorldBox Managed DLLs (UnityEngine.* + Assembly-CSharp.dll). Until we wire in a Unity-refs download (Phase 5 of the long plan), build the mod ZIP **locally** and upload manually:
+   ```powershell
+   # Local build
+   $env:WORLDBOX_DIR='X:\GAMES\steamapps\common\worldbox'
+   dotnet build mod --configuration Release
+   # Stage
+   $stage = "release-stage\WorldBoxBridge"
+   New-Item -ItemType Directory -Force -Path $stage
+   Copy-Item mod/src/WorldBoxBridge/bin/Release/WorldBoxBridge.dll "$stage/"
+   Copy-Item scripts/install-mod.ps1, LICENSE, README.md $stage/
+   Compress-Archive -Path $stage -DestinationPath release-stage/WorldBoxBridge-vX.Y.Z.zip
+   (Get-FileHash release-stage/WorldBoxBridge-vX.Y.Z.zip -Algorithm SHA256).Hash `
+     | Out-File release-stage/WorldBoxBridge-vX.Y.Z.zip.sha256
+   # Upload
+   gh release upload vX.Y.Z release-stage/WorldBoxBridge-vX.Y.Z.zip{,.sha256} --clobber
+   ```
+
+---
+
+## When something breaks — diagnostic flow
+
+| Symptom | First thing to check |
+|---|---|
+| Mod doesn't load on launch | `<worldbox>/BepInEx/LogOutput.log`. Look for `WorldBoxBridge vX.Y.Z starting up...` line. If missing, BepInEx didn't pick up the DLL — wrong folder. |
+| Bridge listening but `/health` connection refused | `Get-Process worldbox` + `netstat -ano \| Select-String 8723` — confirm the port is bound. If `[diag] after Start(): IsBound=True` in the log but netstat is empty, you've hit Mono Unity bug #1 or #2 (see Gotchas). |
+| All commands timeout after 30s | The `MainThreadDispatcher` isn't running. Check the log for `[dispatcher] injected into Unity PlayerLoop Update phase`. If absent, gotcha #3 — re-verify the PlayerLoop injection survived. |
+| Asset id rejected with `UNKNOWN_ASSET` but you're sure it exists | Call `list_*` from the same session — game might have renamed it. Use the `did_you_mean` suggestions. |
+| `list_kingdoms` / `list_cities` return 0 with kingdoms alive | Gotcha #4 — re-verify `WorldAccess.GetSimpleList` is using `IEnumerable` not `getSimpleList`. Bug pre-v0.1.1. |
+| `release.yml` PyPI publish fails | Trusted publisher config drift. Verify <https://pypi.org/manage/project/worldbox-mcp/settings/publishing/> has the GitHub provider with `release.yml` + `pypi` environment. |
+| `dotnet build` fails locally with "Assembly-CSharp not found" | `WORLDBOX_DIR` env var not set, or set to wrong path. `Directory.Build.props` does fallback heuristics including `X:\GAMES\steamapps\common\worldbox`. Set it explicitly. |
+
+---
+
+## What I'd build next (roadmap notes)
+
+- **`scripts/gen-docs.py`** — calls `worldbox_capabilities` against a running game and regenerates `docs/command-reference.md` from the JSON Schema. Removes the drift risk between code and doc tool counts.
+- **CI mod build** — wire `actions/cache` + a script that pulls only the UnityEngine.* DLLs we reference from a stable URL (or download a stripped Unity reference assembly pack). Unblocks the `build-and-attach-mod` job.
+- **Workaround for UI-only powers** (`plague`, `volcano`, …) — research a path through `World.world.disasters_manager` or similar to trigger them programmatically.
+- **`get_actor(name_or_id)`** — single-actor lookup so the agent can drill into a specific Actor's stats without scanning the whole `query_actors` output.
+- **`terraform(action_id, x, y, radius)`** — wrap `AssetManager.terraform` for non-paint terrain mutations (raise/lower terrain, river carving, etc.).
+
+Everything else in the long plan at `~/.claude/plans/option-b-fait-un-gentle-pancake.md` (the original 600-line spec).
