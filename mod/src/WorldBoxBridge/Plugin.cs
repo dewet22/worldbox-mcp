@@ -6,6 +6,7 @@ using UnityEngine;
 using WorldBoxBridge.Commands;
 using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Commands.Discovery;
+using WorldBoxBridge.Commands.Read;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Threading;
@@ -49,9 +50,10 @@ public sealed class Plugin : BaseUnityPlugin
 
             var gameRefs = new GameRefs(Logger);
             var assetCatalog = new AssetCatalog(gameRefs, Logger);
+            var worldAccess = new WorldAccess(gameRefs, Logger);
 
             var registry = new CommandRegistry();
-            RegisterCommands(registry, version, config, assetCatalog, gameRefs);
+            RegisterCommands(registry, version, config, assetCatalog, gameRefs, worldAccess);
             Logger.LogInfo($"{registry.Count} commands registered.");
 
             _bridge = new HttpBridge(Logger, config, registry, version);
@@ -102,7 +104,8 @@ public sealed class Plugin : BaseUnityPlugin
         VersionInfo version,
         BridgeConfig config,
         AssetCatalog assetCatalog,
-        GameRefs gameRefs
+        GameRefs gameRefs,
+        WorldAccess worldAccess
     )
     {
         registry.Register(new HealthCommand(version, config));
@@ -112,9 +115,18 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ListActorsCommand(assetCatalog));
         registry.Register(new ListPowersCommand(assetCatalog));
 
-        // Phase 3 — generic actions. invoke_power covers spawn-by-race + every
-        // disaster + global toggles via the game's unified GodPower model.
+        // Actions — modify the world.
         registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, Logger));
+        registry.Register(new SpawnCommand(assetCatalog, worldAccess, Logger));
+        registry.Register(new PaintTileCommand(assetCatalog, worldAccess, Logger));
+
+        // Read — observe the world before/after acting.
+        registry.Register(new GetWorldStateCommand(worldAccess));
+        registry.Register(new GetTileCommand(worldAccess));
+        registry.Register(new ListKingdomsCommand(worldAccess));
+        registry.Register(new ListCitiesCommand(worldAccess));
+        registry.Register(new QueryActorsCommand(worldAccess));
+        registry.Register(new ScreenshotCommand());
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max);

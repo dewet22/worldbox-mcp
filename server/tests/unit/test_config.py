@@ -47,9 +47,11 @@ def test_load_settings_explicit_env_overrides_everything(monkeypatch: pytest.Mon
     assert settings.bridge.token == "explicit-token-value"
 
 
-def test_load_settings_token_required() -> None:
+def test_load_settings_token_required(tmp_path: Path) -> None:
+    # Point auto-discovery at an empty directory so it doesn't find any real WorldBox
+    # install on the dev machine. Without a token from env or cfg the call must fail fast.
     with pytest.raises(ConfigError, match="token not found"):
-        load_settings(env={})
+        load_settings(env={"WORLDBOX_MCP_WORLDBOX_DIR": str(tmp_path / "nowhere")})
 
 
 def test_load_settings_invalid_port_raises() -> None:
