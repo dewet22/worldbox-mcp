@@ -5,6 +5,7 @@ using BepInEx.Logging;
 using UnityEngine;
 using WorldBoxBridge.Commands;
 using WorldBoxBridge.Commands.Action;
+using WorldBoxBridge.Commands.Control;
 using WorldBoxBridge.Commands.Discovery;
 using WorldBoxBridge.Commands.Read;
 using WorldBoxBridge.Http;
@@ -127,6 +128,11 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ListCitiesCommand(worldAccess));
         registry.Register(new QueryActorsCommand(worldAccess));
         registry.Register(new ScreenshotCommand());
+
+        // Control — simulation flow.
+        registry.Register(new PauseCommand(gameRefs));
+        registry.Register(new ResumeCommand(gameRefs));
+        registry.Register(new SetSpeedCommand(assetCatalog, gameRefs));
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max);
