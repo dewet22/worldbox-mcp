@@ -1,0 +1,51 @@
+version: 2
+
+updates:
+  # Python (MCP server)
+  - package-ecosystem: "pip"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    groups:
+      python-minor:
+        update-types: ["minor", "patch"]
+
+  # .NET (BepInEx mod)
+  - package-ecosystem: "nuget"
+    directory: "/mod"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "dotnet"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    ignore:
+      # Pin BepInEx — bumps must be manual (cross-version testing required)
+      - dependency-name: "BepInEx.Core"
+      - dependency-name: "BepInEx.PluginInfoProps"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
+      include: "scope"

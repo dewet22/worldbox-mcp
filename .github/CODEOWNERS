@@ -1,0 +1,21 @@
+# Code owners for worldbox-mcp
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Each line: <path-pattern> <user-or-team> [<more-users>...]
+# More specific patterns later override earlier ones.
+
+# Default owner: everything not matched below
+*                       @fullya99
+
+# Mod (BepInEx C# plugin)
+/mod/                   @fullya99
+
+# MCP server (Python)
+/server/                @fullya99
+
+# Documentation site
+/docs/                  @fullya99
+
+# CI / release / GitHub config
+/.github/               @fullya99
+/scripts/               @fullya99

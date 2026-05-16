@@ -1,0 +1,54 @@
+# Pre-commit hooks for worldbox-mcp.
+# Install: `pip install pre-commit && pre-commit install`
+# Run on all files: `pre-commit run --all-files`
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^server/
+      - id: ruff-format
+        files: ^server/
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^server/src/
+        additional_dependencies:
+          - pydantic>=2.0
+          - mcp
+          - httpx
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
+
+  # C# formatting via csharpier — invoked locally; CI uses dotnet csharpier directly
+  - repo: local
+    hooks:
+      - id: csharpier
+        name: csharpier
+        entry: dotnet csharpier --check
+        language: system
+        files: ^mod/.*\.cs$
+        pass_filenames: false

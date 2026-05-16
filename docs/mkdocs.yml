@@ -1,0 +1,90 @@
+site_name: worldbox-mcp
+site_description: An MCP server that lets any AI agent control WorldBox.
+site_url: https://fullya99.github.io/worldbox-mcp/
+repo_url: https://github.com/fullya99/worldbox-mcp
+repo_name: fullya99/worldbox-mcp
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; 2026 fullya99 — MIT License.
+
+docs_dir: .
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - include-markdown
+  - section-index
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - Install:
+      - install/index.md
+      - Claude Code: install/claude-code.md
+      - OpenCode: install/opencode.md
+      - Codex CLI: install/codex.md
+      - Cursor: install/cursor.md
+      - Continue: install/continue.md
+      - Any other MCP client: install/manual.md
+  - Reference:
+      - Architecture: architecture.md
+      - Protocol spec: protocol.md
+      - Command reference: command-reference.md
+      - Game API notes: game-api-notes.md
+      - Compatibility: compatibility.md
+  - Contributing:
+      - Development: development.md
+      - Contributing guide: contributing.md
+  - Changelog: changelog.md

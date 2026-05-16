@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / Discussion
+    url: https://github.com/fullya99/worldbox-mcp/discussions
+    about: Ask a question or share an idea before filing an issue.
+  - name: Security vulnerability
+    url: https://github.com/fullya99/worldbox-mcp/security/advisories/new
+    about: Privately report a security issue (see SECURITY.md).
+  - name: MCP specification
+    url: https://modelcontextprotocol.io
+    about: Generic Model Context Protocol questions.

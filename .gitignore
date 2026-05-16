@@ -1,0 +1,79 @@
+# ───────── .NET / C# ─────────
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.dll.mdb
+*.exe.mdb
+packages.lock.json.bak
+.idea/
+*.iml
+
+# ───────── Python ─────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+.venv/
+venv/
+ENV/
+
+# uv
+.uv-cache/
+
+# ───────── Editors ─────────
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ───────── Project-local ─────────
+# Local credentials / tokens (never commit)
+*.local
+*.local.*
+secrets/
+.env
+.env.*
+!.env.example
+
+# Local WorldBox install symlinks / cached dlls
+mod/local-refs/
+mod/lib/
+*.snk
+
+# Build outputs of the mod
+WorldBoxBridge-v*.zip
+
+# Decompilation scratch
+scratch/
+sandbox/
+
+# Docs build
+docs/site/
+.cache/
+
+# Pre-commit
+.pre-commit-cache/

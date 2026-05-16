@@ -1,0 +1,80 @@
+name: WorldBox compatibility check
+
+# Daily check: detect new WorldBox releases on Steam (via SteamDB),
+# and open a tracking issue when one is found so we can re-verify
+# the mod's reflection bindings against the new Assembly-CSharp.dll.
+
+on:
+  schedule:
+    - cron: "0 7 * * *"   # 07:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    name: Detect new WorldBox version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch latest version from Steam
+        id: steam
+        run: |
+          # WorldBox Steam appid = 1206560
+          # Steam Web API exposes basic info; SteamDB is unofficial.
+          curl -fsSL \
+            "https://api.steampowered.com/ISteamApps/UpToDateCheck/v1/?appid=1206560&version=1" \
+            -o steam.json || echo '{}' > steam.json
+          echo "raw=$(cat steam.json)" >> $GITHUB_OUTPUT
+
+      - name: Read last seen version
+        id: last
+        run: |
+          if [ -f .github/.last-worldbox-version ]; then
+            echo "version=$(cat .github/.last-worldbox-version)" >> $GITHUB_OUTPUT
+          else
+            echo "version=unknown" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compare and open issue if changed
+        if: steps.steam.outputs.raw != steps.last.outputs.version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW: ${{ steps.steam.outputs.raw }}
+          OLD: ${{ steps.last.outputs.version }}
+        run: |
+          # Only open a new issue if no open compat issue exists yet
+          existing=$(gh issue list \
+            --label "wb-update" \
+            --state open \
+            --json number \
+            --jq '.[0].number' || echo "")
+          if [ -n "$existing" ]; then
+            echo "Open compat issue #$existing already exists; skipping."
+            exit 0
+          fi
+
+          gh issue create \
+            --title "compat: new WorldBox version detected" \
+            --label "wb-update,needs-triage" \
+            --body "$(cat <<EOF
+          The daily compatibility check detected a change in WorldBox's published version on Steam.
+
+          - Previous snapshot: \`$OLD\`
+          - Current snapshot:  \`$NEW\`
+
+          Next steps for a maintainer:
+
+          1. Pull the new \`Assembly-CSharp.dll\` from a local install.
+          2. Decompile with ILSpy and diff key types referenced in [\`docs/game-api-notes.md\`](../blob/main/docs/game-api-notes.md): \`MapBox\`, \`World\`, \`AssetManager\`, \`Actor\`, \`Kingdom\`.
+          3. Run the e2e smoke suite (\`server/tests/e2e\`) against the updated game.
+          4. Bump compatibility matrix in \`docs/compatibility.md\`.
+          5. Tag a patch release if anything broke.
+
+          ---
+          _Automated by \`.github/workflows/compat-check.yml\`._
+          EOF
+          )"

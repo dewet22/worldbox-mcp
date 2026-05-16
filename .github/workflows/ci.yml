@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lint-server:
+    name: Lint server (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - name: Set up Python
+        run: uv python install 3.12
+      - name: Install
+        working-directory: server
+        run: uv sync --all-extras --frozen
+      - name: ruff check
+        working-directory: server
+        run: uv run ruff check .
+      - name: ruff format check
+        working-directory: server
+        run: uv run ruff format --check .
+      - name: mypy
+        working-directory: server
+        run: uv run mypy --strict src
+
+  test-server:
+    name: Test server (py${{ matrix.python }} on ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - name: Set up Python ${{ matrix.python }}
+        run: uv python install ${{ matrix.python }}
+      - name: Install
+        working-directory: server
+        run: uv sync --all-extras --frozen
+      - name: Run unit + integration tests
+        working-directory: server
+        run: uv run pytest tests/unit tests/integration --cov=worldbox_mcp --cov-report=xml
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
+        uses: codecov/codecov-action@v5
+        with:
+          files: server/coverage.xml
+          fail_ci_if_error: false
+
+  lint-mod:
+    name: Lint mod (csharpier)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Install csharpier
+        run: dotnet tool install -g csharpier
+      - name: Check formatting
+        working-directory: mod
+        run: dotnet csharpier --check .
+
+  build-mod:
+    name: Build mod
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        working-directory: mod
+        run: dotnet restore --locked-mode
+      - name: Build (Release)
+        working-directory: mod
+        run: dotnet build --configuration Release --no-restore -warnaserror
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WorldBoxBridge-dll
+          path: mod/src/WorldBoxBridge/bin/Release/net462/WorldBoxBridge.dll
+          if-no-files-found: error
+
+  test-mod:
+    name: Test mod (xUnit)
+    runs-on: windows-latest
+    needs: build-mod
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore
+        working-directory: mod
+        run: dotnet restore --locked-mode
+      - name: Test
+        working-directory: mod
+        run: dotnet test --configuration Release --no-restore --logger "trx;LogFileName=test-results.trx"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mod-test-results
+          path: mod/**/TestResults/*.trx
+
+  mcp-conformance:
+    name: MCP conformance
+    runs-on: ubuntu-latest
+    needs: lint-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install 3.12
+      - name: Install server
+        working-directory: server
+        run: uv sync --frozen
+      - name: Run MCP Inspector schema check
+        working-directory: server
+        run: |
+          npx --yes @modelcontextprotocol/inspector --cli \
+            uv run worldbox-mcp \
+            --no-bridge-required \
+            --self-check
+
+  pre-commit:
+    name: Pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: pre-commit/[email protected]

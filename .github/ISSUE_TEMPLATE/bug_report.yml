@@ -1,0 +1,119 @@
+name: Bug report
+description: Something behaves incorrectly or crashes.
+title: "bug: <short description>"
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug report. To help us reproduce, please fill out all sections.
+        Vague reports without logs or versions will be auto-closed.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the problem.
+      placeholder: When I call `spawn`, the actor appears but immediately dies.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+      placeholder: The actor should survive.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal sequence of tool calls or actions.
+      placeholder: |
+        1. `pause()`
+        2. `spawn(entity_id="dragon_red", x=10, y=10)`
+        3. `resume()`
+        4. Within 5 seconds the dragon dies.
+    validations:
+      required: true
+
+  - type: input
+    id: worldbox-version
+    attributes:
+      label: WorldBox version
+      description: Steam → WorldBox → right-click → Properties → Updates, or in-game settings.
+      placeholder: "0.x.x"
+    validations:
+      required: true
+
+  - type: input
+    id: mod-version
+    attributes:
+      label: WorldBoxBridge mod version
+      description: Visible in BepInEx/LogOutput.log line "WorldBoxBridge vX.Y.Z loaded".
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: server-version
+    attributes:
+      label: worldbox-mcp (Python server) version
+      description: `pip show worldbox-mcp` or `uvx worldbox-mcp --version`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 11
+        - Windows 10
+        - macOS
+        - Linux
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: MCP client
+      options:
+        - Claude Code
+        - OpenCode
+        - Codex CLI
+        - Cursor
+        - Continue
+        - MCP Inspector
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: |
+        Paste **both**:
+        1. `<worldbox>/BepInEx/LogOutput.log` (last ~100 lines around the issue)
+        2. MCP server stderr (run with `WORLDBOX_MCP_LOG=debug`)
+      render: shell
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pre-flight
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I've searched existing issues for duplicates.
+          required: true
+        - label: I'm using the latest released versions of the mod and server.
+          required: true
+        - label: I have Experimental Mode enabled in WorldBox.
+          required: true

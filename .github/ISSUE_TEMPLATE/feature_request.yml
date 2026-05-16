@@ -1,0 +1,58 @@
+name: Feature request
+description: Suggest a new capability or improvement.
+title: "feat: <short description>"
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a feature. Please describe the user-facing outcome, not just the implementation.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the problem?
+      description: What can't you currently do, or what's awkward?
+      placeholder: I can't tell Claude to "spawn a balanced ecosystem" because there's no batch-spawn primitive.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should this look like? Tool signature, behavior, example call.
+      placeholder: |
+        Add `spawn_batch(entries: list[{entity_id, x, y, count}])` that executes atomically.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you've tried or other approaches you've thought about.
+      placeholder: Calling `spawn` in a loop works but is slow due to per-call HTTP overhead.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Where does this live?
+      multiple: true
+      options:
+        - Mod (C#)
+        - Server (Python)
+        - Docs
+        - CI / tooling
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pre-flight
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I've searched existing issues + discussions for duplicates.
+          required: true
+        - label: This feature is in scope per the project's README.
+          required: true

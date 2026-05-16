@@ -1,0 +1,88 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write   # for PyPI trusted publishing
+
+jobs:
+  release-please:
+    name: release-please
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+      version: ${{ steps.rp.outputs.version }}
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/worldbox-mcp
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - uses: astral-sh/setup-uv@v4
+      - run: uv python install 3.12
+      - name: Build wheel + sdist
+        working-directory: server
+        run: uv build
+      - name: Publish (trusted publisher, no API key)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: server/dist/
+
+  build-and-attach-mod:
+    name: Build mod + attach to release
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build (Release)
+        working-directory: mod
+        run: |
+          dotnet restore --locked-mode
+          dotnet build --configuration Release --no-restore -warnaserror
+      - name: Package mod ZIP
+        shell: pwsh
+        run: |
+          $version = "${{ needs.release-please.outputs.version }}"
+          $stage = "stage/WorldBoxBridge"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "mod/src/WorldBoxBridge/bin/Release/net462/WorldBoxBridge.dll" "$stage/"
+          Copy-Item "scripts/install-mod.ps1" "$stage/"
+          Copy-Item "README.md" "$stage/"
+          Copy-Item "LICENSE" "$stage/"
+          $zip = "WorldBoxBridge-v$version.zip"
+          Compress-Archive -Path $stage -DestinationPath $zip
+          (Get-FileHash $zip -Algorithm SHA256).Hash | Out-File "$zip.sha256"
+          Write-Output "zip=$zip" >> $env:GITHUB_OUTPUT
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: pwsh
+        run: |
+          $tag = "${{ needs.release-please.outputs.tag_name }}"
+          $version = "${{ needs.release-please.outputs.version }}"
+          gh release upload $tag "WorldBoxBridge-v$version.zip" "WorldBoxBridge-v$version.zip.sha256" --clobber

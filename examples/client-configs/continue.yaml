@@ -1,0 +1,7 @@
+# Add to ~/.continue/config.yaml
+
+mcpServers:
+  - name: worldbox
+    command: uvx
+    args:
+      - worldbox-mcp

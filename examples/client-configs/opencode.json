@@ -1,0 +1,10 @@
+{
+  "_comment": "Add to ~/.config/opencode/config.json (Linux/macOS) or %APPDATA%\\opencode\\config.json (Windows).",
+  "mcp": {
+    "worldbox": {
+      "type": "local",
+      "command": ["uvx", "worldbox-mcp"],
+      "enabled": true
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "_comment": "Add to ~/.claude.json (or run: claude mcp add worldbox -- uvx worldbox-mcp).",
+  "mcpServers": {
+    "worldbox": {
+      "command": "uvx",
+      "args": ["worldbox-mcp"]
+    }
+  }
+}

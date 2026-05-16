@@ -1,0 +1,5 @@
+# Add to ~/.codex/config.toml
+
+[mcp_servers.worldbox]
+command = "uvx"
+args = ["worldbox-mcp"]
