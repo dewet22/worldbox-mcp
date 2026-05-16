@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Session;
 using WorldBoxBridge.Threading;
+using SessionState = WorldBoxBridge.Session.Session;
 
 namespace WorldBoxBridge.Commands;
 
@@ -18,11 +19,13 @@ internal sealed class HealthCommand : ICommand
 {
     private readonly VersionInfo _version;
     private readonly BridgeConfig _config;
+    private readonly SessionState _session;
 
-    public HealthCommand(VersionInfo version, BridgeConfig config)
+    public HealthCommand(VersionInfo version, BridgeConfig config, SessionState session)
     {
         _version = version;
         _config = config;
+        _session = session;
     }
 
     public string Name => "health";
@@ -48,6 +51,9 @@ internal sealed class HealthCommand : ICommand
             assembly_csharp_sha256 = _version.AssemblyCSharpSha256,
             tick = MainThreadDispatcher.LastTick,
             enabled = _config.Enabled.Value,
+            multi_agent = !_session.Agents.IsLegacyMode,
+            scenario = _session.ScenarioPreset,
+            agent_count = _session.Agents.Count,
         };
         return Task.FromResult<object?>(payload);
     }

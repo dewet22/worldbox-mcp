@@ -7,6 +7,7 @@ using WorldBoxBridge.Commands;
 using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Commands.Control;
 using WorldBoxBridge.Commands.Discovery;
+using WorldBoxBridge.Commands.Meta;
 using WorldBoxBridge.Commands.Read;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
@@ -55,17 +56,14 @@ public sealed class Plugin : BaseUnityPlugin
             var assetCatalog = new AssetCatalog(gameRefs, Logger);
             var worldAccess = new WorldAccess(gameRefs, Logger);
 
-            var registry = new CommandRegistry();
-            RegisterCommands(registry, version, config, assetCatalog, gameRefs, worldAccess);
-            Logger.LogInfo($"{registry.Count} commands registered.");
+            // Multi-agent v0.3 Phase 2: load agents.json if it exists, else fall back to
+            // legacy single-token mode (one God agent with the credential from BridgeConfig.Token).
+            var agentsJsonPath = Path.Combine(Paths.ConfigPath, "WorldBoxBridge.agents.json");
+            var session = SessionLoader.Load(agentsJsonPath, config.Token.Value, Logger);
 
-            // Phase 1 of multi-agent v0.3: legacy single-token session.
-            // Phase 2 will swap this for an agents.toml-driven Session when the file exists.
-            var session = SessionState.Legacy(config.Token.Value);
-            Logger.LogInfo(
-                $"Session bootstrapped: scenario={session.ScenarioPreset}, "
-                    + $"agents={session.Agents.Count}, legacy_mode={session.Agents.IsLegacyMode}"
-            );
+            var registry = new CommandRegistry();
+            RegisterCommands(registry, version, config, assetCatalog, gameRefs, worldAccess, session);
+            Logger.LogInfo($"{registry.Count} commands registered.");
 
             _bridge = new HttpBridge(Logger, config, registry, version, session);
             _bridge.Start();
@@ -116,10 +114,15 @@ public sealed class Plugin : BaseUnityPlugin
         BridgeConfig config,
         AssetCatalog assetCatalog,
         GameRefs gameRefs,
-        WorldAccess worldAccess
+        WorldAccess worldAccess,
+        SessionState session
     )
     {
-        registry.Register(new HealthCommand(version, config));
+        registry.Register(new HealthCommand(version, config, session));
+
+        // Meta — multi-agent identity introspection.
+        registry.Register(new WhoAmICommand());
+        registry.Register(new SessionInfoCommand(session));
 
         // Discovery — introspect the in-game asset registries.
         registry.Register(new ListTilesCommand(assetCatalog));
