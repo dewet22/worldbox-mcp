@@ -10,8 +10,9 @@ internal static class PluginInfo
     public const string Name = "WorldBoxBridge";
 
     /// <summary>
-    /// SemVer string. Kept in sync with WorldBoxBridge.csproj's &lt;Version&gt; by release-please.
-    /// Update both together.
+    /// SemVer string. Tracked by release-please (see release-please-config.json) — do NOT
+    /// edit by hand; commit with Conventional Commits and the next release PR will bump
+    /// this in sync with WorldBoxBridge.csproj's &lt;Version&gt; and pyproject.toml.
     /// </summary>
-    public const string Version = "0.1.1";
+    public const string Version = "0.2.0"; // x-release-please-version
 }

@@ -19,6 +19,14 @@
           "type": "xml",
           "path": "mod/src/WorldBoxBridge/WorldBoxBridge.csproj",
           "xpath": "//Project/PropertyGroup/Version"
+        },
+        {
+          "type": "generic",
+          "path": "mod/src/WorldBoxBridge/PluginInfo.cs"
+        },
+        {
+          "type": "generic",
+          "path": "server/src/worldbox_mcp/__init__.py"
         }
       ]
     }

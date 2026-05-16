@@ -4,8 +4,12 @@ title: Command reference
 
 # Command reference
 
-20 MCP tools, grouped by category. Asset ids (tile / actor / power / speed) come from the
-running game's registry — call the discovery tools to enumerate them; never hardcode.
+26 MCP tools, grouped by six categories. Asset ids (tile / actor / power / speed) come
+from the running game's registry — call the discovery tools to enumerate them; never
+hardcode. The v0.3 multi-agent additions (Meta `whoami` / `session_info` /
+`turn_advance` / `objective_status`, plus the Bus category) only carry meaningful payload
+when an `agents.json` is deployed; in legacy single-token mode they return the synthetic
+`"legacy"` god agent.
 
 The agent can also dump this list at runtime by calling **`worldbox_capabilities`**, which
 returns the live JSON-Schema for every registered command. That's the source of truth — this
@@ -13,12 +17,16 @@ page tracks it but may lag.
 
 ---
 
-## Meta — basics
+## Meta — basics + multi-agent introspection
 
 | Tool | What it returns |
 |---|---|
-| `worldbox_health` | Plugin liveness + mod version + WorldBox version + Unity version + `Assembly-CSharp.dll` SHA256 + current tick. **Call this first.** |
+| `worldbox_health` | Plugin liveness + mod version + WorldBox version + Unity version + `Assembly-CSharp.dll` SHA256 + current tick + (v0.3) `multi_agent`, `scenario`, `agent_count`. **Call this first.** |
 | `worldbox_capabilities` | The full live tool list with JSON-Schema. **Call this second** if you want to know what's actually available in the build you're talking to. |
+| `worldbox_whoami` _(v0.3)_ | The caller's `agent_id`, `role`, `claimed_kingdom_id`, `permissions[]`, `scenario`, `partial_intel`. The third call every multi-agent client should make. |
+| `worldbox_session_info` _(v0.3)_ | The full session: scenario, partial_intel + turn_based flags, agent roster (without tokens), `turn_order`, `current_turn`. |
+| `worldbox_turn_advance` _(v0.3)_ | Ends the caller's turn in turn-based sessions. Returns `{previous, next, forced_by_god}`. 409 `TURN_NOT_YOURS` if it's not your turn. 400 `BAD_ARGS` if the session is not turn-based. |
+| `worldbox_objective_status` _(v0.3)_ | Per-agent declared objectives + live kingdom-population snapshot. The scoreboard primitive — the agent computes its own score. |
 
 ---
 
@@ -68,6 +76,19 @@ page tracks it but may lag.
 
 ---
 
+## Bus — inter-agent messaging (v0.3+)
+
+| Tool | What for |
+|---|---|
+| `worldbox_send_message` | Send to another agent's inbox, or `to="*"` to broadcast. Args `{to, content, kind?}`. Returns `{seq, recipients, broadcast}`. Broadcast requires `send_broadcast` permission (god / narrator only). Unknown recipient -> 400 with a helpful "Known: [...]" list. |
+| `worldbox_recv_messages` | Poll the caller's inbox. Args `{since_seq=0, max=50}` (hard ceiling 500). Non-destructive — pass the previous response's `next_cursor` as `since_seq` to avoid re-reading. Returns `{items: [{seq, from, to, kind, content, sent_utc}], count, next_cursor}`. |
+
+Inboxes are bounded (default 200 per agent, drop-oldest). Sequence numbers are bus-wide
+and monotonic — one cursor works across recipients and across reconnects. Nothing is
+persisted to disk in v0.3.
+
+---
+
 ## Error model
 
 Every error response follows this shape:
@@ -94,6 +115,9 @@ Every error response follows this shape:
 | `OUT_OF_BOUNDS` | `(x, y)` outside the current map dimensions. |
 | `GAME_REJECTED` | Game logic refused the action (e.g. spawning a land animal on water, or `plague`/`volcano` which lack a `click_action` delegate). |
 | `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. |
+| `PERMISSION_DENIED` _(v0.3)_ | The agent's role lacks the permission this command requires. HTTP 403. |
+| `FACTION_SCOPE_VIOLATION` _(v0.3)_ | The agent tried to act on a kingdom it doesn't claim. HTTP 403. |
+| `TURN_NOT_YOURS` _(v0.3)_ | Turn-based mode is active and another agent currently holds the slot. HTTP 409. |
 | `MAIN_THREAD_TIMEOUT` | A command exceeded 30s on Unity's main thread. Safety valve so the game doesn't hang. |
 | `UNAUTHORIZED` | Missing or wrong `X-WB-Token` header. Should never happen if `worldbox-mcp` auto-discovered your config. |
 | `DISABLED` | `enabled = false` in `BepInEx/config/WorldBoxBridge.cfg`. The kill-switch is engaged. |

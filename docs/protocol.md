@@ -12,13 +12,32 @@ The mod exposes a minimal HTTP/JSON API on `http://127.0.0.1:8723` (default port
 
 ## Authentication
 
-Every request must include the `X-WB-Token` header. The token is generated on first launch and stored at:
+Every request must present a bearer credential, via **either** of two headers:
 
 ```
-<worldbox>/BepInEx/config/WorldBoxBridge.cfg
+Authorization: Bearer <token>       (preferred, v0.3+)
+X-WB-Token: <token>                 (legacy single-tenant, v0.1 / v0.2)
 ```
 
-Requests without a valid token return `401 Unauthorized` immediately, before any work is queued.
+The bridge tries `Authorization: Bearer` first and falls back to `X-WB-Token`. Mixing the
+two in different requests is fine — the C# server treats them as equivalent.
+
+### Legacy single-token mode (default)
+
+If no `agents.json` is present at `<worldbox>/BepInEx/config/WorldBoxBridge.agents.json`,
+the bridge boots with one synthetic agent named `"legacy"` (role `God`, full permissions).
+Its credential is the random token generated on first launch and stored at
+`<worldbox>/BepInEx/config/WorldBoxBridge.cfg`.
+
+### Multi-agent mode (v0.3+)
+
+When `agents.json` exists, every entry registers a distinct bearer. Each authenticated
+request inherits the agent's `role`, optional `kingdom_claim`, permission bitmask, and
+inbox. See [multi-agent.md](multi-agent.md) for the full schema and four scenario presets
+(PvP / coop / hierarchical / sandbox).
+
+Requests without a valid token return `401 Unauthorized` immediately, before any work is
+queued.
 
 ## `GET /health`
 
@@ -94,8 +113,11 @@ Content-Type: application/json
 | `GAME_REJECTED` | 422 | The game accepted the dispatch but the action was logically refused. |
 | `GAME_CRASH` | 500 | An exception bubbled up from `Assembly-CSharp`. Full type + message + stack top in response. |
 | `MAIN_THREAD_TIMEOUT` | 504 | Command exceeded 30s on the main thread; it was abandoned. |
-| `UNAUTHORIZED` | 401 | Missing or wrong `X-WB-Token`. |
+| `UNAUTHORIZED` | 401 | Missing or wrong bearer credential. |
 | `DISABLED` | 503 | `enabled = false` in `WorldBoxBridge.cfg`. The kill-switch is active. |
+| `PERMISSION_DENIED` _(v0.3+)_ | 403 | The agent's role lacks the permission this command needs. |
+| `FACTION_SCOPE_VIOLATION` _(v0.3+)_ | 403 | A FactionPlayer tried to act on a kingdom it doesn't claim. |
+| `TURN_NOT_YOURS` _(v0.3+)_ | 409 | Turn-based mode is active and another agent holds the current slot. |
 
 ## `GET /capabilities`
 
