@@ -50,6 +50,8 @@ internal sealed class SessionInfoCommand : ICommand
             legacy_mode = _session.Agents.IsLegacyMode,
             agent_count = _session.Agents.Count,
             agents,
+            turn_order = _session.TurnOrder?.AgentIds,
+            current_turn = _session.TurnOrder?.Current,
         };
         return Task.FromResult<object?>(payload);
     }

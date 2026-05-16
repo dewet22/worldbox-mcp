@@ -481,6 +481,28 @@ internal sealed class HttpBridge : IDisposable
 
         try
         {
+            // Turn-based gate (Phase 4): in turn_based sessions, action + control commands
+            // are reserved for the current-turn agent. God-role agents (ActionGlobal) bypass
+            // the gate so a hierarchical "DM" can always intervene. Meta / Discovery / Read /
+            // Bus commands are not gated — they can be called any time.
+            if (_session.TurnBased
+                && _session.TurnOrder is not null
+                && IsTurnGatedCategory(command.Category)
+                && !ctx.Has(Permission.ActionGlobal))
+            {
+                var current = _session.TurnOrder.Current;
+                if (current != ctx.AgentId)
+                {
+                    throw new WorldBoxBridge.Commands.Action.BridgeRejectionException(
+                        ErrorCode.TurnNotYours,
+                        $"Not your turn (current='{current}', you='{ctx.AgentId}'). "
+                            + "Wait for them to call turn_advance, or — if you are the current "
+                            + "agent in another session — check that the agents.json turn_order "
+                            + "includes you."
+                    );
+                }
+            }
+
             // Capture ctx in locals so the closure passed to MainThreadDispatcher captures the
             // struct by value (instance is small; struct copies dodge a closure-allocation surprise).
             var capturedCtx = ctx;
@@ -549,6 +571,14 @@ internal sealed class HttpBridge : IDisposable
             );
         }
     }
+
+    /// <summary>
+    /// Categories whose commands are reserved for the current-turn agent in turn_based
+    /// sessions. Action = modifies the world; Control = changes the simulation flow. The
+    /// rest (Meta/Discovery/Read/Bus) stay open so spectators and read-tools work anytime.
+    /// </summary>
+    private static bool IsTurnGatedCategory(CommandCategory category) =>
+        category is CommandCategory.Action or CommandCategory.Control;
 
     private HttpResponse CapabilitiesResponse()
     {

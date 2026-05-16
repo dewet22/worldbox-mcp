@@ -16,19 +16,30 @@ public sealed class Session
         AgentRegistry agents,
         string scenarioPreset,
         bool partialIntel,
-        bool turnBased)
+        bool turnBased,
+        TurnOrder? turnOrder = null)
     {
         Agents = agents ?? throw new ArgumentNullException(nameof(agents));
         ScenarioPreset = scenarioPreset ?? "sandbox";
         PartialIntel = partialIntel;
         TurnBased = turnBased;
+        TurnOrder = turnOrder;
         CreatedUtc = DateTime.UtcNow;
+
+        if (TurnBased && TurnOrder is null)
+        {
+            throw new ArgumentException(
+                "turn_based session requires a TurnOrder. Pass one or set turnBased=false.",
+                nameof(turnOrder)
+            );
+        }
     }
 
     public AgentRegistry Agents { get; }
     public string ScenarioPreset { get; }
     public bool PartialIntel { get; }
     public bool TurnBased { get; }
+    public TurnOrder? TurnOrder { get; }
     public DateTime CreatedUtc { get; }
 
     /// <summary>

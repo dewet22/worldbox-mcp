@@ -67,8 +67,24 @@ def register(server: "FastMCP", client: "BridgeClient") -> None:
             "Returns the live multi-agent session: scenario preset (pvp / coop / "
             "hierarchical / sandbox), partial_intel + turn_based flags, and the list of "
             "all registered agents (id, role, claimed kingdom, last_seen). Tokens are "
-            "never exposed. Use this to discover the other agents on the same world."
+            "never exposed. In turn_based sessions also returns turn_order (the rotation) "
+            "and current_turn (whose turn it is right now). Use this to discover the "
+            "other agents on the same world."
         ),
     )
     async def worldbox_session_info() -> dict[str, Any]:
         return await client.call("session_info")
+
+    @server.tool(
+        name="worldbox_turn_advance",
+        description=(
+            "Ends this agent's turn in a turn_based session. The next agent in the "
+            "session's turn_order becomes active and may issue action / control commands. "
+            "Returns {previous, next, forced_by_god}. Errors with TURN_NOT_YOURS if it's "
+            "not your turn and you're not a god, BAD_ARGS if the session is not turn_based. "
+            "Read / discovery / message-bus commands are NEVER gated by turn — only actions "
+            "and game-flow control are."
+        ),
+    )
+    async def worldbox_turn_advance() -> dict[str, Any]:
+        return await client.call("turn_advance")

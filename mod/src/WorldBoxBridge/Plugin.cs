@@ -123,6 +123,7 @@ public sealed class Plugin : BaseUnityPlugin
         // Meta — multi-agent identity introspection.
         registry.Register(new WhoAmICommand());
         registry.Register(new SessionInfoCommand(session));
+        registry.Register(new TurnAdvanceCommand(session));
 
         // Discovery — introspect the in-game asset registries.
         registry.Register(new ListTilesCommand(assetCatalog));

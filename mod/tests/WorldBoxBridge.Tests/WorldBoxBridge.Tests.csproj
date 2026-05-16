@@ -32,6 +32,7 @@
     <Compile Include="..\..\src\WorldBoxBridge\Session\AgentRegistry.cs" Link="Linked\Session\AgentRegistry.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\RequestContext.cs" Link="Linked\Session\RequestContext.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Session.cs" Link="Linked\Session\Session.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Session\TurnOrder.cs" Link="Linked\Session\TurnOrder.cs" />
   </ItemGroup>
 
 </Project>

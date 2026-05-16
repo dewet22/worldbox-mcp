@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using BepInEx.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -68,11 +69,42 @@ internal static class SessionLoader
             }
 
             var registry = new AgentRegistry(agents);
+
+            // Build the optional TurnOrder. Explicit "turn_order": ["id1", "id2"] wins; otherwise
+            // we fall back to agents in declaration order. Required only when turn_based=true.
+            TurnOrder? turnOrder = null;
+            if (turnBased)
+            {
+                IEnumerable<string> rotation;
+                if (obj["turn_order"] is JArray turnArray && turnArray.Count > 0)
+                {
+                    rotation = turnArray.Values<string>()
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Cast<string>()
+                        .ToList();
+                    foreach (var id in rotation)
+                    {
+                        if (registry.GetById(id) is null)
+                        {
+                            throw new InvalidDataException(
+                                $"turn_order references unknown agent '{id}'."
+                            );
+                        }
+                    }
+                }
+                else
+                {
+                    rotation = agents.Select(a => a.Id);
+                }
+                turnOrder = new TurnOrder(rotation);
+            }
+
             log.LogInfo(
                 $"[session] loaded '{agentsJsonPath}': scenario={scenario}, agents={registry.Count}, "
                     + $"partial_intel={partialIntel}, turn_based={turnBased}"
+                    + (turnOrder is not null ? $", turn_order=[{string.Join(",", turnOrder.AgentIds)}]" : "")
             );
-            return new Session(registry, scenario, partialIntel, turnBased);
+            return new Session(registry, scenario, partialIntel, turnBased, turnOrder);
         }
         catch (Exception ex)
         {

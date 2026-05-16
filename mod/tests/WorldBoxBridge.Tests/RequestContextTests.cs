@@ -182,7 +182,13 @@ public class SessionTests
     public void ContextFor_propagates_session_flags_into_context()
     {
         var registry = AgentRegistry.Legacy("tok");
-        var session = new SessionState(registry, scenarioPreset: "pvp", partialIntel: true, turnBased: true);
+        var session = new SessionState(
+            agents: registry,
+            scenarioPreset: "pvp",
+            partialIntel: true,
+            turnBased: true,
+            turnOrder: new TurnOrder(new[] { "legacy" })
+        );
         var ctx = session.ContextFor(registry.All[0]);
 
         ctx.ScenarioPreset.Should().Be("pvp");
