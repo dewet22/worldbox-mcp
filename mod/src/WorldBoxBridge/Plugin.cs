@@ -4,6 +4,7 @@ using BepInEx;
 using BepInEx.Logging;
 using UnityEngine;
 using WorldBoxBridge.Commands;
+using WorldBoxBridge.Commands.Discovery;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Threading;
@@ -45,8 +46,11 @@ public sealed class Plugin : BaseUnityPlugin
                     + $"(Assembly-CSharp.dll sha256={Truncate(version.AssemblyCSharpSha256, 12)}…)."
             );
 
+            var gameRefs = new GameRefs(Logger);
+            var assetCatalog = new AssetCatalog(gameRefs, Logger);
+
             var registry = new CommandRegistry();
-            RegisterCommands(registry, version, config);
+            RegisterCommands(registry, version, config, assetCatalog);
             Logger.LogInfo($"{registry.Count} commands registered.");
 
             _bridge = new HttpBridge(Logger, config, registry, version);
@@ -95,19 +99,21 @@ public sealed class Plugin : BaseUnityPlugin
     private static void RegisterCommands(
         CommandRegistry registry,
         VersionInfo version,
-        BridgeConfig config
+        BridgeConfig config,
+        AssetCatalog assetCatalog
     )
     {
         registry.Register(new HealthCommand(version, config));
 
-        // ── Phase 2 + 3 commands land here as they're implemented:
-        // registry.Register(new ListTilesCommand(...));
-        // registry.Register(new ListActorsCommand(...));
-        // registry.Register(new ListPowersCommand(...));
-        // registry.Register(new PaintTileCommand(...));
-        // registry.Register(new SpawnCommand(...));
-        // registry.Register(new InvokePowerCommand(...));
-        // ...
+        // Discovery — introspect the in-game asset registries.
+        registry.Register(new ListTilesCommand(assetCatalog));
+        registry.Register(new ListActorsCommand(assetCatalog));
+        registry.Register(new ListPowersCommand(assetCatalog));
+
+        // Phase 3 action primitives land here next:
+        // registry.Register(new PaintTileCommand(assetCatalog));
+        // registry.Register(new SpawnCommand(assetCatalog));
+        // registry.Register(new InvokePowerCommand(assetCatalog));
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s.Substring(0, max);

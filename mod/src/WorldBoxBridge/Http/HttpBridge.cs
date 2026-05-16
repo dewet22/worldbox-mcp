@@ -214,17 +214,15 @@ internal sealed class HttpBridge : IDisposable
         CancellationToken cancellationToken
     )
     {
-        var headerBytes = await ReadUntilDoubleNewlineAsync(stream, cancellationToken)
-            .ConfigureAwait(false);
-        if (headerBytes.Count == 0)
+        var headers = await ReadHeadersAsync(stream, cancellationToken).ConfigureAwait(false);
+        if (headers.TotalRead == 0)
         {
-            return null;
+            return null; // peer closed before sending anything
         }
-        var headerText = Encoding.ASCII.GetString(
-            headerBytes.Array!,
-            headerBytes.Offset,
-            headerBytes.Count
-        );
+        var buffer = headers.Buffer;
+        var totalRead = headers.TotalRead;
+        var headerEnd = headers.HeaderEnd;
+        var headerText = Encoding.ASCII.GetString(buffer, 0, headerEnd);
         var lines = headerText.Split(new[] { "\r\n" }, StringSplitOptions.None);
         if (lines.Length == 0)
         {
@@ -258,10 +256,7 @@ internal sealed class HttpBridge : IDisposable
         }
 
         // Body — only if Content-Length is present and positive.
-        if (
-            int.TryParse(req.GetHeader("Content-Length"), out var len)
-            && len > 0
-        )
+        if (int.TryParse(req.GetHeader("Content-Length"), out var len) && len > 0)
         {
             if (len > MaxBodyBytes)
             {
@@ -270,7 +265,18 @@ internal sealed class HttpBridge : IDisposable
                 );
             }
             req.Body = new byte[len];
-            var read = 0;
+
+            // For small requests, the body often arrives in the same TCP read as the headers.
+            // Copy whatever leftover bytes the header read already consumed into req.Body before
+            // pulling more from the stream — otherwise we'd block forever (or, with timeouts,
+            // throw EndOfStreamException on a connection that's perfectly fine).
+            var leftover = totalRead - headerEnd;
+            if (leftover > 0)
+            {
+                var take = System.Math.Min(leftover, len);
+                Array.Copy(buffer, headerEnd, req.Body, 0, take);
+            }
+            var read = System.Math.Min(leftover, len);
             while (read < len)
             {
                 var chunk = await stream
@@ -288,10 +294,30 @@ internal sealed class HttpBridge : IDisposable
     }
 
     /// <summary>
-    /// Reads from the stream until the empty-line CRLF CRLF terminator, returning the bytes
-    /// up to and including it. Aborts if the header section exceeds <see cref="MaxHeaderBytes"/>.
+    /// Triple returned by <see cref="ReadHeadersAsync"/>. Plain struct rather than a
+    /// <c>ValueTuple</c> — <c>System.ValueTuple</c> isn't always loadable under Unity's
+    /// Mono runtime (out-of-band package on net462).
     /// </summary>
-    private static async Task<ArraySegment<byte>> ReadUntilDoubleNewlineAsync(
+    private readonly struct HeaderReadResult
+    {
+        public HeaderReadResult(byte[] buffer, int totalRead, int headerEnd)
+        {
+            Buffer = buffer;
+            TotalRead = totalRead;
+            HeaderEnd = headerEnd;
+        }
+
+        public byte[] Buffer { get; }
+        public int TotalRead { get; }
+        public int HeaderEnd { get; }
+    }
+
+    /// <summary>
+    /// Reads from the stream until the empty-line CRLF CRLF terminator. Returns the buffer,
+    /// total bytes read, and the offset where headers end — so the caller can recover any body
+    /// bytes that arrived in the same TCP read as the headers.
+    /// </summary>
+    private static async Task<HeaderReadResult> ReadHeadersAsync(
         NetworkStream stream,
         CancellationToken cancellationToken
     )
@@ -307,7 +333,7 @@ internal sealed class HttpBridge : IDisposable
             {
                 if (pos == 0)
                 {
-                    return new ArraySegment<byte>(Array.Empty<byte>());
+                    return new HeaderReadResult(buffer, 0, 0);
                 }
                 break;
             }
@@ -322,7 +348,7 @@ internal sealed class HttpBridge : IDisposable
                     && buffer[i] == (byte)'\n'
                 )
                 {
-                    return new ArraySegment<byte>(buffer, 0, i + 1);
+                    return new HeaderReadResult(buffer, pos, i + 1);
                 }
             }
         }
