@@ -63,6 +63,20 @@ public sealed class Plugin : BaseUnityPlugin
 
     private void OnDestroy()
     {
+        // IMPORTANT: do NOT dispose _bridge here. On WorldBox (Unity 2022.3.60f1), OnDestroy
+        // fires shortly after Awake for the plugin MonoBehaviour — likely a scene-transition
+        // side effect or BepInEx host lifecycle quirk that we can't reliably prevent.
+        //
+        // The bridge keeps itself alive through:
+        //   1. A static reference inside HttpBridge (anti-GC anchor).
+        //   2. A non-background accept thread that pins the listener.
+        // Cleanup happens at process exit (OS) or on OnApplicationQuit (graceful).
+        Logger.LogDebug("Plugin.OnDestroy() ignored — bridge keeps running.");
+    }
+
+    private void OnApplicationQuit()
+    {
+        Logger.LogInfo("OnApplicationQuit — disposing bridge.");
         try
         {
             _bridge?.Dispose();

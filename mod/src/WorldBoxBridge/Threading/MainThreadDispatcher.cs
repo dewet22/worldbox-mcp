@@ -43,7 +43,9 @@ public sealed class MainThreadDispatcher : MonoBehaviour
         _log = log;
         var go = new GameObject("WorldBoxBridge.MainThreadDispatcher");
         DontDestroyOnLoad(go);
-        go.hideFlags = HideFlags.HideAndDontSave;
+        // Note: we DO NOT set HideAndDontSave here — that flag can interact badly with
+        // Unity's resource management (it gets considered unused and culled), the opposite
+        // of what its name suggests.
         _instance = go.AddComponent<MainThreadDispatcher>();
     }
 

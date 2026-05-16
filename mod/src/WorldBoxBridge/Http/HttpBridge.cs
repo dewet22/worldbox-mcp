@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,30 +16,47 @@ using WorldBoxBridge.Threading;
 namespace WorldBoxBridge.Http;
 
 /// <summary>
-/// Hosts the local HTTP API. Owns the <see cref="HttpListener"/>, the auth check, the routing
-/// table and the JSON envelope shaping. Knows nothing about the game — delegates everything
-/// concrete to <see cref="ICommand"/> implementations.
+/// Hosts the local HTTP API on a raw <see cref="TcpListener"/>.
 /// </summary>
 /// <remarks>
-/// Threading: <c>HttpListener.GetContextAsync</c> returns on a thread pool thread. Every
-/// request is processed entirely off the Unity main thread; commands that need game state
-/// hop onto the main thread via <see cref="MainThreadDispatcher"/>.
+/// <para><b>Why not <see cref="System.Net.HttpListener"/>?</b> Under Unity's Mono runtime
+/// (verified on Unity 2022.3.60f1), <c>HttpListener.Start()</c> returns successfully and
+/// <c>IsListening</c> reports <c>true</c>, but no TCP socket is actually bound. This is a
+/// long-standing bug in Mono's managed HTTP implementation — see
+/// <see href="https://discussions.unity.com/t/httplistener-ignores-port-on-some-windows-platform-s/755558"/>
+/// for the discussion. <see cref="TcpListener"/> bypasses the broken managed HTTP layer and
+/// goes straight to the platform socket APIs, which work reliably.</para>
+///
+/// <para>The HTTP/1.1 subset we implement is intentionally minimal: connection-per-request,
+/// no keep-alive, no chunked transfer encoding, no compression. Everything we need for a
+/// loopback control plane and nothing more.</para>
 /// </remarks>
 internal sealed class HttpBridge : IDisposable
 {
+    /// <summary>
+    /// Anti-GC anchor. Even if the BepInEx plugin MonoBehaviour gets destroyed (which happens
+    /// on this game shortly after Awake), this static keeps the bridge instance alive for the
+    /// full process lifetime so the accept thread + socket survive.
+    /// </summary>
+    private static HttpBridge? _alive;
+
     private readonly ManualLogSource _log;
     private readonly BridgeConfig _config;
     private readonly CommandRegistry _registry;
     private readonly VersionInfo _version;
-    private readonly HttpListener _listener;
+    private readonly TcpListener _listener;
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
+
+    /// <summary>Per-connection read timeout. Local agents respond fast — any longer = wedged.</summary>
+    private static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(35);
+    private const int MaxHeaderBytes = 16 * 1024;
+    private const int MaxBodyBytes = 4 * 1024 * 1024;
 
     private static readonly JsonSerializerSettings JsonSettings = new()
     {
         Formatting = Formatting.None,
         NullValueHandling = NullValueHandling.Ignore,
-        ContractResolver = new Newtonsoft.Json.Serialization.DefaultContractResolver(),
     };
 
     public HttpBridge(
@@ -51,181 +70,362 @@ internal sealed class HttpBridge : IDisposable
         _config = config;
         _registry = registry;
         _version = version;
-        _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://{_config.Host.Value}:{_config.Port.Value}/");
+        // Mono Unity quirk: IPAddress.Parse("127.0.0.1") does not always behave the same as
+        // the IPAddress.Loopback constant. Several Unity dev threads document the listener
+        // silently failing to bind with Parse'd addresses where the constant works fine.
+        // We treat the common loopback strings as aliases for the constant; other addresses
+        // go through Parse normally.
+        var host = _config.Host.Value;
+        IPAddress bindAddress = host switch
+        {
+            "127.0.0.1" or "localhost" => IPAddress.Loopback,
+            "::1" => IPAddress.IPv6Loopback,
+            _ => IPAddress.Parse(host),
+        };
+        _log.LogInfo(
+            $"[diag] resolved host '{host}' to IPAddress={bindAddress} (family={bindAddress.AddressFamily})"
+        );
+        _listener = new TcpListener(bindAddress, _config.Port.Value);
     }
 
     public void Start()
     {
         _config.AssertLoopbackOnly();
-        _listener.Start();
+        _log.LogInfo("[diag] about to call _listener.Start()...");
+        try
+        {
+            _listener.Start();
+        }
+        catch (Exception ex)
+        {
+            _log.LogError($"[diag] _listener.Start() THREW: {ex.GetType().FullName}: {ex.Message}");
+            throw;
+        }
+        var sock = _listener.Server;
+        _log.LogInfo(
+            $"[diag] after Start(): IsBound={sock.IsBound} "
+                + $"LocalEndPoint={sock.LocalEndPoint} "
+                + $"Handle={sock.Handle} "
+                + $"AddressFamily={sock.AddressFamily} "
+                + $"SocketType={sock.SocketType} "
+                + $"ProtocolType={sock.ProtocolType}"
+        );
         _log.LogInfo(
             $"listening on http://{_config.Host.Value}:{_config.Port.Value} "
                 + $"(commands={_registry.Count}, token=<configured>)"
         );
-        _loop = Task.Run(() => RunAsync(_cts.Token), _cts.Token);
+        // Use a dedicated NON-background thread.
+        //   - Mono's thread pool inside Unity has shown odd behavior with long-lived tasks.
+        //   - A plain Thread bypasses the pool entirely.
+        //   - IsBackground=false would prevent process shutdown until the thread exits, so we
+        //     keep IsBackground=true but anchor the listener via _alive (anti-GC) instead.
+        _alive = this;
+        var t = new Thread(AcceptLoopBlocking)
+        {
+            IsBackground = true,
+            Name = "WorldBoxBridge.Accept",
+        };
+        t.Start();
+        _loop = Task.CompletedTask;
+        _log.LogInfo($"[diag] accept thread started (Id={t.ManagedThreadId}, IsBackground={t.IsBackground})");
     }
 
-    private async Task RunAsync(CancellationToken cancellationToken)
+    private void AcceptLoopBlocking()
     {
-        while (!cancellationToken.IsCancellationRequested)
+        _log.LogInfo(
+            $"[accept-thread] entered. listener.IsBound={_listener.Server.IsBound} "
+                + $"LocalEndPoint={_listener.Server.LocalEndPoint}"
+        );
+        // (self-connect probe removed — it triggered OnDestroy in some Unity configurations)
+        while (!_cts.IsCancellationRequested)
         {
-            HttpListenerContext context;
+            TcpClient client;
             try
             {
-                context = await _listener.GetContextAsync().ConfigureAwait(false);
-            }
-            catch (HttpListenerException) when (cancellationToken.IsCancellationRequested)
-            {
-                return;
+                client = _listener.AcceptTcpClient();
             }
             catch (ObjectDisposedException)
             {
                 return;
             }
+            catch (SocketException sex) when (_cts.IsCancellationRequested)
+            {
+                _log.LogInfo($"[accept-thread] socket closed during shutdown: {sex.Message}");
+                return;
+            }
             catch (Exception ex)
             {
-                _log.LogError($"HttpListener.GetContextAsync failed: {ex}");
+                _log.LogError($"[accept-thread] AcceptTcpClient threw: {ex.GetType().Name}: {ex.Message}");
+                Thread.Sleep(200);
                 continue;
             }
 
-            // Fire-and-forget per request — never block the accept loop.
-            _ = Task.Run(() => HandleAsync(context, cancellationToken), cancellationToken);
+            _ = Task.Run(() => HandleClientAsync(client, _cts.Token));
         }
     }
 
-    private async Task HandleAsync(
-        HttpListenerContext context,
-        CancellationToken cancellationToken
-    )
+    private async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken)
     {
-        var req = context.Request;
-        var res = context.Response;
-        try
+        using (client)
         {
-            if (!_config.Enabled.Value)
-            {
-                await WriteErrorAsync(
-                    res,
-                    HttpStatusCode.ServiceUnavailable,
-                    ErrorCode.Disabled,
-                    "WorldBoxBridge is disabled. Set enabled = true in WorldBoxBridge.cfg."
-                );
-                return;
-            }
+            client.NoDelay = true;
+            client.ReceiveTimeout = (int)ReadTimeout.TotalMilliseconds;
+            client.SendTimeout = (int)ReadTimeout.TotalMilliseconds;
 
-            if (!IsAuthorized(req))
-            {
-                await WriteErrorAsync(
-                    res,
-                    HttpStatusCode.Unauthorized,
-                    ErrorCode.Unauthorized,
-                    "Missing or invalid X-WB-Token header."
-                );
-                return;
-            }
-
-            var path = req.Url?.AbsolutePath ?? "/";
-            switch (path)
-            {
-                case "/health" when req.HttpMethod == "GET":
-                    await ExecuteAndWriteAsync(res, "health", new JObject(), cancellationToken);
-                    return;
-
-                case "/cmd" when req.HttpMethod == "POST":
-                    await HandleCommandAsync(req, res, cancellationToken);
-                    return;
-
-                case "/capabilities" when req.HttpMethod == "GET":
-                    await WriteCapabilitiesAsync(res);
-                    return;
-
-                default:
-                    await WriteErrorAsync(
-                        res,
-                        HttpStatusCode.NotFound,
-                        ErrorCode.UnknownCommand,
-                        $"No route for {req.HttpMethod} {path}."
-                    );
-                    return;
-            }
-        }
-        catch (Exception ex)
-        {
-            _log.LogError($"Unhandled error in HandleAsync: {ex}");
             try
             {
-                await WriteErrorAsync(
-                    res,
-                    HttpStatusCode.InternalServerError,
-                    ErrorCode.Internal,
-                    ex.Message,
-                    exception: ExceptionInfo.From(ex)
-                );
+                using var stream = client.GetStream();
+                var request = await ReadRequestAsync(stream, cancellationToken).ConfigureAwait(false);
+                if (request == null)
+                {
+                    return; // empty / malformed; drop silently
+                }
+
+                var response = await RouteAsync(request, cancellationToken).ConfigureAwait(false);
+                await WriteResponseAsync(stream, response, cancellationToken).ConfigureAwait(false);
             }
-            catch
+            catch (Exception ex)
             {
-                // Best-effort.
-            }
-        }
-        finally
-        {
-            try
-            {
-                res.OutputStream.Close();
-            }
-            catch
-            {
-                // Already closed.
+                _log.LogError($"HandleClientAsync error: {ex.GetType().Name}: {ex.Message}");
             }
         }
     }
 
-    private async Task HandleCommandAsync(
-        HttpListenerRequest req,
-        HttpListenerResponse res,
+    // ──────────────────────────────────────────────────────────────────────
+    // Request parsing
+    // ──────────────────────────────────────────────────────────────────────
+
+    private sealed class HttpRequest
+    {
+        public string Method { get; set; } = "GET";
+        public string Path { get; set; } = "/";
+        public Dictionary<string, string> Headers { get; } =
+            new(StringComparer.OrdinalIgnoreCase);
+        public byte[] Body { get; set; } = Array.Empty<byte>();
+
+        public string? GetHeader(string name)
+        {
+            return Headers.TryGetValue(name, out var v) ? v : null;
+        }
+    }
+
+    private async Task<HttpRequest?> ReadRequestAsync(
+        NetworkStream stream,
         CancellationToken cancellationToken
     )
     {
-        JObject? body;
-        try
+        var headerBytes = await ReadUntilDoubleNewlineAsync(stream, cancellationToken)
+            .ConfigureAwait(false);
+        if (headerBytes.Count == 0)
         {
-            using var reader = new StreamReader(
-                req.InputStream,
-                req.ContentEncoding ?? Encoding.UTF8
+            return null;
+        }
+        var headerText = Encoding.ASCII.GetString(
+            headerBytes.Array!,
+            headerBytes.Offset,
+            headerBytes.Count
+        );
+        var lines = headerText.Split(new[] { "\r\n" }, StringSplitOptions.None);
+        if (lines.Length == 0)
+        {
+            return null;
+        }
+
+        var requestLine = lines[0].Split(' ');
+        if (requestLine.Length < 2)
+        {
+            return null;
+        }
+        var req = new HttpRequest
+        {
+            Method = requestLine[0].ToUpperInvariant(),
+            Path = requestLine[1],
+        };
+
+        for (var i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (string.IsNullOrEmpty(line))
+            {
+                continue;
+            }
+            var colon = line.IndexOf(':');
+            if (colon <= 0)
+            {
+                continue;
+            }
+            req.Headers[line.Substring(0, colon).Trim()] = line.Substring(colon + 1).Trim();
+        }
+
+        // Body — only if Content-Length is present and positive.
+        if (
+            int.TryParse(req.GetHeader("Content-Length"), out var len)
+            && len > 0
+        )
+        {
+            if (len > MaxBodyBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Body of {len} bytes exceeds {MaxBodyBytes} byte limit."
+                );
+            }
+            req.Body = new byte[len];
+            var read = 0;
+            while (read < len)
+            {
+                var chunk = await stream
+                    .ReadAsync(req.Body, read, len - read, cancellationToken)
+                    .ConfigureAwait(false);
+                if (chunk <= 0)
+                {
+                    throw new EndOfStreamException("Client closed connection mid-body.");
+                }
+                read += chunk;
+            }
+        }
+
+        return req;
+    }
+
+    /// <summary>
+    /// Reads from the stream until the empty-line CRLF CRLF terminator, returning the bytes
+    /// up to and including it. Aborts if the header section exceeds <see cref="MaxHeaderBytes"/>.
+    /// </summary>
+    private static async Task<ArraySegment<byte>> ReadUntilDoubleNewlineAsync(
+        NetworkStream stream,
+        CancellationToken cancellationToken
+    )
+    {
+        var buffer = new byte[MaxHeaderBytes];
+        var pos = 0;
+        while (pos < MaxHeaderBytes)
+        {
+            var n = await stream
+                .ReadAsync(buffer, pos, MaxHeaderBytes - pos, cancellationToken)
+                .ConfigureAwait(false);
+            if (n <= 0)
+            {
+                if (pos == 0)
+                {
+                    return new ArraySegment<byte>(Array.Empty<byte>());
+                }
+                break;
+            }
+            pos += n;
+
+            for (var i = 3; i < pos; i++)
+            {
+                if (
+                    buffer[i - 3] == (byte)'\r'
+                    && buffer[i - 2] == (byte)'\n'
+                    && buffer[i - 1] == (byte)'\r'
+                    && buffer[i] == (byte)'\n'
+                )
+                {
+                    return new ArraySegment<byte>(buffer, 0, i + 1);
+                }
+            }
+        }
+        throw new InvalidOperationException(
+            $"Request header exceeds {MaxHeaderBytes} bytes — refusing."
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Routing — same logic as before, just using HttpRequest instead of HttpListenerRequest
+    // ──────────────────────────────────────────────────────────────────────
+
+    private sealed class HttpResponse
+    {
+        public int Status { get; set; } = 200;
+        public string StatusText { get; set; } = "OK";
+        public string ContentType { get; set; } = "application/json; charset=utf-8";
+        public byte[] Body { get; set; } = Array.Empty<byte>();
+    }
+
+    private async Task<HttpResponse> RouteAsync(
+        HttpRequest req,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!_config.Enabled.Value)
+        {
+            return ErrorResponse(
+                503,
+                "Service Unavailable",
+                ErrorCode.Disabled,
+                "WorldBoxBridge is disabled. Set enabled = true in WorldBoxBridge.cfg."
             );
-            var raw = await reader.ReadToEndAsync().ConfigureAwait(false);
-            body = string.IsNullOrWhiteSpace(raw) ? new JObject() : JObject.Parse(raw);
+        }
+        if (!IsAuthorized(req))
+        {
+            return ErrorResponse(
+                401,
+                "Unauthorized",
+                ErrorCode.Unauthorized,
+                "Missing or invalid X-WB-Token header."
+            );
+        }
+
+        var path = req.Path.Split('?')[0];
+        if (path == "/health" && req.Method == "GET")
+        {
+            return await ExecuteCommandAsync("health", new JObject(), cancellationToken)
+                .ConfigureAwait(false);
+        }
+        if (path == "/cmd" && req.Method == "POST")
+        {
+            return await HandleCommandAsync(req, cancellationToken).ConfigureAwait(false);
+        }
+        if (path == "/capabilities" && req.Method == "GET")
+        {
+            return CapabilitiesResponse();
+        }
+
+        return ErrorResponse(
+            404,
+            "Not Found",
+            ErrorCode.UnknownCommand,
+            $"No route for {req.Method} {path}."
+        );
+    }
+
+    private async Task<HttpResponse> HandleCommandAsync(
+        HttpRequest req,
+        CancellationToken cancellationToken
+    )
+    {
+        JObject body;
+        try
+        {
+            var raw = req.Body.Length == 0 ? "{}" : Encoding.UTF8.GetString(req.Body);
+            body = JObject.Parse(raw);
         }
         catch (JsonException ex)
         {
-            await WriteErrorAsync(
-                res,
-                HttpStatusCode.BadRequest,
+            return ErrorResponse(
+                400,
+                "Bad Request",
                 ErrorCode.BadArgs,
                 $"Request body is not valid JSON: {ex.Message}"
             );
-            return;
         }
 
         var name = (string?)body["name"];
         if (string.IsNullOrWhiteSpace(name))
         {
-            await WriteErrorAsync(
-                res,
-                HttpStatusCode.BadRequest,
+            return ErrorResponse(
+                400,
+                "Bad Request",
                 ErrorCode.BadArgs,
                 "Body must contain a non-empty 'name' field."
             );
-            return;
         }
-
         var args = body["args"] as JObject ?? new JObject();
-        await ExecuteAndWriteAsync(res, name!, args, cancellationToken);
+        return await ExecuteCommandAsync(name!, args, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task ExecuteAndWriteAsync(
-        HttpListenerResponse res,
+    private async Task<HttpResponse> ExecuteCommandAsync(
         string name,
         JObject args,
         CancellationToken cancellationToken
@@ -233,15 +433,14 @@ internal sealed class HttpBridge : IDisposable
     {
         if (!_registry.TryGet(name, out var command))
         {
-            await WriteErrorAsync(
-                res,
-                HttpStatusCode.NotFound,
+            return ErrorResponse(
+                404,
+                "Not Found",
                 ErrorCode.UnknownCommand,
                 $"No command named '{name}'.",
                 commandName: name,
                 args: args
             );
-            return;
         }
 
         try
@@ -260,14 +459,13 @@ internal sealed class HttpBridge : IDisposable
             {
                 result = await command.ExecuteAsync(args, cancellationToken).ConfigureAwait(false);
             }
-
-            await WriteSuccessAsync(res, result);
+            return SuccessResponse(result);
         }
         catch (TimeoutException tex)
         {
-            await WriteErrorAsync(
-                res,
-                HttpStatusCode.GatewayTimeout,
+            return ErrorResponse(
+                504,
+                "Gateway Timeout",
                 ErrorCode.MainThreadTimeout,
                 tex.Message,
                 commandName: name,
@@ -277,9 +475,9 @@ internal sealed class HttpBridge : IDisposable
         }
         catch (Exception ex)
         {
-            await WriteErrorAsync(
-                res,
-                HttpStatusCode.InternalServerError,
+            return ErrorResponse(
+                500,
+                "Internal Server Error",
                 ErrorCode.GameCrash,
                 ex.Message,
                 commandName: name,
@@ -289,7 +487,7 @@ internal sealed class HttpBridge : IDisposable
         }
     }
 
-    private async Task WriteCapabilitiesAsync(HttpListenerResponse res)
+    private HttpResponse CapabilitiesResponse()
     {
         var commands = new JArray();
         foreach (var cmd in _registry.All)
@@ -305,7 +503,6 @@ internal sealed class HttpBridge : IDisposable
                 }
             );
         }
-
         var payload = new JObject
         {
             ["mod_version"] = _version.ModVersion,
@@ -314,29 +511,37 @@ internal sealed class HttpBridge : IDisposable
             ["assembly_csharp_sha256"] = _version.AssemblyCSharpSha256,
             ["commands"] = commands,
         };
-
-        await WriteJsonAsync(res, HttpStatusCode.OK, payload.ToString(Formatting.None));
+        return new HttpResponse
+        {
+            Status = 200,
+            StatusText = "OK",
+            Body = Encoding.UTF8.GetBytes(payload.ToString(Formatting.None)),
+        };
     }
 
-    private async Task WriteSuccessAsync(HttpListenerResponse res, object? result)
+    private HttpResponse SuccessResponse(object? result)
     {
         var envelope = new SuccessEnvelope
         {
             Result = result,
             Tick = MainThreadDispatcher.LastTick,
         };
-        var json = JsonConvert.SerializeObject(envelope, JsonSettings);
-        await WriteJsonAsync(res, HttpStatusCode.OK, json);
+        return new HttpResponse
+        {
+            Status = 200,
+            StatusText = "OK",
+            Body = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(envelope, JsonSettings)),
+        };
     }
 
-    private async Task WriteErrorAsync(
-        HttpListenerResponse res,
-        HttpStatusCode status,
+    private static HttpResponse ErrorResponse(
+        int status,
+        string statusText,
         string code,
         string message,
         string? commandName = null,
         JObject? args = null,
-        System.Collections.Generic.IReadOnlyList<string>? didYouMean = null,
+        IReadOnlyList<string>? didYouMean = null,
         ExceptionInfo? exception = null
     )
     {
@@ -352,28 +557,55 @@ internal sealed class HttpBridge : IDisposable
                 Exception = exception,
             },
         };
-        var json = JsonConvert.SerializeObject(envelope, JsonSettings);
-        await WriteJsonAsync(res, status, json);
+        return new HttpResponse
+        {
+            Status = status,
+            StatusText = statusText,
+            Body = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(envelope, JsonSettings)),
+        };
     }
 
-    private async Task WriteJsonAsync(HttpListenerResponse res, HttpStatusCode status, string json)
+    // ──────────────────────────────────────────────────────────────────────
+    // Wire output
+    // ──────────────────────────────────────────────────────────────────────
+
+    private static async Task WriteResponseAsync(
+        NetworkStream stream,
+        HttpResponse response,
+        CancellationToken cancellationToken
+    )
     {
-        var bytes = Encoding.UTF8.GetBytes(json);
-        res.StatusCode = (int)status;
-        res.ContentType = "application/json; charset=utf-8";
-        res.ContentLength64 = bytes.Length;
-        await res.OutputStream.WriteAsync(bytes, 0, bytes.Length).ConfigureAwait(false);
+        var header =
+            $"HTTP/1.1 {response.Status} {response.StatusText}\r\n"
+            + $"Content-Type: {response.ContentType}\r\n"
+            + $"Content-Length: {response.Body.Length}\r\n"
+            + "Connection: close\r\n"
+            + "Cache-Control: no-store\r\n"
+            + "\r\n";
+        var headerBytes = Encoding.ASCII.GetBytes(header);
+        await stream.WriteAsync(headerBytes, 0, headerBytes.Length, cancellationToken)
+            .ConfigureAwait(false);
+        if (response.Body.Length > 0)
+        {
+            await stream
+                .WriteAsync(response.Body, 0, response.Body.Length, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private bool IsAuthorized(HttpListenerRequest req)
+    // ──────────────────────────────────────────────────────────────────────
+    // Auth
+    // ──────────────────────────────────────────────────────────────────────
+
+    private bool IsAuthorized(HttpRequest req)
     {
-        var presented = req.Headers["X-WB-Token"];
+        var presented = req.GetHeader("X-WB-Token");
         if (string.IsNullOrEmpty(presented))
         {
             return false;
         }
-        var expected = _config.Token.Value;
-        return FixedTimeEquals(presented!, expected);
+        return FixedTimeEquals(presented!, _config.Token.Value);
     }
 
     /// <summary>Constant-time string comparison to avoid timing oracles on the token.</summary>
@@ -381,7 +613,6 @@ internal sealed class HttpBridge : IDisposable
     {
         if (a.Length != b.Length)
         {
-            // Length difference itself is not secret, so an early-return is fine.
             return false;
         }
         var diff = 0;
@@ -391,6 +622,10 @@ internal sealed class HttpBridge : IDisposable
         }
         return diff == 0;
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Lifecycle
+    // ──────────────────────────────────────────────────────────────────────
 
     public void Dispose()
     {
@@ -405,7 +640,6 @@ internal sealed class HttpBridge : IDisposable
         try
         {
             _listener.Stop();
-            _listener.Close();
         }
         catch
         {
