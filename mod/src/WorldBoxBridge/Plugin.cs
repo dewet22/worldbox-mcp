@@ -5,6 +5,7 @@ using BepInEx.Logging;
 using UnityEngine;
 using WorldBoxBridge.Commands;
 using WorldBoxBridge.Commands.Action;
+using WorldBoxBridge.Commands.Bus;
 using WorldBoxBridge.Commands.Control;
 using WorldBoxBridge.Commands.Discovery;
 using WorldBoxBridge.Commands.Meta;
@@ -124,6 +125,10 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new WhoAmICommand());
         registry.Register(new SessionInfoCommand(session));
         registry.Register(new TurnAdvanceCommand(session));
+
+        // Bus — inter-agent messaging.
+        registry.Register(new SendMessageCommand(session));
+        registry.Register(new RecvMessagesCommand(session));
 
         // Discovery — introspect the in-game asset registries.
         registry.Register(new ListTilesCommand(assetCatalog));

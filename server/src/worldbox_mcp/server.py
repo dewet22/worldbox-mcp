@@ -13,7 +13,7 @@ import structlog
 
 from .client import BridgeClient
 from .config import Settings
-from .tools import action, control, discovery, meta, read
+from .tools import action, bus, control, discovery, meta, read
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
@@ -55,5 +55,6 @@ def build_server(settings: Settings) -> tuple["FastMCP", BridgeClient]:
     action.register(server, client)
     read.register(server, client)
     control.register(server, client)
+    bus.register(server, client)
 
     return server, client

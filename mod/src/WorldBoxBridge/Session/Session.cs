@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace WorldBoxBridge.Session;
 
@@ -17,13 +18,19 @@ public sealed class Session
         string scenarioPreset,
         bool partialIntel,
         bool turnBased,
-        TurnOrder? turnOrder = null)
+        TurnOrder? turnOrder = null,
+        MessageBus? messageBus = null)
     {
         Agents = agents ?? throw new ArgumentNullException(nameof(agents));
         ScenarioPreset = scenarioPreset ?? "sandbox";
         PartialIntel = partialIntel;
         TurnBased = turnBased;
         TurnOrder = turnOrder;
+        // Auto-build a default MessageBus from the registry if the caller didn't pass one —
+        // tests and the legacy factory just want a working bus without ceremony.
+        var allIds = new List<string>(agents.Count);
+        foreach (var a in agents.All) allIds.Add(a.Id);
+        MessageBus = messageBus ?? new MessageBus(allIds);
         CreatedUtc = DateTime.UtcNow;
 
         if (TurnBased && TurnOrder is null)
@@ -40,6 +47,7 @@ public sealed class Session
     public bool PartialIntel { get; }
     public bool TurnBased { get; }
     public TurnOrder? TurnOrder { get; }
+    public MessageBus MessageBus { get; }
     public DateTime CreatedUtc { get; }
 
     /// <summary>
