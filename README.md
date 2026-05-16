@@ -151,6 +151,11 @@ In your agent client:
   a small ecology experiment near the center of the map.
 ```
 
+Or paste the full god-mode ecology prompt from [`examples/prompts/godmode-ecology.md`](examples/prompts/godmode-ecology.md) to exercise every tool category in one go.
+
+```text
+```
+
 ## The 19 tools
 
 | Category | Tools | What for |
