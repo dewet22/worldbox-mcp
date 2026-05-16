@@ -88,3 +88,6 @@ examples/scenarios/output/
 actionlint.exe
 actionlint
 
+
+# Build staging area for release artifacts
+release-stage/
