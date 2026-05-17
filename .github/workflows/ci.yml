@@ -146,13 +146,14 @@ jobs:
       - name: Install server
         working-directory: server
         run: uv sync --frozen
-      - name: Run MCP Inspector schema check
+      - name: Self-check (server builds + tool schemas register cleanly)
+        # The MCP Inspector CLI (v0.16+) requires --method <jsonrpc method>; calling it
+        # without one now errors. The self-check is more direct and covers the same
+        # ground: it constructs the FastMCP server, registers every tool, and exits 0
+        # iff nothing throws during registration. CLAUDE.md "Day-to-day commands" uses
+        # the same invocation as the dev sanity check.
         working-directory: server
-        run: |
-          npx --yes @modelcontextprotocol/inspector --cli \
-            uv run worldbox-mcp \
-            --no-bridge-required \
-            --self-check
+        run: uv run worldbox-mcp --self-check --no-bridge-required
 
   pre-commit:
     name: Pre-commit

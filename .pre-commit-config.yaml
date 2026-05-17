@@ -9,6 +9,9 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        # GitHub issue forms allow backticks in unquoted strings; pyyaml's strict
+        # parser doesn't. The forms validate fine in GitHub's own renderer; skip here.
+        exclude: ^\.github/ISSUE_TEMPLATE/.*\.yml$
       - id: check-toml
       - id: check-json
       - id: check-merge-conflict
@@ -43,12 +46,8 @@ repos:
         stages: [commit-msg]
         args: []
 
-  # C# formatting via csharpier — invoked locally; CI uses dotnet csharpier directly
-  - repo: local
-    hooks:
-      - id: csharpier
-        name: csharpier
-        entry: dotnet csharpier --check
-        language: system
-        files: ^mod/.*\.cs$
-        pass_filenames: false
+  # NOTE: csharpier check is intentionally NOT a pre-commit hook -- it depends on the
+  # .NET SDK + the global `csharpier` tool being installed, which isn't true for the
+  # pre-commit/[email protected] runner. The dedicated `lint-mod` CI job runs `dotnet csharpier
+  # --check .` (pinned to 0.30.6) on every push, so coverage is preserved. Developers
+  # working in mod/ should run `dotnet csharpier .` locally before committing.
