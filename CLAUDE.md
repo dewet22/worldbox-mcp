@@ -23,7 +23,7 @@ End user runs `claude mcp add worldbox -- uvx worldbox-mcp` (or equivalent for t
 
 - **Latest tag**: `v0.3.1` (PyPI `worldbox-mcp 0.3.1`, GitHub Release Latest, mod ZIP attached).
 - **Branch**: `main` is the shipping branch; release-please continuously maintains a `chore(main): release X.Y.Z` PR with the next bump as commits land.
-- **Docs site**: `https://fullya.me/worldbox-mcp/` (custom CNAME; *not* `fullya99.github.io/worldbox-mcp`).
+- **Docs site**: `https://fullya99.github.io/worldbox-mcp/` (default GitHub Pages URL — the user-level `fullya99/fullya99.github.io` repo had a stale CNAME to a dead `fullya.me` domain; removed 2026-05-17 so all project sites default to `<user>.github.io/<project>/`).
 - **CI**: green except for `Build mod` which is intentionally `continue-on-error: true` (no Unity DLLs on CI runners — known limitation, mod ZIP is built locally and `gh release upload`-ed per release).
 - **Recently shipped on this branch**: full multi-agent session layer (Phases 1–7) + `AdvanceTime` permission split + docs refresh + CI cleanup. See `~/.claude/plans/ok-j-aimeraisd-que-tu-purrfect-pearl.md` for the execution log.
 
@@ -106,7 +106,7 @@ server/                                Python MCP server
 │       └── bus.py                     (v0.3) worldbox_send_message / recv_messages
 └── tests/                             pytest (unit + integration with fake bridge + e2e). 18 cases.
 
-docs/                                  MkDocs Material — published at fullya.me/worldbox-mcp/ (custom CNAME)
+docs/                                  MkDocs Material — published at fullya99.github.io/worldbox-mcp/
 ├── index.md
 ├── architecture.md                    Component layout, thread model, session layer
 ├── multi-agent.md                     (v0.3) Multi-agent walkthrough: roles, perms, fog, bus, presets
@@ -214,7 +214,7 @@ These choices are baked into `.github/workflows/` + `.github/dependabot.yml`. Ea
 - **`mkdocs.yml` lives at the repo root**, not `docs/`. mkdocs 1.x rejects configs where `docs_dir` is the parent of the config file. Layout: `mkdocs.yml` at root with `docs_dir: docs`, `site_dir: site`.
 - **`Build mod` and `Test mod` are `continue-on-error: true`**. The CI runner has no Unity DLLs, so the mod project genuinely can't compile there. The jobs stay green-ish (showing the gap) while the workflow doesn't go red. Real fix is a Unity-refs cache (in roadmap).
 - **GitHub Pages was bootstrapped via `gh api repos/.../pages -X POST -F build_type=workflow`** (one-time). The default `GITHUB_TOKEN` lacks the admin scope to *create* the Pages site, but `actions/configure-pages@v5 with: enablement: true` is idempotent afterward.
-- **The published docs URL is `https://fullya.me/worldbox-mcp/`** (custom CNAME). Make sure `mkdocs.yml` `site_url` matches if you regenerate canonical URLs.
+- **No user-level CNAME**: `fullya99/fullya99.github.io` used to carry a `CNAME` file pointing at `fullya.me`, which silently 301-redirected *every* project site under the user — including this one — to a dead domain. Removed 2026-05-17 (commit `6af015a` in that repo). If a project ever needs a custom domain again, prefer a per-project `docs/CNAME` instead of the user-level one so the blast radius stays bounded.
 - **FluentAssertions is capped at 6.x** in `.github/dependabot.yml`. v7+ ships under a paid Xceed commercial license (~$130/dev/year). v6 is the last MIT/Apache release. Migration alternatives if needed: AwesomeAssertions or Shouldly.
 - **The Pre-commit job does not run csharpier** (no .NET SDK on `pre-commit/[email protected]`'s ubuntu-latest runner). The dedicated `lint-mod` job covers it.
 - **MCP conformance check runs `worldbox-mcp --self-check --no-bridge-required`** directly — *not* the MCP Inspector CLI, which now requires `--method <jsonrpc>` to be useful.

@@ -8,7 +8,7 @@ uvx worldbox-mcp --http    # Streamable HTTP transport
 uvx worldbox-mcp --help
 ```
 
-See the [top-level README](../README.md) and the [docs site](https://fullya.me/worldbox-mcp/) for full installation instructions and client configuration recipes.
+See the [top-level README](../README.md) and the [docs site](https://fullya99.github.io/worldbox-mcp/) for full installation instructions and client configuration recipes.
 
 ## Development
 

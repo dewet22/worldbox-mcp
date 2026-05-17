@@ -1,9 +1,6 @@
 site_name: worldbox-mcp
 site_description: An MCP server that lets any AI agent control WorldBox.
-# Custom CNAME -- the repo's GitHub Pages is configured to publish at fullya.me/worldbox-mcp/,
-# not at the default fullya99.github.io/worldbox-mcp/. Keep these aligned so canonical links
-# in the sitemap and per-page <link rel="canonical"> point at the right URL.
-site_url: https://fullya.me/worldbox-mcp/
+site_url: https://fullya99.github.io/worldbox-mcp/
 repo_url: https://github.com/fullya99/worldbox-mcp
 repo_name: fullya99/worldbox-mcp
 edit_uri: edit/main/docs/
