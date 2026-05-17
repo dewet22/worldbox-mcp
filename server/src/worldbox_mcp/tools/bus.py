@@ -19,10 +19,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
-    from ..client import BridgeClient
+    from worldbox_mcp.client import BridgeClient
 
 
-def register(server: "FastMCP", client: "BridgeClient") -> None:
+def register(server: FastMCP, client: BridgeClient) -> None:
     @server.tool(
         name="worldbox_send_message",
         description=(
@@ -35,7 +35,9 @@ def register(server: "FastMCP", client: "BridgeClient") -> None:
             "{seq, recipients, broadcast}."
         ),
     )
-    async def worldbox_send_message(to: str, content: str, kind: str | None = None) -> dict[str, Any]:
+    async def worldbox_send_message(
+        to: str, content: str, kind: str | None = None
+    ) -> dict[str, Any]:
         args: dict[str, Any] = {"to": to, "content": content}
         if kind is not None:
             args["kind"] = kind

@@ -14,9 +14,12 @@ from __future__ import annotations
 
 import configparser
 import os
-from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8723
@@ -122,7 +125,9 @@ def _enumerate_default_paths() -> Iterable[Path]:
         try:
             import string
 
-            drives = [f"{letter}:\\" for letter in string.ascii_uppercase if Path(f"{letter}:\\").exists()]
+            drives = [
+                f"{letter}:\\" for letter in string.ascii_uppercase if Path(f"{letter}:\\").exists()
+            ]
         except Exception:  # pragma: no cover — defensive
             drives = ["C:\\"]
         for drive in drives:
@@ -132,7 +137,9 @@ def _enumerate_default_paths() -> Iterable[Path]:
         home = Path.home()
         yield home / ".steam" / "steam" / "steamapps" / "common" / "worldbox"
         yield home / ".local" / "share" / "Steam" / "steamapps" / "common" / "worldbox"
-        yield home / "Library" / "Application Support" / "Steam" / "steamapps" / "common" / "worldbox"
+        yield (
+            home / "Library" / "Application Support" / "Steam" / "steamapps" / "common" / "worldbox"
+        )
 
 
 def _is_worldbox_install(path: Path) -> bool:
@@ -142,9 +149,7 @@ def _is_worldbox_install(path: Path) -> bool:
     for binary in ("worldbox.exe", "worldbox", "worldbox.x86_64"):
         if (path / binary).is_file():
             return True
-    if (path / "worldbox.app").is_dir():
-        return True
-    return False
+    return bool((path / "worldbox.app").is_dir())
 
 
 def _parse_bepinex_cfg(cfg_path: Path) -> dict[str, str]:

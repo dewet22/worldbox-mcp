@@ -10,13 +10,16 @@ from __future__ import annotations
 
 import asyncio
 import socket
-from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 import pytest
 from aiohttp import web
 
 from worldbox_mcp.client import BridgeClient
 from worldbox_mcp.config import BridgeAddress
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 def _free_port() -> int:
@@ -101,7 +104,7 @@ async def test_health_round_trip(
 
 
 async def test_auth_rejected(fake_bridge: tuple[FakeBridge, BridgeAddress]) -> None:
-    bridge, address = fake_bridge
+    _bridge, address = fake_bridge
     wrong = BridgeAddress(host=address.host, port=address.port, token="WRONG")
     async with BridgeClient(wrong) as client:
         from worldbox_mcp.errors import BridgeError
@@ -119,7 +122,8 @@ async def test_command_payload_forwarded(
         out = await client.call("noop", {"a": 1, "b": "two"})
         assert out == {"echo": {"name": "noop", "args": {"a": 1, "b": "two"}}}
     method, path, body = bridge.calls[-1]
-    assert method == "POST" and path == "/cmd"
+    assert method == "POST"
+    assert path == "/cmd"
     assert body == {"name": "noop", "args": {"a": 1, "b": "two"}}
 
 

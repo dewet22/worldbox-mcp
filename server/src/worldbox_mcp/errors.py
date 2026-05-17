@@ -42,7 +42,7 @@ class BridgeErrorEnvelope:
     extras: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "BridgeErrorEnvelope":
+    def from_payload(cls, payload: dict[str, Any]) -> BridgeErrorEnvelope:
         known = {"code", "message", "command", "args", "did_you_mean", "exception"}
         return cls(
             code=str(payload.get("code", "INTERNAL")),

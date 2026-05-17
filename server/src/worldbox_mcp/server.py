@@ -12,16 +12,17 @@ from typing import TYPE_CHECKING
 import structlog
 
 from .client import BridgeClient
-from .config import Settings
 from .tools import action, bus, control, discovery, meta, read
 
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
+    from .config import Settings
+
 logger = structlog.get_logger(__name__)
 
 
-def build_server(settings: Settings) -> tuple["FastMCP", BridgeClient]:
+def build_server(settings: Settings) -> tuple[FastMCP, BridgeClient]:
     """Construct the MCP server and the bridge client it owns.
 
     Returns both so the caller can keep the client lifecycle tied to the server's

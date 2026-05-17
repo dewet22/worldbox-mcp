@@ -24,8 +24,8 @@ class TransportConfig:
 
 
 async def run(
-    server: "FastMCP",
-    client: "BridgeClient",
+    server: FastMCP,
+    client: BridgeClient,
     transport: TransportConfig,
 ) -> None:
     """Run the server until shutdown, then close the bridge client."""
@@ -50,8 +50,10 @@ async def run(
             try:
                 await runner(host=transport.host, port=transport.port)
             except TypeError:
-                server.settings.host = transport.host  # type: ignore[attr-defined]
-                server.settings.port = transport.port  # type: ignore[attr-defined]
+                # Older SDKs exposed FastMCP.settings.host/.port for transport config.
+                # Newer SDKs may not -- the type: ignore covers both shapes.
+                server.settings.host = transport.host
+                server.settings.port = transport.port
                 await runner()
         else:
             msg = f"Unknown transport kind: {transport.kind!r}"

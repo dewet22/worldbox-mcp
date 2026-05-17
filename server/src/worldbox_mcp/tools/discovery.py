@@ -11,10 +11,10 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from mcp.server.fastmcp import FastMCP
 
-    from ..client import BridgeClient
+    from worldbox_mcp.client import BridgeClient
 
 
-def register(server: "FastMCP", client: "BridgeClient") -> None:
+def register(server: FastMCP, client: BridgeClient) -> None:
     """Register the three discovery tools onto ``server``."""
 
     @server.tool(

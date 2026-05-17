@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-
 import pytest
 
 from worldbox_mcp.config import BridgeAddress
@@ -18,9 +16,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
     )
 
 
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
     if config.getoption("--run-e2e"):
         return
     skip_e2e = pytest.mark.skip(reason="e2e suite needs WorldBox running (--run-e2e to enable)")

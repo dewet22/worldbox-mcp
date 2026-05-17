@@ -13,12 +13,14 @@ ecosystem.
 
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import httpx
 
-from .config import BridgeAddress
-from .errors import BridgeError, BridgeErrorEnvelope, TransportError
+from .errors import BridgeErrorEnvelope, TransportError
+
+if TYPE_CHECKING:
+    from .config import BridgeAddress
 
 DEFAULT_TIMEOUT: Final[float] = 35.0  # Bridge has a 30s per-action timeout; leave room.
 
@@ -52,7 +54,7 @@ class BridgeClient:
             timeout=timeout,
         )
 
-    async def __aenter__(self) -> "BridgeClient":
+    async def __aenter__(self) -> BridgeClient:
         return self
 
     async def __aexit__(self, *_exc: object) -> None:
@@ -110,7 +112,8 @@ class BridgeClient:
         try:
             data: dict[str, Any] = response.json()
         except ValueError as exc:
-            msg = f"Bridge returned non-JSON (status {response.status_code}): {response.text[:200]!r}"
+            preview = response.text[:200]
+            msg = f"Bridge returned non-JSON (status {response.status_code}): {preview!r}"
             raise TransportError(msg, cause=exc) from exc
 
         if not envelope:
