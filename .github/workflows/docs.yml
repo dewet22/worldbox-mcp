@@ -6,7 +6,6 @@ on:
     paths:
       - "docs/**"
       - "mkdocs.yml"
-      - "docs/mkdocs.yml"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -38,11 +37,10 @@ jobs:
             mkdocs-section-index \
             pymdown-extensions
       - name: Build site
-        working-directory: docs
         run: mkdocs build --strict
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs/site
+          path: site
       - id: deploy
         uses: actions/deploy-pages@v4

@@ -6,7 +6,6 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Control;
@@ -63,7 +62,11 @@ internal sealed class SetSpeedCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         // Speed change is shared (no per-agent speed) and non-destructive -- granted to
         // AdvanceTime instead of ControlWorld so FactionPlayers can fast-forward through
@@ -86,10 +89,7 @@ internal sealed class SetSpeedCommand : ICommand
         var configType = _refs.Type("Config");
         if (configType == null)
         {
-            throw new BridgeRejectionException(
-                ErrorCode.GameRejected,
-                "Config type not found."
-            );
+            throw new BridgeRejectionException(ErrorCode.GameRejected, "Config type not found.");
         }
         _setWorldSpeedString ??= configType.GetMethod(
             "setWorldSpeed",

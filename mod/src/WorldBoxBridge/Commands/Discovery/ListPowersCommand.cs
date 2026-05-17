@@ -2,9 +2,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
-using WorldBoxBridge.Threading;
-
 using WorldBoxBridge.Session;
+using WorldBoxBridge.Threading;
 
 namespace WorldBoxBridge.Commands.Discovery;
 
@@ -41,7 +40,11 @@ internal sealed class ListPowersCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         // HttpBridge already marshalled us onto the main thread.
         var items = _catalog.ListAssets("powers", ExtraFields);

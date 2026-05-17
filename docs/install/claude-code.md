@@ -4,7 +4,7 @@
 
 ## Install the bridge first
 
-Make sure you've already installed the in-game mod and that WorldBox is running with `BepInEx/LogOutput.log` showing `listening on 127.0.0.1:8723`. If not, see [`install/`](.) for the mod side.
+Make sure you've already installed the in-game mod and that WorldBox is running with `BepInEx/LogOutput.log` showing `listening on 127.0.0.1:8723`. If not, see [the install index](index.md) for the mod side.
 
 ## Add the server
 
@@ -56,7 +56,7 @@ Copy this into a fresh Claude Code session. It exercises **discovery → action 
 
 This prompt is intentionally **dense** — it forces the agent to use every tool category in the right order, handles the no-world-loaded edge case explicitly, and asks for narrative output that proves the agent understood the data it got back.
 
-A working equivalent is committed at [`examples/scenarios/ecology_smoke.py`](../../examples/scenarios/ecology_smoke.py) — same plan in Python so you can diff agent reasoning against a deterministic reference.
+A working equivalent is committed at [`examples/scenarios/ecology_smoke.py`](https://github.com/fullya99/worldbox-mcp/blob/main/examples/scenarios/ecology_smoke.py) — same plan in Python so you can diff agent reasoning against a deterministic reference.
 
 ## Multi-agent setups
 

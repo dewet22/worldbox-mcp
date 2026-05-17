@@ -2,11 +2,11 @@
 
 Thanks for your interest in contributing. This guide covers setup, conventions, and how to add new commands.
 
-> **If you're an AI agent or working with one**: read **[CLAUDE.md](CLAUDE.md)** first. It's dense, project-specific context (architecture, gotchas, release process) that prevents 30+ minutes of re-discovery.
+> **If you're an AI agent or working with one**: read **[CLAUDE.md](https://github.com/fullya99/worldbox-mcp/blob/main/CLAUDE.md)** first. It's dense, project-specific context (architecture, gotchas, release process) that prevents 30+ minutes of re-discovery.
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). Be kind.
+This project follows the [Contributor Covenant](https://github.com/fullya99/worldbox-mcp/blob/main/CODE_OF_CONDUCT.md). Be kind.
 
 ## Project layout
 

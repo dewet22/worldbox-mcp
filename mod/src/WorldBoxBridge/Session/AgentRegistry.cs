@@ -74,14 +74,16 @@ public sealed class AgentRegistry
     /// using the legacy <c>BridgeConfig.Token</c> as its credential.
     /// </summary>
     public static AgentRegistry Legacy(string token) =>
-        new(new[]
-        {
-            new Agent(
-                id: "legacy",
-                token: token,
-                role: AgentRole.God,
-                claimedKingdomId: null,
-                permissions: Permission.God
-            ),
-        });
+        new(
+            new[]
+            {
+                new Agent(
+                    id: "legacy",
+                    token: token,
+                    role: AgentRole.God,
+                    claimedKingdomId: null,
+                    permissions: Permission.God
+                ),
+            }
+        );
 }

@@ -75,7 +75,11 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Install csharpier
-        run: dotnet tool install -g csharpier
+        # Pin to 0.x: csharpier 1.x (released 2025) changed the CLI (`dotnet csharpier --check`
+        # -> `csharpier check`), removed XML registration as `dotnet-csharpier`, and shifted to
+        # 4-space XML indentation by default. Reformatting the whole tree to 1.x defaults is a
+        # deliberate decision -- track separately. For now pin to the last 0.x.
+        run: dotnet tool install -g csharpier --version 0.30.6
       - name: Check formatting
         working-directory: mod
         run: dotnet csharpier --check .

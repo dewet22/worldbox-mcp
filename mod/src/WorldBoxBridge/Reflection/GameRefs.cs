@@ -53,22 +53,23 @@ internal sealed class GameRefs
     public MethodInfo? Method(
         Type owner,
         string name,
-        BindingFlags flags = BindingFlags.Public
+        BindingFlags flags =
+            BindingFlags.Public
             | BindingFlags.NonPublic
             | BindingFlags.Instance
             | BindingFlags.Static,
         params Type[] argTypes
     )
     {
-        var key = $"{owner.FullName}.{name}({string.Join(",", System.Linq.Enumerable.Select(argTypes, t => t.FullName))})";
+        var key =
+            $"{owner.FullName}.{name}({string.Join(",", System.Linq.Enumerable.Select(argTypes, t => t.FullName))})";
         return _methods.GetOrAdd(
             key,
             _ =>
             {
-                var mi =
-                    argTypes is { Length: > 0 }
-                        ? owner.GetMethod(name, flags, binder: null, types: argTypes, modifiers: null)
-                        : owner.GetMethod(name, flags);
+                var mi = argTypes is { Length: > 0 }
+                    ? owner.GetMethod(name, flags, binder: null, types: argTypes, modifiers: null)
+                    : owner.GetMethod(name, flags);
                 if (mi == null)
                 {
                     _log.LogWarning(
@@ -83,7 +84,8 @@ internal sealed class GameRefs
     public FieldInfo? Field(
         Type owner,
         string name,
-        BindingFlags flags = BindingFlags.Public
+        BindingFlags flags =
+            BindingFlags.Public
             | BindingFlags.NonPublic
             | BindingFlags.Instance
             | BindingFlags.Static
@@ -109,7 +111,8 @@ internal sealed class GameRefs
     public PropertyInfo? Property(
         Type owner,
         string name,
-        BindingFlags flags = BindingFlags.Public
+        BindingFlags flags =
+            BindingFlags.Public
             | BindingFlags.NonPublic
             | BindingFlags.Instance
             | BindingFlags.Static

@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using WorldBoxBridge.Session;
-using SessionState = WorldBoxBridge.Session.Session;
 using Xunit;
+using SessionState = WorldBoxBridge.Session.Session;
 
 namespace WorldBoxBridge.Tests;
 
@@ -14,8 +14,10 @@ public class TurnOrderTests
     [Fact]
     public void Constructor_rejects_empty_rotation()
     {
-        FluentActions.Invoking(() => new TurnOrder(Array.Empty<string>()))
-            .Should().Throw<InvalidOperationException>()
+        FluentActions
+            .Invoking(() => new TurnOrder(Array.Empty<string>()))
+            .Should()
+            .Throw<InvalidOperationException>()
             .WithMessage("*no one would ever be allowed to act*");
     }
 
@@ -57,8 +59,15 @@ public class TurnOrderTests
         var ids = Enumerable.Range(0, 4).Select(i => $"agent_{i}").ToArray();
         var order = new TurnOrder(ids);
 
-        var threads = Enumerable.Range(0, 4)
-            .Select(_ => Task.Run(() => { for (var i = 0; i < 1000; i++) order.Advance(); }))
+        var threads = Enumerable
+            .Range(0, 4)
+            .Select(_ =>
+                Task.Run(() =>
+                {
+                    for (var i = 0; i < 1000; i++)
+                        order.Advance();
+                })
+            )
             .ToArray();
         await Task.WhenAll(threads);
 
@@ -81,34 +90,61 @@ public class TurnOrderTests
 public class SessionTurnConfigTests
 {
     private static AgentRegistry TwoAgents() =>
-        new(new[]
-        {
-            new Agent("a", "tok_a", AgentRole.FactionPlayer, claimedKingdomId: 1, Permission.FactionPlayer),
-            new Agent("b", "tok_b", AgentRole.FactionPlayer, claimedKingdomId: 2, Permission.FactionPlayer),
-        });
+        new(
+            new[]
+            {
+                new Agent(
+                    "a",
+                    "tok_a",
+                    AgentRole.FactionPlayer,
+                    claimedKingdomId: 1,
+                    Permission.FactionPlayer
+                ),
+                new Agent(
+                    "b",
+                    "tok_b",
+                    AgentRole.FactionPlayer,
+                    claimedKingdomId: 2,
+                    Permission.FactionPlayer
+                ),
+            }
+        );
 
     [Fact]
     public void TurnBased_session_requires_a_turn_order()
     {
-        FluentActions.Invoking(() => new SessionState(
-            agents: TwoAgents(),
-            scenarioPreset: "pvp",
-            partialIntel: true,
-            turnBased: true,
-            turnOrder: null
-        )).Should().Throw<ArgumentException>().WithMessage("*requires a TurnOrder*");
+        FluentActions
+            .Invoking(
+                () =>
+                    new SessionState(
+                        agents: TwoAgents(),
+                        scenarioPreset: "pvp",
+                        partialIntel: true,
+                        turnBased: true,
+                        turnOrder: null
+                    )
+            )
+            .Should()
+            .Throw<ArgumentException>()
+            .WithMessage("*requires a TurnOrder*");
     }
 
     [Fact]
     public void NonTurnBased_session_does_not_need_a_turn_order()
     {
-        FluentActions.Invoking(() => new SessionState(
-            agents: TwoAgents(),
-            scenarioPreset: "pvp",
-            partialIntel: true,
-            turnBased: false,
-            turnOrder: null
-        )).Should().NotThrow();
+        FluentActions
+            .Invoking(
+                () =>
+                    new SessionState(
+                        agents: TwoAgents(),
+                        scenarioPreset: "pvp",
+                        partialIntel: true,
+                        turnBased: false,
+                        turnOrder: null
+                    )
+            )
+            .Should()
+            .NotThrow();
     }
 
     [Fact]

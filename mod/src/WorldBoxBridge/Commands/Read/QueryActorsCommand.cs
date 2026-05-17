@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Read;
@@ -45,10 +44,22 @@ internal sealed class QueryActorsCommand : ICommand
                             new JProperty(
                                 "properties",
                                 new JObject(
-                                    new JProperty("x", new JObject(new JProperty("type", "integer"))),
-                                    new JProperty("y", new JObject(new JProperty("type", "integer"))),
-                                    new JProperty("w", new JObject(new JProperty("type", "integer"))),
-                                    new JProperty("h", new JObject(new JProperty("type", "integer")))
+                                    new JProperty(
+                                        "x",
+                                        new JObject(new JProperty("type", "integer"))
+                                    ),
+                                    new JProperty(
+                                        "y",
+                                        new JObject(new JProperty("type", "integer"))
+                                    ),
+                                    new JProperty(
+                                        "w",
+                                        new JObject(new JProperty("type", "integer"))
+                                    ),
+                                    new JProperty(
+                                        "h",
+                                        new JObject(new JProperty("type", "integer"))
+                                    )
                                 )
                             ),
                             new JProperty("required", new JArray("x", "y", "w", "h"))
@@ -78,7 +89,11 @@ internal sealed class QueryActorsCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.Require(Permission.ReadOwnFaction);
         var raceFilter = args.Value<string?>("race");
@@ -141,8 +156,9 @@ internal sealed class QueryActorsCommand : ICommand
             if (aliveOnly)
             {
                 var alive =
-                    _world.CachedMethod(actor.GetType(), "isAlive")?.Invoke(actor, Array.Empty<object>())
-                        as bool?;
+                    _world
+                        .CachedMethod(actor.GetType(), "isAlive")
+                        ?.Invoke(actor, Array.Empty<object>()) as bool?;
                 if (alive == false)
                 {
                     continue;
@@ -205,9 +221,9 @@ internal sealed class QueryActorsCommand : ICommand
             items.Add(
                 new
                 {
-                    name =
-                        _world.CachedMethod(actor.GetType(), "getName")?.Invoke(actor, Array.Empty<object>())
-                            as string,
+                    name = _world
+                        .CachedMethod(actor.GetType(), "getName")
+                        ?.Invoke(actor, Array.Empty<object>()) as string,
                     asset_id = assetId,
                     kingdom_id = kid,
                     x = tx,

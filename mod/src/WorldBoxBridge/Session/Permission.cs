@@ -30,7 +30,16 @@ public enum Permission
     /// </summary>
     AdvanceTime = 1 << 8,
 
-    God = ReadAll | ReadOwnFaction | ActionGlobal | ActionFaction | ControlWorld | SendMessage | RecvMessage | SendBroadcast | AdvanceTime,
+    God =
+        ReadAll
+        | ReadOwnFaction
+        | ActionGlobal
+        | ActionFaction
+        | ControlWorld
+        | SendMessage
+        | RecvMessage
+        | SendBroadcast
+        | AdvanceTime,
     FactionPlayer = ReadOwnFaction | ActionFaction | SendMessage | RecvMessage | AdvanceTime,
     Observer = ReadAll | ReadOwnFaction | SendMessage | RecvMessage,
     Narrator = ReadAll | ReadOwnFaction | SendMessage | RecvMessage | SendBroadcast,

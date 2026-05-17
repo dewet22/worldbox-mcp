@@ -48,5 +48,9 @@ public interface ICommand
     /// session-level scope (role, faction claim, fog-of-war flag). Commands should call
     /// <see cref="RequestContext.Require"/> early to enforce per-role gating.
     /// </summary>
-    Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken);
+    Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    );
 }

@@ -6,7 +6,6 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Read;
@@ -42,7 +41,11 @@ internal sealed class GetTileCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
         {
@@ -55,7 +58,9 @@ internal sealed class GetTileCommand : ICommand
         if (tile == null)
         {
             var dims = _world.GetMapDimensions();
-            var range = dims.HasValue ? $" (map is {dims.Value.Width}x{dims.Value.Height})" : string.Empty;
+            var range = dims.HasValue
+                ? $" (map is {dims.Value.Width}x{dims.Value.Height})"
+                : string.Empty;
             throw new BridgeRejectionException(
                 ErrorCode.OutOfBounds,
                 $"({x},{y}) is outside the map or the world isn't initialised yet{range}."
@@ -78,7 +83,12 @@ internal sealed class GetTileCommand : ICommand
                 {
                     continue;
                 }
-                if (_world.CachedMethod(actor.GetType(), "getName")?.Invoke(actor, Array.Empty<object>()) is string name)
+                if (
+                    _world
+                        .CachedMethod(actor.GetType(), "getName")
+                        ?.Invoke(actor, Array.Empty<object>())
+                    is string name
+                )
                 {
                     actors.Add(name);
                 }

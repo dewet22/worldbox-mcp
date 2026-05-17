@@ -235,11 +235,16 @@ internal sealed class AssetCatalog
                 Type = type;
                 Field = field;
             }
+
             public Type Type { get; }
             public string Field { get; }
+
             public bool Equals(TypeFieldKey other) => Type == other.Type && Field == other.Field;
+
             public override bool Equals(object obj) => obj is TypeFieldKey k && Equals(k);
-            public override int GetHashCode() => ((Type?.GetHashCode() ?? 0) * 397) ^ (Field?.GetHashCode() ?? 0);
+
+            public override int GetHashCode() =>
+                ((Type?.GetHashCode() ?? 0) * 397) ^ (Field?.GetHashCode() ?? 0);
         }
 
         public int LastKnownCount { get; set; }

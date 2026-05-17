@@ -53,9 +53,7 @@ public static class MainThreadDispatcher
     /// distinct private type means we never collide with built-in or third-party subsystems,
     /// and we can spot our entry on subsequent reads of the loop.
     /// </summary>
-    private struct WorldBoxBridgeTick
-    {
-    }
+    private struct WorldBoxBridgeTick { }
 
     /// <summary>Injects the dispatcher into Unity's PlayerLoop. Idempotent.</summary>
     public static void Bootstrap(ManualLogSource log)

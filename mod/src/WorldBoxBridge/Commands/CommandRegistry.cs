@@ -26,7 +26,8 @@ internal sealed class CommandRegistry
         _byName[command.Name] = command;
     }
 
-    public bool TryGet(string name, out ICommand command) => _byName.TryGetValue(name, out command!);
+    public bool TryGet(string name, out ICommand command) =>
+        _byName.TryGetValue(name, out command!);
 
     public IEnumerable<ICommand> All => _byName.Values.OrderBy(c => c.Name);
 

@@ -44,10 +44,7 @@ public sealed class Plugin : BaseUnityPlugin
             config.AssertLoopbackOnly();
             Logger.LogInfo($"Config loaded from {configPath} (port={config.Port.Value}).");
 
-            var version = VersionDetector.Detect(
-                Application.unityVersion,
-                Application.version
-            );
+            var version = VersionDetector.Detect(Application.unityVersion, Application.version);
             Logger.LogInfo(
                 $"Detected WorldBox '{version.WorldBoxVersion}' on Unity {version.UnityVersion} "
                     + $"(Assembly-CSharp.dll sha256={Truncate(version.AssemblyCSharpSha256, 12)}…)."
@@ -63,13 +60,23 @@ public sealed class Plugin : BaseUnityPlugin
             var session = SessionLoader.Load(agentsJsonPath, config.Token.Value, Logger);
 
             var registry = new CommandRegistry();
-            RegisterCommands(registry, version, config, assetCatalog, gameRefs, worldAccess, session);
+            RegisterCommands(
+                registry,
+                version,
+                config,
+                assetCatalog,
+                gameRefs,
+                worldAccess,
+                session
+            );
             Logger.LogInfo($"{registry.Count} commands registered.");
 
             _bridge = new HttpBridge(Logger, config, registry, version, session);
             _bridge.Start();
 
-            Logger.LogInfo("Ready. Kill-switch: set enabled=false in WorldBoxBridge.cfg to hot-disable.");
+            Logger.LogInfo(
+                "Ready. Kill-switch: set enabled=false in WorldBoxBridge.cfg to hot-disable."
+            );
         }
         catch (Exception ex)
         {

@@ -7,7 +7,6 @@ using BepInEx.Logging;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Action;
@@ -102,7 +101,11 @@ internal sealed class SpawnCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.RequireAny(Permission.ActionFaction, Permission.ActionGlobal);
         var entityId = (string?)args["entity_id"];
@@ -126,7 +129,9 @@ internal sealed class SpawnCommand : ICommand
         }
         if (count > 100)
         {
-            throw new ArgumentException("count must be <= 100 (use a loop on the agent side for more).");
+            throw new ArgumentException(
+                "count must be <= 100 (use a loop on the agent side for more)."
+            );
         }
 
         // Pre-check id: gives us did_you_mean on typos before the game silently no-ops.
@@ -143,7 +148,9 @@ internal sealed class SpawnCommand : ICommand
         if (tile == null)
         {
             var dims = _world.GetMapDimensions();
-            var range = dims.HasValue ? $" (map is {dims.Value.Width}x{dims.Value.Height})" : string.Empty;
+            var range = dims.HasValue
+                ? $" (map is {dims.Value.Width}x{dims.Value.Height})"
+                : string.Empty;
             throw new BridgeRejectionException(
                 ErrorCode.OutOfBounds,
                 $"({x},{y}) is outside the map or the world isn't initialised yet{range}."
@@ -176,11 +183,11 @@ internal sealed class SpawnCommand : ICommand
         {
             entityId,
             tile,
-            true,          // pSpawnSound — agent-initiated, give it a sound
-            false,         // pMiracleSpawn
+            true, // pSpawnSound — agent-initiated, give it a sound
+            false, // pMiracleSpawn
             spawnHeight,
-            null,          // pSubspecies — leave to default
-            false,         // pGiveOwnerlessItems
+            null, // pSubspecies — leave to default
+            false, // pGiveOwnerlessItems
             adult,
         };
 

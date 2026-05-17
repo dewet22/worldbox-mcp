@@ -13,16 +13,20 @@ public class MessageBusTests
     [Fact]
     public void Constructor_rejects_zero_agents()
     {
-        FluentActions.Invoking(() => new MessageBus(Array.Empty<string>()))
-            .Should().Throw<InvalidOperationException>()
+        FluentActions
+            .Invoking(() => new MessageBus(Array.Empty<string>()))
+            .Should()
+            .Throw<InvalidOperationException>()
             .WithMessage("*nobody could send or receive*");
     }
 
     [Fact]
     public void Constructor_rejects_zero_inbox_size()
     {
-        FluentActions.Invoking(() => new MessageBus(new[] { "a" }, maxInboxSize: 0))
-            .Should().Throw<ArgumentOutOfRangeException>();
+        FluentActions
+            .Invoking(() => new MessageBus(new[] { "a" }, maxInboxSize: 0))
+            .Should()
+            .Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -63,8 +67,10 @@ public class MessageBusTests
     public void Send_to_unknown_recipient_throws_arg_exception()
     {
         var bus = TwoAgents();
-        FluentActions.Invoking(() => bus.Send("athena", "ghost", null, "x"))
-            .Should().Throw<ArgumentException>()
+        FluentActions
+            .Invoking(() => bus.Send("athena", "ghost", null, "x"))
+            .Should()
+            .Throw<ArgumentException>()
             .WithMessage("*not registered*");
     }
 
@@ -72,8 +78,10 @@ public class MessageBusTests
     public void Send_from_unknown_sender_throws()
     {
         var bus = TwoAgents();
-        FluentActions.Invoking(() => bus.Send("ghost", "athena", null, "x"))
-            .Should().Throw<InvalidOperationException>();
+        FluentActions
+            .Invoking(() => bus.Send("ghost", "athena", null, "x"))
+            .Should()
+            .Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -99,7 +107,8 @@ public class MessageBusTests
     public void Recv_caps_at_max()
     {
         var bus = TwoAgents();
-        for (var i = 0; i < 20; i++) bus.Send("athena", "ares", null, $"m{i}");
+        for (var i = 0; i < 20; i++)
+            bus.Send("athena", "ares", null, $"m{i}");
 
         var page = bus.Recv("ares", sinceSeq: 0, max: 5);
         page.Should().HaveCount(5);
@@ -112,7 +121,8 @@ public class MessageBusTests
     {
         // Inbox capped at 3 → after 5 sends, only seqs 3..5 remain (oldest 2 dropped).
         var bus = new MessageBus(new[] { "a", "b" }, maxInboxSize: 3);
-        for (var i = 1; i <= 5; i++) bus.Send("a", "b", null, $"m{i}");
+        for (var i = 1; i <= 5; i++)
+            bus.Send("a", "b", null, $"m{i}");
 
         var all = bus.Recv("b", sinceSeq: 0, max: 100);
         all.Should().HaveCount(3);
@@ -132,8 +142,10 @@ public class MessageBusTests
     public void Recv_for_unknown_agent_throws()
     {
         var bus = TwoAgents();
-        FluentActions.Invoking(() => bus.Recv("ghost"))
-            .Should().Throw<InvalidOperationException>()
+        FluentActions
+            .Invoking(() => bus.Recv("ghost"))
+            .Should()
+            .Throw<InvalidOperationException>()
             .WithMessage("*not registered*");
     }
 }

@@ -26,13 +26,16 @@ public sealed class MessageBus
 
     public MessageBus(IEnumerable<string> agentIds, int maxInboxSize = 200)
     {
-        if (agentIds is null) throw new ArgumentNullException(nameof(agentIds));
-        if (maxInboxSize <= 0) throw new ArgumentOutOfRangeException(nameof(maxInboxSize));
+        if (agentIds is null)
+            throw new ArgumentNullException(nameof(agentIds));
+        if (maxInboxSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxInboxSize));
         _maxInboxSize = maxInboxSize;
         _inboxes = new Dictionary<string, Queue<Message>>(StringComparer.Ordinal);
         foreach (var id in agentIds)
         {
-            if (string.IsNullOrEmpty(id)) continue;
+            if (string.IsNullOrEmpty(id))
+                continue;
             _inboxes[id] = new Queue<Message>(capacity: 16);
         }
         if (_inboxes.Count == 0)
@@ -46,7 +49,13 @@ public sealed class MessageBus
     /// <summary>Total messages delivered (post-fan-out for broadcasts). Useful for tests.</summary>
     public long DeliveredCount
     {
-        get { lock (_lock) { return _seq; } }
+        get
+        {
+            lock (_lock)
+            {
+                return _seq;
+            }
+        }
     }
 
     /// <summary>
@@ -57,8 +66,10 @@ public sealed class MessageBus
     /// </summary>
     public long Send(string from, string to, string? kind, string content)
     {
-        if (string.IsNullOrEmpty(from)) throw new ArgumentException("from required", nameof(from));
-        if (string.IsNullOrEmpty(to)) throw new ArgumentException("to required", nameof(to));
+        if (string.IsNullOrEmpty(from))
+            throw new ArgumentException("from required", nameof(from));
+        if (string.IsNullOrEmpty(to))
+            throw new ArgumentException("to required", nameof(to));
         content ??= string.Empty;
 
         lock (_lock)
@@ -110,7 +121,7 @@ public sealed class MessageBus
         inbox.Enqueue(msg);
         while (inbox.Count > _maxInboxSize)
         {
-            inbox.Dequeue();   // drop-oldest
+            inbox.Dequeue(); // drop-oldest
         }
         return _seq;
     }
@@ -122,8 +133,10 @@ public sealed class MessageBus
     /// </summary>
     public IReadOnlyList<Message> Recv(string agentId, long sinceSeq = 0, int max = 100)
     {
-        if (string.IsNullOrEmpty(agentId)) throw new ArgumentException("agentId required");
-        if (max <= 0) throw new ArgumentOutOfRangeException(nameof(max));
+        if (string.IsNullOrEmpty(agentId))
+            throw new ArgumentException("agentId required");
+        if (max <= 0)
+            throw new ArgumentOutOfRangeException(nameof(max));
         lock (_lock)
         {
             if (!_inboxes.TryGetValue(agentId, out var inbox))
@@ -136,9 +149,11 @@ public sealed class MessageBus
             var result = new List<Message>(Math.Min(max, inbox.Count));
             foreach (var msg in inbox)
             {
-                if (msg.Seq <= sinceSeq) continue;
+                if (msg.Seq <= sinceSeq)
+                    continue;
                 result.Add(msg);
-                if (result.Count >= max) break;
+                if (result.Count >= max)
+                    break;
             }
             return result;
         }

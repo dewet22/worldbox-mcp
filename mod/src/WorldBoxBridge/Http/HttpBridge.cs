@@ -133,7 +133,9 @@ internal sealed class HttpBridge : IDisposable
         };
         t.Start();
         _loop = Task.CompletedTask;
-        _log.LogInfo($"[diag] accept thread started (Id={t.ManagedThreadId}, IsBackground={t.IsBackground})");
+        _log.LogInfo(
+            $"[diag] accept thread started (Id={t.ManagedThreadId}, IsBackground={t.IsBackground})"
+        );
     }
 
     private void AcceptLoopBlocking()
@@ -161,7 +163,9 @@ internal sealed class HttpBridge : IDisposable
             }
             catch (Exception ex)
             {
-                _log.LogError($"[accept-thread] AcceptTcpClient threw: {ex.GetType().Name}: {ex.Message}");
+                _log.LogError(
+                    $"[accept-thread] AcceptTcpClient threw: {ex.GetType().Name}: {ex.Message}"
+                );
                 Thread.Sleep(200);
                 continue;
             }
@@ -181,7 +185,8 @@ internal sealed class HttpBridge : IDisposable
             try
             {
                 using var stream = client.GetStream();
-                var request = await ReadRequestAsync(stream, cancellationToken).ConfigureAwait(false);
+                var request = await ReadRequestAsync(stream, cancellationToken)
+                    .ConfigureAwait(false);
                 if (request == null)
                 {
                     return; // empty / malformed; drop silently
@@ -205,8 +210,7 @@ internal sealed class HttpBridge : IDisposable
     {
         public string Method { get; set; } = "GET";
         public string Path { get; set; } = "/";
-        public Dictionary<string, string> Headers { get; } =
-            new(StringComparer.OrdinalIgnoreCase);
+        public Dictionary<string, string> Headers { get; } = new(StringComparer.OrdinalIgnoreCase);
         public byte[] Body { get; set; } = Array.Empty<byte>();
 
         public string? GetHeader(string name)
@@ -409,7 +413,8 @@ internal sealed class HttpBridge : IDisposable
         }
         if (path == "/cmd" && req.Method == "POST")
         {
-            return await HandleCommandAsync(req, ctx.Value, cancellationToken).ConfigureAwait(false);
+            return await HandleCommandAsync(req, ctx.Value, cancellationToken)
+                .ConfigureAwait(false);
         }
         if (path == "/capabilities" && req.Method == "GET")
         {
@@ -485,10 +490,12 @@ internal sealed class HttpBridge : IDisposable
             // are reserved for the current-turn agent. God-role agents (ActionGlobal) bypass
             // the gate so a hierarchical "DM" can always intervene. Meta / Discovery / Read /
             // Bus commands are not gated — they can be called any time.
-            if (_session.TurnBased
+            if (
+                _session.TurnBased
                 && _session.TurnOrder is not null
                 && IsTurnGatedCategory(command.Category)
-                && !ctx.Has(Permission.ActionGlobal))
+                && !ctx.Has(Permission.ActionGlobal)
+            )
             {
                 var current = _session.TurnOrder.Current;
                 if (current != ctx.AgentId)
@@ -511,14 +518,20 @@ internal sealed class HttpBridge : IDisposable
             {
                 result = await MainThreadDispatcher
                     .RunOnMainThreadAsync(
-                        () => command.ExecuteAsync(args, capturedCtx, cancellationToken).GetAwaiter().GetResult(),
+                        () =>
+                            command
+                                .ExecuteAsync(args, capturedCtx, cancellationToken)
+                                .GetAwaiter()
+                                .GetResult(),
                         cancellationToken: cancellationToken
                     )
                     .ConfigureAwait(false);
             }
             else
             {
-                result = await command.ExecuteAsync(args, ctx, cancellationToken).ConfigureAwait(false);
+                result = await command
+                    .ExecuteAsync(args, ctx, cancellationToken)
+                    .ConfigureAwait(false);
             }
             return SuccessResponse(result);
         }
@@ -676,7 +689,8 @@ internal sealed class HttpBridge : IDisposable
             + "Cache-Control: no-store\r\n"
             + "\r\n";
         var headerBytes = Encoding.ASCII.GetBytes(header);
-        await stream.WriteAsync(headerBytes, 0, headerBytes.Length, cancellationToken)
+        await stream
+            .WriteAsync(headerBytes, 0, headerBytes.Length, cancellationToken)
             .ConfigureAwait(false);
         if (response.Body.Length > 0)
         {

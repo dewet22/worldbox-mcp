@@ -42,7 +42,11 @@ internal sealed class TurnAdvanceCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         if (!_session.TurnBased || _session.TurnOrder is null)
         {
@@ -67,6 +71,13 @@ internal sealed class TurnAdvanceCommand : ICommand
 
         var previous = _session.TurnOrder.Current;
         var next = _session.TurnOrder.Advance();
-        return Task.FromResult<object?>(new { previous, next, forced_by_god = ctx.Has(Permission.ActionGlobal) && previous != ctx.AgentId });
+        return Task.FromResult<object?>(
+            new
+            {
+                previous,
+                next,
+                forced_by_god = ctx.Has(Permission.ActionGlobal) && previous != ctx.AgentId,
+            }
+        );
     }
 }

@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Read;
@@ -46,7 +45,11 @@ internal sealed class ListKingdomsCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.Require(Permission.ReadOwnFaction);
         // Intentional: kingdoms list is NEVER fog-of-war filtered. Agents need to know
@@ -71,8 +74,9 @@ internal sealed class ListKingdomsCommand : ICommand
                     continue;
                 }
                 var alive =
-                    _world.CachedMethod(kingdom.GetType(), "isAlive")?.Invoke(kingdom, Array.Empty<object>())
-                        as bool?;
+                    _world
+                        .CachedMethod(kingdom.GetType(), "isAlive")
+                        ?.Invoke(kingdom, Array.Empty<object>()) as bool?;
                 if (alive == false)
                 {
                     continue;
@@ -101,8 +105,9 @@ internal sealed class ListKingdomsCommand : ICommand
             name = _world.Read(kingdom, "name"),
             race = asset != null ? _world.Read(asset, "id") : null,
             king_name = king != null
-                ? _world.CachedMethod(king.GetType(), "getName")?.Invoke(king, Array.Empty<object>())
-                    as string
+                ? _world
+                    .CachedMethod(king.GetType(), "getName")
+                    ?.Invoke(king, Array.Empty<object>()) as string
                 : null,
             capital_id = capital != null ? _world.Read(capital, "id") : null,
             cities_count = cities?.Count ?? 0,

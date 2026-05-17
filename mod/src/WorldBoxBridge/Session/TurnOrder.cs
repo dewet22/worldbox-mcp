@@ -24,7 +24,8 @@ public sealed class TurnOrder
 
     public TurnOrder(IEnumerable<string> agentIds)
     {
-        if (agentIds is null) throw new ArgumentNullException(nameof(agentIds));
+        if (agentIds is null)
+            throw new ArgumentNullException(nameof(agentIds));
         _agentIds = agentIds.ToList();
         if (_agentIds.Count == 0)
         {
@@ -36,12 +37,24 @@ public sealed class TurnOrder
 
     public IReadOnlyList<string> AgentIds
     {
-        get { lock (_lock) { return _agentIds.AsReadOnly(); } }
+        get
+        {
+            lock (_lock)
+            {
+                return _agentIds.AsReadOnly();
+            }
+        }
     }
 
     public string Current
     {
-        get { lock (_lock) { return _agentIds[_currentIndex]; } }
+        get
+        {
+            lock (_lock)
+            {
+                return _agentIds[_currentIndex];
+            }
+        }
     }
 
     /// <summary>Advances to the next agent in the rotation, returning the new current agent.</summary>
@@ -57,6 +70,9 @@ public sealed class TurnOrder
     /// <summary>True if <paramref name="agentId"/> is the agent whose turn is currently active.</summary>
     public bool IsCurrentlyActive(string agentId)
     {
-        lock (_lock) { return _agentIds[_currentIndex] == agentId; }
+        lock (_lock)
+        {
+            return _agentIds[_currentIndex] == agentId;
+        }
     }
 }

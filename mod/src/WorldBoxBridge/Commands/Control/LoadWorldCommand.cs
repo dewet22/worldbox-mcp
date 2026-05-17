@@ -8,7 +8,6 @@ using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Control;
@@ -63,7 +62,11 @@ internal sealed class LoadWorldCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.Require(Permission.ControlWorld);
         var path = args.Value<string?>("path");
@@ -92,7 +95,10 @@ internal sealed class LoadWorldCommand : ICommand
             }
             catch (FormatException ex)
             {
-                throw new BridgeRejectionException(ErrorCode.BadArgs, $"bytes_b64 invalid: {ex.Message}");
+                throw new BridgeRejectionException(
+                    ErrorCode.BadArgs,
+                    $"bytes_b64 invalid: {ex.Message}"
+                );
             }
         }
         else

@@ -78,7 +78,8 @@ internal static class SessionLoader
                 IEnumerable<string> rotation;
                 if (obj["turn_order"] is JArray turnArray && turnArray.Count > 0)
                 {
-                    rotation = turnArray.Values<string>()
+                    rotation = turnArray
+                        .Values<string>()
                         .Where(s => !string.IsNullOrWhiteSpace(s))
                         .Cast<string>()
                         .ToList();
@@ -102,7 +103,11 @@ internal static class SessionLoader
             log.LogInfo(
                 $"[session] loaded '{agentsJsonPath}': scenario={scenario}, agents={registry.Count}, "
                     + $"partial_intel={partialIntel}, turn_based={turnBased}"
-                    + (turnOrder is not null ? $", turn_order=[{string.Join(",", turnOrder.AgentIds)}]" : "")
+                    + (
+                        turnOrder is not null
+                            ? $", turn_order=[{string.Join(",", turnOrder.AgentIds)}]"
+                            : ""
+                    )
             );
             return new Session(registry, scenario, partialIntel, turnBased, turnOrder);
         }
@@ -172,7 +177,8 @@ internal static class SessionLoader
         {
             foreach (var ot in oArr)
             {
-                if (ot is not JObject obj) continue;
+                if (ot is not JObject obj)
+                    continue;
                 var objId = obj.Value<string?>("id") ?? $"obj{objectives.Count}";
                 var label = obj.Value<string?>("label") ?? objId;
                 var kind = obj.Value<string?>("kind") ?? "freeform";
@@ -180,9 +186,7 @@ internal static class SessionLoader
                 objectives.Add(new Objective(objId, label, kind, target));
             }
         }
-        var objectiveSet = objectives.Count > 0
-            ? new ObjectiveSet(objectives)
-            : null;
+        var objectiveSet = objectives.Count > 0 ? new ObjectiveSet(objectives) : null;
         return new Agent(id!, token!, role, kingdomClaim, perms, objectiveSet);
     }
 

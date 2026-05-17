@@ -6,7 +6,6 @@ using BepInEx.Logging;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Action;
@@ -74,7 +73,11 @@ internal sealed class InvokePowerCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.RequireAny(Permission.ActionFaction, Permission.ActionGlobal);
         var powerId = (string?)args["power_id"];

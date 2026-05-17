@@ -113,14 +113,10 @@ internal sealed class WorldAccess
         }
     }
 
-    public object? UnitsManager =>
-        GetInstanceField(ref _unitsField, "units", _mapBoxType);
-    public object? KingdomsManager =>
-        GetInstanceField(ref _kingdomsField, "kingdoms", _mapBoxType);
-    public object? CitiesManager =>
-        GetInstanceField(ref _citiesField, "cities", _mapBoxType);
-    public object? MapStats =>
-        GetInstanceField(ref _mapStatsField, "map_stats", _mapBoxType);
+    public object? UnitsManager => GetInstanceField(ref _unitsField, "units", _mapBoxType);
+    public object? KingdomsManager => GetInstanceField(ref _kingdomsField, "kingdoms", _mapBoxType);
+    public object? CitiesManager => GetInstanceField(ref _citiesField, "cities", _mapBoxType);
+    public object? MapStats => GetInstanceField(ref _mapStatsField, "map_stats", _mapBoxType);
 
     public bool? IsPaused
     {
@@ -131,10 +127,11 @@ internal sealed class WorldAccess
             {
                 return null;
             }
-            _isPausedMethod ??= mb.GetType().GetMethod(
-                "isPaused",
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-            );
+            _isPausedMethod ??= mb.GetType()
+                .GetMethod(
+                    "isPaused",
+                    BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+                );
             return _isPausedMethod?.Invoke(mb, Array.Empty<object>()) as bool?;
         }
     }
@@ -150,10 +147,11 @@ internal sealed class WorldAccess
         {
             return null;
         }
-        _tilesMapField ??= mb.GetType().GetField(
-            "tiles_map",
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-        );
+        _tilesMapField ??= mb.GetType()
+            .GetField(
+                "tiles_map",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+            );
         if (_tilesMapField?.GetValue(mb) is not Array map)
         {
             return null;
@@ -237,8 +235,7 @@ internal sealed class WorldAccess
     // Reflection helpers reused by Read commands
     // ──────────────────────────────────────────────────────────────────────
 
-    public FieldInfo? Field(object instance, string name) =>
-        CachedField(instance.GetType(), name);
+    public FieldInfo? Field(object instance, string name) => CachedField(instance.GetType(), name);
 
     public FieldInfo? CachedField(Type type, string name)
     {
@@ -370,10 +367,8 @@ internal sealed class WorldAccess
         {
             return null;
         }
-        cache ??= mb.GetType().GetField(
-            name,
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-        );
+        cache ??= mb.GetType()
+            .GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
         return cache?.GetValue(mb);
     }
 
@@ -389,7 +384,9 @@ internal sealed class WorldAccess
         public string Name { get; }
 
         public bool Equals(TypeMemberKey other) => Type == other.Type && Name == other.Name;
+
         public override bool Equals(object obj) => obj is TypeMemberKey k && Equals(k);
+
         public override int GetHashCode() =>
             ((Type?.GetHashCode() ?? 0) * 397) ^ (Name?.GetHashCode() ?? 0);
     }

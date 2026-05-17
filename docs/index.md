@@ -15,7 +15,7 @@ It ships as two open-source components:
 
 ## Quick links
 
-- 🚀 **[Install](install/)** — pick your AI client
+- 🚀 **[Install](install/index.md)** — pick your AI client
 - 🏗 **[Architecture](architecture.md)** — how the two halves talk to each other
 - 📚 **[Command reference](command-reference.md)** — every tool, auto-generated
 - 👥 **[Multi-agent sessions](multi-agent.md)** — N AIs on one world (v0.3+)

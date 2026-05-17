@@ -2,8 +2,8 @@ using FluentAssertions;
 using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Session;
-using SessionState = WorldBoxBridge.Session.Session;
 using Xunit;
+using SessionState = WorldBoxBridge.Session.Session;
 
 namespace WorldBoxBridge.Tests;
 
@@ -13,7 +13,8 @@ public class RequestContextTests
         AgentRole role,
         long? kingdomClaim = null,
         bool partialIntel = false,
-        string scenario = "sandbox")
+        string scenario = "sandbox"
+    )
     {
         var agent = new Agent(
             id: role.ToString().ToLowerInvariant(),
@@ -69,8 +70,10 @@ public class RequestContextTests
     public void Require_throws_PERMISSION_DENIED_when_missing()
     {
         var ctx = Ctx(AgentRole.Observer);
-        FluentActions.Invoking(() => ctx.Require(Permission.ActionGlobal))
-            .Should().Throw<BridgeRejectionException>()
+        FluentActions
+            .Invoking(() => ctx.Require(Permission.ActionGlobal))
+            .Should()
+            .Throw<BridgeRejectionException>()
             .Where(ex => ex.Code == ErrorCode.PermissionDenied)
             .WithMessage("*role=Observer*ActionGlobal*");
     }
@@ -79,18 +82,20 @@ public class RequestContextTests
     public void RequireAny_passes_when_at_least_one_held()
     {
         var ctx = Ctx(AgentRole.FactionPlayer);
-        FluentActions.Invoking(() =>
-            ctx.RequireAny(Permission.ActionGlobal, Permission.ActionFaction)
-        ).Should().NotThrow();
+        FluentActions
+            .Invoking(() => ctx.RequireAny(Permission.ActionGlobal, Permission.ActionFaction))
+            .Should()
+            .NotThrow();
     }
 
     [Fact]
     public void RequireAny_throws_when_none_held()
     {
         var ctx = Ctx(AgentRole.Observer);
-        FluentActions.Invoking(() =>
-            ctx.RequireAny(Permission.ActionGlobal, Permission.ActionFaction)
-        ).Should().Throw<BridgeRejectionException>()
+        FluentActions
+            .Invoking(() => ctx.RequireAny(Permission.ActionGlobal, Permission.ActionFaction))
+            .Should()
+            .Throw<BridgeRejectionException>()
             .Where(ex => ex.Code == ErrorCode.PermissionDenied);
     }
 
@@ -101,14 +106,20 @@ public class RequestContextTests
     private const long NullClaim = long.MinValue; // not a real kingdom id, marker for "no claim"
 
     [Theory]
-    [InlineData(AgentRole.God, NullClaim, true, 3L, true)]              // god always sees all (ReadAll)
-    [InlineData(AgentRole.Observer, NullClaim, true, 3L, true)]         // observer always sees all (ReadAll)
-    [InlineData(AgentRole.FactionPlayer, 5L, false, 3L, true)]          // no partial_intel → see all
-    [InlineData(AgentRole.FactionPlayer, NullClaim, true, 3L, true)]    // unclaimed factionplayer → see all
-    [InlineData(AgentRole.FactionPlayer, 5L, true, 5L, true)]           // claimed factionplayer sees own kingdom
-    [InlineData(AgentRole.FactionPlayer, 5L, true, 3L, false)]          // claimed factionplayer hides others
-    [InlineData(AgentRole.Narrator, NullClaim, true, 3L, true)]         // narrator sees all (ReadAll)
-    public void CanSeeKingdom_matrix(AgentRole role, long claim, bool partialIntel, long target, bool expected)
+    [InlineData(AgentRole.God, NullClaim, true, 3L, true)] // god always sees all (ReadAll)
+    [InlineData(AgentRole.Observer, NullClaim, true, 3L, true)] // observer always sees all (ReadAll)
+    [InlineData(AgentRole.FactionPlayer, 5L, false, 3L, true)] // no partial_intel → see all
+    [InlineData(AgentRole.FactionPlayer, NullClaim, true, 3L, true)] // unclaimed factionplayer → see all
+    [InlineData(AgentRole.FactionPlayer, 5L, true, 5L, true)] // claimed factionplayer sees own kingdom
+    [InlineData(AgentRole.FactionPlayer, 5L, true, 3L, false)] // claimed factionplayer hides others
+    [InlineData(AgentRole.Narrator, NullClaim, true, 3L, true)] // narrator sees all (ReadAll)
+    public void CanSeeKingdom_matrix(
+        AgentRole role,
+        long claim,
+        bool partialIntel,
+        long target,
+        bool expected
+    )
     {
         long? actualClaim = claim == NullClaim ? null : claim;
         var ctx = Ctx(role, actualClaim, partialIntel);
@@ -143,8 +154,10 @@ public class RequestContextTests
     public void RequireKingdomAccess_factionplayer_cannot_touch_foreign_kingdom()
     {
         var ctx = Ctx(AgentRole.FactionPlayer, kingdomClaim: 7);
-        FluentActions.Invoking(() => ctx.RequireKingdomAccess(3))
-            .Should().Throw<BridgeRejectionException>()
+        FluentActions
+            .Invoking(() => ctx.RequireKingdomAccess(3))
+            .Should()
+            .Throw<BridgeRejectionException>()
             .Where(ex => ex.Code == ErrorCode.FactionScopeViolation)
             .WithMessage("*kingdom=7*kingdom 3*");
     }
@@ -156,8 +169,10 @@ public class RequestContextTests
         // (Observer can't act at all due to a separate Require(Permission.ActionFaction) gate
         // in the command itself, but this test isolates RequireKingdomAccess's own logic.)
         var ctx = Ctx(AgentRole.Observer, kingdomClaim: 7);
-        FluentActions.Invoking(() => ctx.RequireKingdomAccess(3))
-            .Should().Throw<BridgeRejectionException>()
+        FluentActions
+            .Invoking(() => ctx.RequireKingdomAccess(3))
+            .Should()
+            .Throw<BridgeRejectionException>()
             .Where(ex => ex.Code == ErrorCode.FactionScopeViolation);
     }
 

@@ -6,7 +6,6 @@ using BepInEx.Logging;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Action;
@@ -92,7 +91,11 @@ internal sealed class PaintTileCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         // Terraforming is genuinely global (no per-kingdom semantics in WorldBox) — gate on
         // ActionGlobal so FactionPlayers can't reshape opponents' territory.

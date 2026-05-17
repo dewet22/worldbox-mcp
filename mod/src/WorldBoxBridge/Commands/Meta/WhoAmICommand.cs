@@ -28,7 +28,11 @@ internal sealed class WhoAmICommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         var payload = new
         {
@@ -45,15 +49,24 @@ internal sealed class WhoAmICommand : ICommand
     private static string[] PermissionList(Permission p)
     {
         var list = new System.Collections.Generic.List<string>();
-        if (p.HasFlag(Permission.ReadAll)) list.Add("read_all");
-        if (p.HasFlag(Permission.ReadOwnFaction)) list.Add("read_own_faction");
-        if (p.HasFlag(Permission.ActionGlobal)) list.Add("action_global");
-        if (p.HasFlag(Permission.ActionFaction)) list.Add("action_faction");
-        if (p.HasFlag(Permission.ControlWorld)) list.Add("control_world");
-        if (p.HasFlag(Permission.SendMessage)) list.Add("send_message");
-        if (p.HasFlag(Permission.RecvMessage)) list.Add("recv_message");
-        if (p.HasFlag(Permission.SendBroadcast)) list.Add("send_broadcast");
-        if (p.HasFlag(Permission.AdvanceTime)) list.Add("advance_time");
+        if (p.HasFlag(Permission.ReadAll))
+            list.Add("read_all");
+        if (p.HasFlag(Permission.ReadOwnFaction))
+            list.Add("read_own_faction");
+        if (p.HasFlag(Permission.ActionGlobal))
+            list.Add("action_global");
+        if (p.HasFlag(Permission.ActionFaction))
+            list.Add("action_faction");
+        if (p.HasFlag(Permission.ControlWorld))
+            list.Add("control_world");
+        if (p.HasFlag(Permission.SendMessage))
+            list.Add("send_message");
+        if (p.HasFlag(Permission.RecvMessage))
+            list.Add("recv_message");
+        if (p.HasFlag(Permission.SendBroadcast))
+            list.Add("send_broadcast");
+        if (p.HasFlag(Permission.AdvanceTime))
+            list.Add("advance_time");
         return list.ToArray();
     }
 }

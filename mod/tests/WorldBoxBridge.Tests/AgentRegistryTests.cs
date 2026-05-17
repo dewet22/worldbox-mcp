@@ -67,8 +67,20 @@ public class AgentRegistryTests
     [Fact]
     public void Multi_agent_constructor_routes_per_token()
     {
-        var athena = new Agent("athena", "tok_a", AgentRole.FactionPlayer, claimedKingdomId: 1, Permission.FactionPlayer);
-        var ares = new Agent("ares", "tok_b", AgentRole.FactionPlayer, claimedKingdomId: 2, Permission.FactionPlayer);
+        var athena = new Agent(
+            "athena",
+            "tok_a",
+            AgentRole.FactionPlayer,
+            claimedKingdomId: 1,
+            Permission.FactionPlayer
+        );
+        var ares = new Agent(
+            "ares",
+            "tok_b",
+            AgentRole.FactionPlayer,
+            claimedKingdomId: 2,
+            Permission.FactionPlayer
+        );
         var registry = new AgentRegistry(new[] { athena, ares });
 
         registry.Count.Should().Be(2);
@@ -82,8 +94,7 @@ public class AgentRegistryTests
     public void Zero_agents_is_an_invalid_configuration()
     {
         Action act = () => _ = new AgentRegistry(Array.Empty<Agent>());
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*reject every request*");
+        act.Should().Throw<InvalidOperationException>().WithMessage("*reject every request*");
     }
 
     [Fact]
@@ -117,8 +128,10 @@ public class PermissionDefaultsTests
         perms.HasFlag(Permission.ActionGlobal).Should().BeFalse();
         perms.HasFlag(Permission.ActionFaction).Should().BeTrue();
         perms.HasFlag(Permission.ReadOwnFaction).Should().BeTrue();
-        perms.HasFlag(Permission.AdvanceTime).Should().BeTrue(
-            "FactionPlayers need to fast-forward through quiet phases");
+        perms
+            .HasFlag(Permission.AdvanceTime)
+            .Should()
+            .BeTrue("FactionPlayers need to fast-forward through quiet phases");
     }
 
     [Fact]
@@ -126,8 +139,16 @@ public class PermissionDefaultsTests
     {
         // Observer + Narrator are watchers -- they shouldn't be able to skip ahead while
         // the actual players are still deliberating.
-        PermissionDefaults.For(AgentRole.Observer).HasFlag(Permission.AdvanceTime).Should().BeFalse();
-        PermissionDefaults.For(AgentRole.Narrator).HasFlag(Permission.AdvanceTime).Should().BeFalse();
+        PermissionDefaults
+            .For(AgentRole.Observer)
+            .HasFlag(Permission.AdvanceTime)
+            .Should()
+            .BeFalse();
+        PermissionDefaults
+            .For(AgentRole.Narrator)
+            .HasFlag(Permission.AdvanceTime)
+            .Should()
+            .BeFalse();
     }
 
     [Fact]

@@ -71,7 +71,8 @@ WorldBoxBridge-v*.zip
 scratch/
 sandbox/
 
-# Docs build
+# Docs build (mkdocs.yml moved to repo root in 0.3 -- legacy docs/site/ kept for back-compat)
+site/
 docs/site/
 .cache/
 

@@ -10,7 +10,8 @@ public sealed class Agent
         AgentRole role,
         long? claimedKingdomId,
         Permission permissions,
-        ObjectiveSet? objectives = null)
+        ObjectiveSet? objectives = null
+    )
     {
         Id = id ?? throw new ArgumentNullException(nameof(id));
         Token = token ?? throw new ArgumentNullException(nameof(token));

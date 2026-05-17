@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Read;
@@ -33,7 +32,11 @@ internal sealed class ScreenshotCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         // Screenshot leaks the entire map at once — gate it on ReadAll so FactionPlayers
         // under partial_intel can't bypass their fog-of-war by snapping a picture.

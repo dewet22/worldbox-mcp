@@ -41,23 +41,31 @@ internal sealed class ObjectiveStatusCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.Require(Permission.ReadOwnFaction);
 
-        var agentObjectives = _session.Agents.All.Select(a => new
-        {
-            agent_id = a.Id,
-            role = a.Role.ToWireString(),
-            claimed_kingdom_id = a.ClaimedKingdomId,
-            objectives = a.Objectives.Items.Select(o => new
+        var agentObjectives = _session
+            .Agents.All.Select(a => new
             {
-                id = o.Id,
-                label = o.Label,
-                kind = o.Kind,
-                target = o.Target,
-            }).ToArray(),
-        }).ToArray();
+                agent_id = a.Id,
+                role = a.Role.ToWireString(),
+                claimed_kingdom_id = a.ClaimedKingdomId,
+                objectives = a
+                    .Objectives.Items.Select(o => new
+                    {
+                        id = o.Id,
+                        label = o.Label,
+                        kind = o.Kind,
+                        target = o.Target,
+                    })
+                    .ToArray(),
+            })
+            .ToArray();
 
         // Live kingdom-population snapshot — same units count the game's UI shows in
         // the kingdoms panel. Fog-of-war is intentionally NOT applied here: the metrics
@@ -73,29 +81,37 @@ internal sealed class ObjectiveStatusCommand : ICommand
             {
                 foreach (var kingdom in raw)
                 {
-                    if (kingdom is null) continue;
-                    var alive = _world.CachedMethod(kingdom.GetType(), "isAlive")
-                        ?.Invoke(kingdom, System.Array.Empty<object>()) as bool?;
-                    if (alive == false) continue;
+                    if (kingdom is null)
+                        continue;
+                    var alive =
+                        _world
+                            .CachedMethod(kingdom.GetType(), "isAlive")
+                            ?.Invoke(kingdom, System.Array.Empty<object>()) as bool?;
+                    if (alive == false)
+                        continue;
                     var units = _world.Read(kingdom, "units") as System.Collections.ICollection;
                     var cities = _world.Read(kingdom, "cities") as System.Collections.ICollection;
-                    kingdomMetrics.Add(new
-                    {
-                        id = _world.Read(kingdom, "id"),
-                        name = _world.Read(kingdom, "name"),
-                        units = units?.Count ?? 0,
-                        cities = cities?.Count ?? 0,
-                        wild = _world.Read(kingdom, "wild") as bool? ?? false,
-                    });
+                    kingdomMetrics.Add(
+                        new
+                        {
+                            id = _world.Read(kingdom, "id"),
+                            name = _world.Read(kingdom, "name"),
+                            units = units?.Count ?? 0,
+                            cities = cities?.Count ?? 0,
+                            wild = _world.Read(kingdom, "wild") as bool? ?? false,
+                        }
+                    );
                 }
             }
         }
 
-        return Task.FromResult<object?>(new
-        {
-            scenario = _session.ScenarioPreset,
-            agents = agentObjectives,
-            kingdoms = kingdomMetrics,
-        });
+        return Task.FromResult<object?>(
+            new
+            {
+                scenario = _session.ScenarioPreset,
+                agents = agentObjectives,
+                kingdoms = kingdomMetrics,
+            }
+        );
     }
 }

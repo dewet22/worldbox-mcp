@@ -32,15 +32,21 @@ internal sealed class SessionInfoCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
-        var agents = _session.Agents.All.Select(a => new
-        {
-            id = a.Id,
-            role = a.Role.ToWireString(),
-            claimed_kingdom_id = a.ClaimedKingdomId,
-            last_seen_utc = a.LastSeenUtc == default ? null : a.LastSeenUtc.ToString("o"),
-        }).ToArray();
+        var agents = _session
+            .Agents.All.Select(a => new
+            {
+                id = a.Id,
+                role = a.Role.ToWireString(),
+                claimed_kingdom_id = a.ClaimedKingdomId,
+                last_seen_utc = a.LastSeenUtc == default ? null : a.LastSeenUtc.ToString("o"),
+            })
+            .ToArray();
 
         var payload = new
         {

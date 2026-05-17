@@ -40,47 +40,63 @@ internal sealed class RecvMessagesCommand : ICommand
             new JProperty(
                 "properties",
                 new JObject(
-                    new JProperty("since_seq", new JObject(
-                        new JProperty("type", "integer"),
-                        new JProperty("default", 0),
-                        new JProperty("description", "Return messages with seq > this value.")
-                    )),
-                    new JProperty("max", new JObject(
-                        new JProperty("type", "integer"),
-                        new JProperty("default", DefaultMax),
-                        new JProperty("maximum", HardMax)
-                    ))
+                    new JProperty(
+                        "since_seq",
+                        new JObject(
+                            new JProperty("type", "integer"),
+                            new JProperty("default", 0),
+                            new JProperty("description", "Return messages with seq > this value.")
+                        )
+                    ),
+                    new JProperty(
+                        "max",
+                        new JObject(
+                            new JProperty("type", "integer"),
+                            new JProperty("default", DefaultMax),
+                            new JProperty("maximum", HardMax)
+                        )
+                    )
                 )
             ),
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.Require(Permission.RecvMessage);
 
         var sinceSeq = args.Value<long?>("since_seq") ?? 0L;
         var max = args.Value<int?>("max") ?? DefaultMax;
-        if (max <= 0) max = DefaultMax;
-        if (max > HardMax) max = HardMax;
+        if (max <= 0)
+            max = DefaultMax;
+        if (max > HardMax)
+            max = HardMax;
 
         var messages = _session.MessageBus.Recv(ctx.AgentId, sinceSeq, max);
-        var items = messages.Select(m => new
-        {
-            seq = m.Seq,
-            from = m.From,
-            to = m.To,
-            kind = m.Kind,
-            content = m.Content,
-            sent_utc = m.SentUtc.ToString("o"),
-        }).ToArray();
+        var items = messages
+            .Select(m => new
+            {
+                seq = m.Seq,
+                from = m.From,
+                to = m.To,
+                kind = m.Kind,
+                content = m.Content,
+                sent_utc = m.SentUtc.ToString("o"),
+            })
+            .ToArray();
 
-        return Task.FromResult<object?>(new
-        {
-            items,
-            count = items.Length,
-            // (avoid C# 8 ^1 index-from-end syntax: net462 doesn't have System.Index in the runtime)
-            next_cursor = items.Length > 0 ? items[items.Length - 1].seq : sinceSeq,
-        });
+        return Task.FromResult<object?>(
+            new
+            {
+                items,
+                count = items.Length,
+                // (avoid C# 8 ^1 index-from-end syntax: net462 doesn't have System.Index in the runtime)
+                next_cursor = items.Length > 0 ? items[items.Length - 1].seq : sinceSeq,
+            }
+        );
     }
 }

@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using WorldBoxBridge.Reflection;
-
 using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Read;
@@ -44,7 +43,11 @@ internal sealed class ListCitiesCommand : ICommand
             new JProperty("additionalProperties", false)
         );
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         ctx.Require(Permission.ReadOwnFaction);
         var filterKingdomId = args.Value<long?>("kingdom_id");
@@ -99,8 +102,9 @@ internal sealed class ListCitiesCommand : ICommand
             kingdom_id = kingdomId,
             kingdom_name = kingdom != null ? _world.Read(kingdom, "name") as string : null,
             leader_name = leader != null
-                ? _world.CachedMethod(leader.GetType(), "getName")?.Invoke(leader, Array.Empty<object>())
-                    as string
+                ? _world
+                    .CachedMethod(leader.GetType(), "getName")
+                    ?.Invoke(leader, Array.Empty<object>()) as string
                 : null,
             building_count = buildings?.Count ?? 0,
             unit_count = units?.Count ?? 0,

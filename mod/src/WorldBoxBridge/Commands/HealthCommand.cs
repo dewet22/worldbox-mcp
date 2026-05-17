@@ -40,7 +40,11 @@ internal sealed class HealthCommand : ICommand
         );
     public bool RequiresMainThread => false;
 
-    public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
+    public Task<object?> ExecuteAsync(
+        JObject args,
+        RequestContext ctx,
+        CancellationToken cancellationToken
+    )
     {
         object payload = new
         {

@@ -48,7 +48,8 @@ public readonly struct RequestContext
     {
         foreach (var p in perms)
         {
-            if (Has(p)) return true;
+            if (Has(p))
+                return true;
         }
         return false;
     }
@@ -71,9 +72,12 @@ public readonly struct RequestContext
     /// </summary>
     public bool CanSeeKingdom(long kingdomId)
     {
-        if (Has(Permission.ReadAll)) return true;
-        if (!PartialIntel) return true;
-        if (!ClaimedKingdomId.HasValue) return true;
+        if (Has(Permission.ReadAll))
+            return true;
+        if (!PartialIntel)
+            return true;
+        if (!ClaimedKingdomId.HasValue)
+            return true;
         return ClaimedKingdomId.Value == kingdomId;
     }
 
@@ -84,9 +88,12 @@ public readonly struct RequestContext
     /// </summary>
     public void RequireKingdomAccess(long kingdomId)
     {
-        if (Has(Permission.ActionGlobal)) return;
-        if (!ClaimedKingdomId.HasValue) return; // unbound (auto:N not yet resolved) — allow
-        if (ClaimedKingdomId.Value == kingdomId) return;
+        if (Has(Permission.ActionGlobal))
+            return;
+        if (!ClaimedKingdomId.HasValue)
+            return; // unbound (auto:N not yet resolved) — allow
+        if (ClaimedKingdomId.Value == kingdomId)
+            return;
         throw new BridgeRejectionException(
             ErrorCode.FactionScopeViolation,
             $"Agent '{AgentId}' (kingdom={ClaimedKingdomId}) cannot affect kingdom {kingdomId}."
