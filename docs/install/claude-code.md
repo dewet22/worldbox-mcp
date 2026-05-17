@@ -58,6 +58,16 @@ This prompt is intentionally **dense** — it forces the agent to use every tool
 
 A working equivalent is committed at [`examples/scenarios/ecology_smoke.py`](../../examples/scenarios/ecology_smoke.py) — same plan in Python so you can diff agent reasoning against a deterministic reference.
 
+## Multi-agent setups
+
+To put **multiple AI agents on the same world**, drop an `agents.json` into
+`<worldbox>/BepInEx/config/WorldBoxBridge.agents.json` and add one Claude Code MCP entry
+per agent, each with its own bearer token via the `--header` flag (HTTP transport) or
+the `WORLDBOX_MCP_TOKEN` env var (stdio). The full walkthrough — including the four
+canonical scenarios (PvP / coop / hierarchical / sandbox), the permission matrix, and
+the fog-of-war / turn-based / message-bus semantics — lives in
+[`docs/multi-agent.md`](../multi-agent.md).
+
 ## Troubleshooting
 
 | Symptom | Cause | Fix |

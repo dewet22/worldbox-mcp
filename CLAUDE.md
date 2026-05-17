@@ -15,7 +15,7 @@ Two components, shipped from this monorepo:
 
 End user runs `claude mcp add worldbox -- uvx worldbox-mcp` (or equivalent for their client). The server spawns on demand via `uvx`, talks HTTP to the bridge, no manual install or Python virtualenv needed.
 
-**20 MCP tools** across meta / discovery / action / read / control — see `docs/command-reference.md` for the live list.
+**26 MCP tools** across meta / discovery / action / read / control / bus — see `docs/command-reference.md` for the live list. Multi-agent layer (v0.3+) is documented in `docs/multi-agent.md`: same architecture supports four scenarios (PvP / coop / hierarchical / sandbox) configured via `BepInEx/config/WorldBoxBridge.agents.json`. If that file is absent, the bridge runs in legacy single-tenant mode.
 
 ---
 
@@ -28,12 +28,26 @@ mod/                                   BepInEx C# plugin
 ├── Directory.Packages.props           Central NuGet versions
 ├── NuGet.config                       Explicit nuget.org + bepinex.dev feeds
 ├── src/WorldBoxBridge/
-│   ├── Plugin.cs                      BepInEx entry — wires config, dispatcher, registry, HTTP
+│   ├── Plugin.cs                      BepInEx entry — wires config, session, dispatcher, registry, HTTP
 │   ├── BridgeConfig.cs                Token + host + port + enabled (BepInEx ConfigFile)
-│   ├── PluginInfo.cs                  Version constant (kept in sync with csproj manually for now)
+│   ├── PluginInfo.cs                  Version constant — tracked by release-please via the
+│   │                                    `// x-release-please-version` marker, do NOT edit by hand
 │   ├── Http/
-│   │   ├── HttpBridge.cs              TcpListener-based HTTP/1.1 (NOT HttpListener — see Gotchas)
-│   │   └── ErrorEnvelope.cs           Unified JSON error shape + ErrorCode constants
+│   │   ├── HttpBridge.cs              TcpListener-based HTTP/1.1 (NOT HttpListener — see Gotchas).
+│   │   │                                Accepts both Authorization: Bearer (v0.3+) and X-WB-Token (legacy)
+│   │   ├── ErrorCode.cs               String constants for public error codes (linkable from tests)
+│   │   └── ErrorEnvelope.cs           Unified JSON success / error shape (Newtonsoft.Json bound)
+│   ├── Session/                       (v0.3) Multi-agent layer
+│   │   ├── AgentRole.cs               Enum: God / FactionPlayer / Observer / Narrator
+│   │   ├── Permission.cs              Bitflag perms + PermissionDefaults per role
+│   │   ├── Agent.cs                   Per-agent record (id, token, role, claim, perms, objectives)
+│   │   ├── AgentRegistry.cs           Constant-time token → Agent lookup
+│   │   ├── RequestContext.cs          Per-request identity threaded into every ICommand call
+│   │   ├── Session.cs                 Singleton: scenario preset, partial_intel + turn_based flags
+│   │   ├── SessionLoader.cs           Parses agents.json (JSON, not TOML — Newtonsoft already loaded)
+│   │   ├── TurnOrder.cs               Thread-safe round-robin rotation
+│   │   ├── MessageBus.cs              In-memory pub-sub, bounded per-agent inboxes
+│   │   └── Objective.cs               Free-form per-agent goal metadata (scoreboard primitive)
 │   ├── Threading/
 │   │   └── MainThreadDispatcher.cs    Injects callback into Unity PlayerLoop.Update
 │   ├── Reflection/
@@ -42,41 +56,50 @@ mod/                                   BepInEx C# plugin
 │   │   ├── WorldAccess.cs             MapBox.instance + units/kingdoms/cities accessors
 │   │   └── VersionDetector.cs         Game version + Assembly-CSharp SHA256
 │   ├── Commands/
-│   │   ├── ICommand.cs                Command interface + CommandCategory enum
+│   │   ├── ICommand.cs                Command interface (takes RequestContext) + CommandCategory enum
 │   │   ├── CommandRegistry.cs         name → ICommand registry
-│   │   ├── HealthCommand.cs           Meta
+│   │   ├── HealthCommand.cs           Meta — also reports multi_agent / scenario / agent_count
+│   │   ├── Meta/                      whoami, session_info, turn_advance, objective_status (v0.3+)
 │   │   ├── Discovery/                 list_tiles, list_actors, list_powers
-│   │   ├── Action/                    invoke_power, spawn, paint_tile (+ BridgeRejectionException)
+│   │   ├── Action/                    invoke_power, spawn, paint_tile (+ BridgeRejectionException
+│   │   │                                in its own file, linkable from tests)
 │   │   ├── Read/                      get_world_state, get_tile, list_kingdoms, list_cities,
-│   │   │                                query_actors, screenshot
-│   │   └── Control/                   pause, resume, set_speed, generate_world, save_world,
-│   │                                    load_world
+│   │   │                                query_actors (faction-filtered), screenshot
+│   │   ├── Control/                   pause, resume, set_speed, generate_world, save_world,
+│   │   │                                load_world
+│   │   └── Bus/                       send_message, recv_messages (v0.3+)
 │   └── AssetSuggester.cs              Levenshtein for did_you_mean
-└── tests/WorldBoxBridge.Tests/        xUnit, net8, linked-sources (no Unity dep)
+└── tests/WorldBoxBridge.Tests/        xUnit, net8, linked-sources (no Unity dep).
+                                       69 cases incl. AgentRegistry / RequestContext / TurnOrder
+                                       / MessageBus matrix coverage.
 
 server/                                Python MCP server
 ├── pyproject.toml                     Hatchling, deps: mcp, httpx, pydantic, structlog
 ├── src/worldbox_mcp/
-│   ├── __init__.py                    __version__
+│   ├── __init__.py                    __version__ (tracked by release-please via marker)
 │   ├── __main__.py                    CLI: stdio (default), --http, --self-check
 │   ├── server.py                      FastMCP factory + tool registration
 │   ├── transport.py                   stdio / Streamable HTTP selector
-│   ├── client.py                      httpx async wrapper around HttpBridge
+│   ├── client.py                      httpx wrapper, sends Authorization: Bearer (per-call token
+│   │                                    override available for multi-tenant front-ends)
 │   ├── config.py                      Env + auto-discover BepInEx config
 │   ├── errors.py                      BridgeError + TransportError
 │   └── tools/
-│       ├── meta.py                    worldbox_health, worldbox_capabilities
+│       ├── meta.py                    health / capabilities / whoami / session_info / turn_advance
+│       │                                / objective_status
 │       ├── discovery.py               worldbox_list_*
 │       ├── action.py                  worldbox_invoke_power / spawn / paint_tile
 │       ├── read.py                    worldbox_get_* / list_* / query_actors / screenshot
-│       └── control.py                 worldbox_pause / resume / set_speed / generate / save / load
-└── tests/                             pytest (unit + integration with fake bridge + e2e)
+│       ├── control.py                 worldbox_pause / resume / set_speed / generate / save / load
+│       └── bus.py                     (v0.3) worldbox_send_message / recv_messages
+└── tests/                             pytest (unit + integration with fake bridge + e2e). 18 cases.
 
 docs/                                  MkDocs Material — published at fullya99.github.io/worldbox-mcp
 ├── index.md
-├── architecture.md
-├── protocol.md                        HTTP/JSON spec
-├── command-reference.md               20 tools + error codes
+├── architecture.md                    Component layout, thread model, session layer
+├── multi-agent.md                     (v0.3) Multi-agent walkthrough: roles, perms, fog, bus, presets
+├── protocol.md                        HTTP/JSON spec, both Authorization: Bearer + legacy X-WB-Token
+├── command-reference.md               26 tools + error codes
 ├── game-api-notes.md                  ★ verified reflection paths into WorldBox internals
 ├── compatibility.md                   WorldBox × mod version matrix
 ├── development.md                     local dev + testing
@@ -85,7 +108,12 @@ docs/                                  MkDocs Material — published at fullya99
 examples/
 ├── client-configs/                    JSON snippets to paste into each client
 ├── prompts/                           Demo prompts (godmode-ecology, build-civilization, …)
-└── scenarios/ecology_smoke.py         End-to-end agentic loop using only MCP tools
+└── scenarios/
+    ├── ecology_smoke.py               Single-agent end-to-end agentic loop (legacy mode)
+    └── multi-agent/                   (v0.3) Four scenario presets + README + pvp_smoke.py e2e
+        ├── pvp.json / coop.json / hierarchical.json / sandbox.json
+        ├── README.md                  Side-by-side comparison + token-generation snippet
+        └── pvp_smoke.py               Two-agent PvP end-to-end smoke (BridgeClient × 2)
 
 scratch/                               Decompiled Assembly-CSharp.dll types — gitignored
                                        Regenerate via the ilspycmd one-liners below.
@@ -149,15 +177,17 @@ ilspycmd -t MapBox -r 'X:\GAMES\steamapps\common\worldbox\worldbox_Data\Managed'
 ## Adding a new MCP tool — 5-minute checklist
 
 1. **Mod side** (`mod/src/WorldBoxBridge/Commands/<Category>/<Name>Command.cs`):
-   - Implement `ICommand`. Pick a `CommandCategory`. Set `RequiresMainThread`.
+   - Implement `ICommand`. Pick a `CommandCategory` (Meta, Discovery, Action, Read, Control, Bus). Set `RequiresMainThread`.
+   - Signature is `Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken)`. Call `ctx.Require(Permission.X)` at the top to gate the command; use `ctx.CanSeeKingdom` / `ctx.RequireKingdomAccess` for fog-of-war / faction binding.
    - Reuse `AssetCatalog.Resolve` for any asset-id input (gives free `did_you_mean`).
    - Reuse `WorldAccess` for `MapBox` / `units` / `kingdoms` / `cities` access.
-   - Throw `BridgeRejectionException` (in `Commands.Action` namespace) for structured errors. HttpBridge maps it to the right HTTP status + envelope.
+   - Throw `BridgeRejectionException` (in `Commands.Action` namespace, its own file) for structured errors. HttpBridge maps it to the right HTTP status + envelope.
+   - Be mindful of category semantics: **Action/Control are turn-gated** in turn_based sessions; **Meta/Discovery/Read/Bus are not** (so `turn_advance` lives in Meta, not Control, to avoid permanent deadlock).
 2. **Register** in `mod/src/WorldBoxBridge/Plugin.cs#RegisterCommands` (one line).
 3. **Python side** (`server/src/worldbox_mcp/tools/<category>.py`):
    - Add a `@server.tool(name="worldbox_<your_name>", description=...)` function.
    - **Description matters**: it's what Claude reads to decide when to call your tool. Be concrete about inputs/outputs and edge cases.
-4. **Update** `docs/command-reference.md` with the new tool in its category table.
+4. **Update** `docs/command-reference.md` with the new tool in its category table. If it's multi-agent-related, also update `docs/multi-agent.md`.
 5. **Build + deploy + smoke-test** with the cheat-sheet commands above.
 
 ---
@@ -248,10 +278,16 @@ Don't confuse them.
 
 ## What I'd build next (roadmap notes)
 
+The v0.3 multi-agent layer (identity, permissions, fog-of-war, turn-based, message bus,
+objectives, four scenario presets, pvp_smoke) shipped on `main` 2026-05-17. Next:
+
 - **`scripts/gen-docs.py`** — calls `worldbox_capabilities` against a running game and regenerates `docs/command-reference.md` from the JSON Schema. Removes the drift risk between code and doc tool counts.
-- **CI mod build** — wire `actions/cache` + a script that pulls only the UnityEngine.* DLLs we reference from a stable URL (or download a stripped Unity reference assembly pack). Unblocks the `build-and-attach-mod` job.
+- **CI mod build** — wire `actions/cache` + a script that pulls only the UnityEngine.* DLLs we reference from a stable URL (or download a stripped Unity reference assembly pack). Unblocks the `build-and-attach-mod` job — currently failing because the runner has no Unity Managed/ DLLs.
+- **Single multi-tenant MCP server (Phase 2.5)** — currently the "N agents on one world" path is "N `worldbox-mcp` processes each with their own `WORLDBOX_MCP_TOKEN`". The bridge already supports it; what's missing is one MCP server that accepts multiple MCP clients with distinct bearer headers and forwards `ctx.request.headers["authorization"]` per-call to the bridge. `BridgeClient.call(token=...)` is already plumbed; the work is in `tools/*.py` to take `ctx: Context` and extract the bearer.
+- **Auto-resolve `kingdom_claim: "auto:N"`** — currently parked as `null` until claimed; need a hook on first world-load to bind the Nth alive kingdom to the agent. Today `RequireKingdomAccess` is permissive on null claims, so PvP scoping is partly best-effort.
 - **Workaround for UI-only powers** (`plague`, `volcano`, …) — research a path through `World.world.disasters_manager` or similar to trigger them programmatically.
 - **`get_actor(name_or_id)`** — single-actor lookup so the agent can drill into a specific Actor's stats without scanning the whole `query_actors` output.
 - **`terraform(action_id, x, y, radius)`** — wrap `AssetManager.terraform` for non-paint terrain mutations (raise/lower terrain, river carving, etc.).
+- **Persistent message log** (v0.3.2) — opt-in JSONL on disk for replay / post-mortem.
 
-Everything else in the long plan at `~/.claude/plans/option-b-fait-un-gentle-pancake.md` (the original 600-line spec).
+Earlier long plan (the original 600-line spec) at `~/.claude/plans/option-b-fait-un-gentle-pancake.md`; the v0.3 implementation plan at `~/.claude/plans/ok-j-aimeraisd-que-tu-purrfect-pearl.md` documents what shipped and the remaining gaps.

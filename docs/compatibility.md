@@ -4,7 +4,9 @@ Status legend: ✅ tested & green · ⚠️ partial (specific commands disabled)
 
 | WorldBox version | Unity | Scripting backend | Mod version | Status | Notes |
 |---|---|---|---|---|---|
-| **0.51.2** | 2022.3.60f1 | Mono | **0.1.1** | ✅ | Full validation: 20 tools, end-to-end agentic loop (`examples/scenarios/ecology_smoke.py`). Assembly-CSharp.dll SHA256 `51d275f0…df6dd69f`. |
+| **0.51.2** | 2022.3.60f1 | Mono | **0.3.x** | ✅ | Full validation: 26 tools, multi-agent session layer (`examples/scenarios/multi-agent/pvp_smoke.py`). 3-agent PvP roster (faction_player × 2 + narrator) with fog-of-war, turn-based mode, message bus, and AdvanceTime perm split — all green live. Assembly-CSharp.dll SHA256 `51d275f0…df6dd69f`. |
+| 0.51.2 | 2022.3.60f1 | Mono | 0.2.x | ✅ | 20-tool baseline + `generate_world` / `save_world` / `load_world`. Single-tenant only. |
+| 0.51.2 | 2022.3.60f1 | Mono | 0.1.1 | ✅ | 20 tools, end-to-end agentic loop (`examples/scenarios/ecology_smoke.py`). |
 | 0.51.2 | 2022.3.60f1 | Mono | 0.1.0 | ⚠️ | `list_kingdoms` / `list_cities` / `get_world_state.{kingdoms,cities}_alive` return 0 even when alive — fixed in 0.1.1. |
 
 ## Reading the matrix

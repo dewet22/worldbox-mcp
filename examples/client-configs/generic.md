@@ -29,6 +29,6 @@ Then point your client to `http://127.0.0.1:7800/mcp`.
 |---|---|---|
 | `WORLDBOX_MCP_BRIDGE_HOST` | `127.0.0.1` | Mod HTTP host |
 | `WORLDBOX_MCP_BRIDGE_PORT` | `8723` | Mod HTTP port |
-| `WORLDBOX_MCP_TOKEN` | _(auto-discover)_ | Override the `X-WB-Token` value |
+| `WORLDBOX_MCP_TOKEN` | _(auto-discover)_ | Bearer token sent to the bridge. In multi-agent mode, run one `worldbox-mcp` process per agent and set this to each agent's token. |
 | `WORLDBOX_MCP_LOG` | `info` | `debug`, `info`, `warning`, `error` |
 | `WORLDBOX_MCP_WORLDBOX_DIR` | _(auto-discover)_ | Manually point to your WorldBox install |

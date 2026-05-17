@@ -45,26 +45,31 @@ Returns a small JSON object useful for connection checks.
 
 ```http
 GET /health HTTP/1.1
-X-WB-Token: <token>
+Authorization: Bearer <token>
 ```
 
 ```json
 {
   "ok": true,
-  "mod_version": "0.1.0",
+  "mod_version": "0.3.0",
   "worldbox_version": "0.x.x",
   "unity_version": "2022.3.60f1",
   "assembly_csharp_sha256": "…",
   "tick": 12345,
-  "enabled": true
+  "enabled": true,
+  "multi_agent": false,
+  "scenario": "sandbox",
+  "agent_count": 1
 }
 ```
+
+`multi_agent`, `scenario`, `agent_count` reflect the active session. With no `agents.json` deployed the bridge runs in legacy single-tenant mode (`multi_agent: false`, scenario `sandbox`, one synthetic `"legacy"` god agent).
 
 ## `POST /cmd`
 
 ```http
 POST /cmd HTTP/1.1
-X-WB-Token: <token>
+Authorization: Bearer <token>
 Content-Type: application/json
 
 {
@@ -125,13 +130,16 @@ Returns the list of registered commands with their JSON Schemas. The Python serv
 
 ```json
 {
-  "mod_version": "0.1.0",
+  "mod_version": "0.3.0",
   "worldbox_version": "0.x.x",
+  "unity_version": "2022.3.60f1",
+  "assembly_csharp_sha256": "…",
   "commands": [
     {
       "name": "spawn",
       "category": "action",
       "description": "Spawn one or more actors at (x, y).",
+      "requires_main_thread": true,
       "schema": { "$schema": "https://json-schema.org/draft/2020-12/schema", ... }
     },
     …

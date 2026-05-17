@@ -89,10 +89,10 @@ Runs `ruff`, `mypy`, `csharpier`, and Conventional Commits check on every commit
 
 A command is implemented in **two places**: the mod (C#) executes it; the server (Python) exposes it as an MCP tool.
 
-1. **Mod side** — pick a folder under `mod/src/WorldBoxBridge/Commands/{Discovery,Action,Read,Control}/`. Implement `ICommand`. Register in `CommandRegistry`. Add unit test in `mod/tests/`.
-2. **Server side** — add a `@server.tool` function in `server/src/worldbox_mcp/tools/{discovery,action,read,control}.py`. Add unit test under `server/tests/unit/`.
-3. **Test e2e manually** — launch WorldBox with the new mod build, call the tool via MCP Inspector.
-4. **Document** — `capabilities()` will auto-include it; `command-reference.md` regenerates on CI.
+1. **Mod side** — pick a folder under `mod/src/WorldBoxBridge/Commands/{Meta,Discovery,Action,Read,Control,Bus}/`. Implement `ICommand` (signature takes `RequestContext` — call `ctx.Require(Permission.X)` at the top to gate it). Register in `Plugin.RegisterCommands`. Add unit test in `mod/tests/`.
+2. **Server side** — add a `@server.tool` function in `server/src/worldbox_mcp/tools/{meta,discovery,action,read,control,bus}.py`. Add unit test under `server/tests/unit/`.
+3. **Test e2e manually** — launch WorldBox with the new mod build, call the tool via MCP Inspector or the `pvp_smoke.py` pattern.
+4. **Document** — `capabilities()` will auto-include it; update `docs/command-reference.md` in your PR. If the new tool is multi-agent-related, also update `docs/multi-agent.md`.
 
 ## Testing
 

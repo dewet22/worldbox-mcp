@@ -40,8 +40,9 @@ Launch WorldBox once. `BepInEx/LogOutput.log` should contain a line like:
 ### Verify
 
 ```bash
-curl http://127.0.0.1:8723/health \
-  -H "X-WB-Token: $(cat '<worldbox>/BepInEx/config/WorldBoxBridge.cfg' | grep token | cut -d'=' -f2)"
+TOKEN=$(grep '^token = ' '<worldbox>/BepInEx/config/WorldBoxBridge.cfg' | cut -d= -f2 | tr -d ' ')
+curl http://127.0.0.1:8723/health -H "Authorization: Bearer $TOKEN"
+# The legacy header `X-WB-Token: $TOKEN` is also still accepted.
 ```
 
 You should see:
@@ -49,14 +50,20 @@ You should see:
 ```json
 {
   "ok": true,
-  "mod_version": "0.1.1",
+  "mod_version": "0.3.0",
   "worldbox_version": "0.51.2",
   "unity_version": "2022.3.60f1",
   "assembly_csharp_sha256": "51d275f0…",
   "tick": 1234,
-  "enabled": true
+  "enabled": true,
+  "multi_agent": false,
+  "scenario": "sandbox",
+  "agent_count": 1
 }
 ```
+
+`multi_agent: true` only appears once you've deployed an `agents.json` — see
+[`docs/multi-agent.md`](../multi-agent.md) for the multi-AI session layer.
 
 ## Step 2 — Plug into your AI client
 

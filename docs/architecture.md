@@ -9,16 +9,21 @@
 └─────────────┘             └──────────────────┘                  │ inside worldbox.exe  │
                                                                   │                      │
                                                                   │  ┌────────────────┐  │
-                                                                  │  │ HTTP listener  │  │
+                                                                  │  │ TCP listener   │  │
+                                                                  │  │ + hand-rolled  │  │
+                                                                  │  │ HTTP/1.1       │  │
                                                                   │  │ Auth + routing │  │
                                                                   │  └────────┬───────┘  │
                                                                   │           │          │
-                                                                  │     ConcurrentQueue  │
+                                                                  │     Session layer    │
+                                                                  │  (agents, perms,     │
+                                                                  │   message bus,       │
+                                                                  │   turn order)        │
                                                                   │           │          │
                                                                   │  ┌────────▼───────┐  │
                                                                   │  │ Main thread    │  │
                                                                   │  │ dispatcher     │  │
-                                                                  │  │ (Update loop)  │  │
+                                                                  │  │ (PlayerLoop)   │  │
                                                                   │  └────────┬───────┘  │
                                                                   │           │          │
                                                                   │  ┌────────▼───────┐  │
@@ -48,7 +53,15 @@
 
 ### `WorldBoxBridge` (BepInEx C# plugin)
 
-- Hosts a `System.Net.HttpListener` bound to `127.0.0.1`, authenticated with a per-install token.
+- Hosts an HTTP/1.1 server built on `System.Net.Sockets.TcpListener` + a hand-rolled
+  request parser, bound to `127.0.0.1`. Authenticated with a bearer token (one shared
+  secret in legacy single-tenant mode; one per agent in multi-agent mode). We use
+  `TcpListener` rather than `System.Net.HttpListener` because the latter silently fails
+  to bind under Unity 2022.3 Mono — see CLAUDE.md gotcha #1.
+- Holds a **session layer** (v0.3+) on top of HTTP routing: agent registry (token → role
+  / faction / permissions), in-memory message bus with per-agent inboxes, optional
+  turn-order. Loaded from `BepInEx/config/WorldBoxBridge.agents.json` at startup; falls
+  back to legacy single-token mode if the file is absent. See [multi-agent.md](multi-agent.md).
 - Dispatches incoming JSON commands onto Unity's main thread via a `ConcurrentQueue<Action>` drained from a delegate injected into Unity's `PlayerLoop` (not a `MonoBehaviour`). On WorldBox 0.51.2, BepInEx-created `MonoBehaviour` GameObjects get destroyed shortly after Awake — the PlayerLoop hook is part of the engine's tick table and survives that.
 - Resolves all WorldBox types via cached reflection — never `using WorldBox.*` directly — so the mod survives game updates as long as core types keep their names.
 - Maps every command to game APIs that live inside `Assembly-CSharp.dll`.
@@ -63,11 +76,13 @@
 ## Data flow for a tool call
 
 1. AI client emits `tools/call` over MCP.
-2. Python server validates args with Pydantic, builds a JSON command envelope, sends `POST /cmd` with `X-WB-Token`.
-3. Mod's HTTP handler verifies token, parses JSON, enqueues an `Action` on the main-thread dispatcher with a `TaskCompletionSource`.
-4. Next Unity frame: dispatcher pops the action, runs the command, sets the TCS result.
-5. HTTP handler awaits the TCS, serializes the result, returns `200 OK`.
-6. Python server returns the result to the MCP client.
+2. Python server validates args with Pydantic, builds a JSON command envelope, sends `POST /cmd` with `Authorization: Bearer <token>` (the legacy `X-WB-Token` header is still accepted).
+3. Mod's HTTP handler verifies the bearer against the `AgentRegistry`, resolves it into a `RequestContext` (agent id, role, kingdom claim, permissions, scenario flags), then parses the JSON body.
+4. The bridge runs the per-command permission gate (`ctx.Require(Permission.X)`) and — in turn-based sessions — checks that the caller holds the current turn. Both fail fast before any game-state work.
+5. Bridge enqueues an `Action` on the main-thread dispatcher with a `TaskCompletionSource`.
+6. Next Unity frame: dispatcher pops the action, the command runs with `RequestContext` in scope (so it can fog-of-war-filter reads or scope writes to the caller's kingdom), sets the TCS result.
+7. HTTP handler awaits the TCS, serializes the result, returns `200 OK`.
+8. Python server returns the result to the MCP client.
 
 For long-running commands the dispatcher enforces a 30-second timeout to keep the game from freezing if a reflection call goes pathological — see [protocol.md](protocol.md).
 

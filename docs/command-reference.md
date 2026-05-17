@@ -119,7 +119,7 @@ Every error response follows this shape:
 | `FACTION_SCOPE_VIOLATION` _(v0.3)_ | The agent tried to act on a kingdom it doesn't claim. HTTP 403. |
 | `TURN_NOT_YOURS` _(v0.3)_ | Turn-based mode is active and another agent currently holds the slot. HTTP 409. |
 | `MAIN_THREAD_TIMEOUT` | A command exceeded 30s on Unity's main thread. Safety valve so the game doesn't hang. |
-| `UNAUTHORIZED` | Missing or wrong `X-WB-Token` header. Should never happen if `worldbox-mcp` auto-discovered your config. |
+| `UNAUTHORIZED` | Missing or wrong bearer credential (either `Authorization: Bearer <token>` or the legacy `X-WB-Token: <token>`). Should never happen if `worldbox-mcp` auto-discovered your config. |
 | `DISABLED` | `enabled = false` in `BepInEx/config/WorldBoxBridge.cfg`. The kill-switch is engaged. |
 
 ---
