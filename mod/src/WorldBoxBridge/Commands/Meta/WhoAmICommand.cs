@@ -53,6 +53,7 @@ internal sealed class WhoAmICommand : ICommand
         if (p.HasFlag(Permission.SendMessage)) list.Add("send_message");
         if (p.HasFlag(Permission.RecvMessage)) list.Add("recv_message");
         if (p.HasFlag(Permission.SendBroadcast)) list.Add("send_broadcast");
+        if (p.HasFlag(Permission.AdvanceTime)) list.Add("advance_time");
         return list.ToArray();
     }
 }

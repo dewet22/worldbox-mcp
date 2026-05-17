@@ -111,12 +111,19 @@ code change. Side-by-side examples live in `examples/scenarios/multi-agent/`.
 Four roles, each with a default permission bitmask. The roles map onto the four scenarios
 naturally — pick the one that fits your agent.
 
-| Role | Read all | Read own faction | Action global | Action faction | Control world | Send msg | Recv msg | Broadcast |
-|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **God** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **FactionPlayer** |   | ✓ |   | ✓ |   | ✓ | ✓ |   |
-| **Observer** | ✓ | ✓ |   |   |   | ✓ | ✓ |   |
-| **Narrator** | ✓ | ✓ |   |   |   | ✓ | ✓ | ✓ |
+| Role | Read all | Read own faction | Action global | Action faction | Control world | Advance time | Send msg | Recv msg | Broadcast |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| **God** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **FactionPlayer** |   | ✓ |   | ✓ |   | ✓ | ✓ | ✓ |   |
+| **Observer** | ✓ | ✓ |   |   |   |   | ✓ | ✓ |   |
+| **Narrator** | ✓ | ✓ |   |   |   |   | ✓ | ✓ | ✓ |
+
+**Permission scope**:
+
+- `ActionGlobal` — terraforming, anything that's truly map-wide (paint_tile, etc.).
+- `ActionFaction` — actions an agent can perform on/from their kingdom (spawn, invoke_power).
+- `ControlWorld` — **destructive** world-lifecycle ops (generate_world wipes everything, save_world / load_world rewrite state). God-only on purpose.
+- `AdvanceTime` — **non-destructive** simulation-flow controls: pause, resume, set_speed. Granted to active-player roles so PvP agents can fast-forward through quiet phases (`worldbox_set_speed("x20")`) or pause to think without needing a god agent in the session. Spectator roles (Observer, Narrator) intentionally do NOT have it — they shouldn't be able to skip ahead while the actual players are still deliberating.
 
 Every command declares the permission it needs via `ctx.Require(...)` at the top of its
 `ExecuteAsync`. Missing permission returns HTTP 403 with `code: PERMISSION_DENIED`. Cross-

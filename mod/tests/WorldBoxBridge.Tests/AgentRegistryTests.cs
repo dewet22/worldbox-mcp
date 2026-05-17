@@ -106,6 +106,7 @@ public class PermissionDefaultsTests
         perms.HasFlag(Permission.ActionGlobal).Should().BeTrue();
         perms.HasFlag(Permission.ControlWorld).Should().BeTrue();
         perms.HasFlag(Permission.SendBroadcast).Should().BeTrue();
+        perms.HasFlag(Permission.AdvanceTime).Should().BeTrue();
     }
 
     [Fact]
@@ -116,6 +117,17 @@ public class PermissionDefaultsTests
         perms.HasFlag(Permission.ActionGlobal).Should().BeFalse();
         perms.HasFlag(Permission.ActionFaction).Should().BeTrue();
         perms.HasFlag(Permission.ReadOwnFaction).Should().BeTrue();
+        perms.HasFlag(Permission.AdvanceTime).Should().BeTrue(
+            "FactionPlayers need to fast-forward through quiet phases");
+    }
+
+    [Fact]
+    public void Spectator_roles_cannot_advance_time()
+    {
+        // Observer + Narrator are watchers -- they shouldn't be able to skip ahead while
+        // the actual players are still deliberating.
+        PermissionDefaults.For(AgentRole.Observer).HasFlag(Permission.AdvanceTime).Should().BeFalse();
+        PermissionDefaults.For(AgentRole.Narrator).HasFlag(Permission.AdvanceTime).Should().BeFalse();
     }
 
     [Fact]

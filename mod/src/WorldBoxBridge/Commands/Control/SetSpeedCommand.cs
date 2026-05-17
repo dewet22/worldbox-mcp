@@ -65,7 +65,10 @@ internal sealed class SetSpeedCommand : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
-        ctx.Require(Permission.ControlWorld);
+        // Speed change is shared (no per-agent speed) and non-destructive -- granted to
+        // AdvanceTime instead of ControlWorld so FactionPlayers can fast-forward through
+        // quiet phases without needing a god agent in the PvP session.
+        ctx.Require(Permission.AdvanceTime);
         var speedId = (string?)args["speed_id"];
         if (string.IsNullOrWhiteSpace(speedId))
         {

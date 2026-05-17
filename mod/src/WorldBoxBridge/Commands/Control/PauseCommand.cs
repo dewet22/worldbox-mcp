@@ -41,7 +41,10 @@ internal abstract class PausedCommandBase : ICommand
 
     public Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken cancellationToken)
     {
-        ctx.Require(Permission.ControlWorld);
+        // pause / resume are simulation-flow controls -- shared experience, no griefing
+        // potential (everyone sees the same pause). Gated on AdvanceTime so FactionPlayers
+        // can use them too; destructive lifecycle ops keep ControlWorld.
+        ctx.Require(Permission.AdvanceTime);
         var configType = _refs.Type("Config");
         if (configType == null)
         {
