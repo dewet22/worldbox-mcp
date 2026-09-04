@@ -19,6 +19,7 @@ internal sealed class BridgeConfig
     public ConfigEntry<string> Host { get; }
     public ConfigEntry<int> Port { get; }
     public ConfigEntry<string> Token { get; }
+    public ConfigEntry<bool> SuppressStartupWindow { get; }
 
     private BridgeConfig(ConfigFile file)
     {
@@ -43,6 +44,15 @@ internal sealed class BridgeConfig
             "token",
             string.Empty,
             "Shared secret. Sent by clients in the X-WB-Token header. Generated automatically if empty."
+        );
+
+        SuppressStartupWindow = file.Bind(
+            "Game",
+            "suppress_startup_window",
+            true,
+            "Skip the 'welcome' window WorldBox shows after loading. That window pauses the "
+                + "simulation until someone closes it, which defeats unattended agent control. "
+                + "Set to false to get the vanilla startup screen back (dismiss_window still works)."
         );
 
         if (string.IsNullOrWhiteSpace(Token.Value))

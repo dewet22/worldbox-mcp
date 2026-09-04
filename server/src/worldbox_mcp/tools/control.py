@@ -51,6 +51,19 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         return await client.call("set_speed", {"speed_id": speed_id})
 
     @server.tool(
+        name="worldbox_dismiss_window",
+        description=(
+            "Closes any open in-game window: the startup 'welcome' screen, settings, info "
+            "panels, confirmations. Open windows freeze the simulation, so call this when "
+            "worldbox_get_ui_state reports window_active=true (typically right after the game "
+            "launches). Returns `{dismissed, window}`; window is the id that was open, or null "
+            "if nothing was."
+        ),
+    )
+    async def worldbox_dismiss_window() -> dict[str, Any]:
+        return await client.call("dismiss_window")
+
+    @server.tool(
         name="worldbox_generate_world",
         description=(
             "Regenerates the world map. All kingdoms / cities / actors are wiped. Optional "

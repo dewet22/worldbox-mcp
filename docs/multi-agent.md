@@ -24,7 +24,7 @@ compatible. Total surface = 26.
 | Discovery | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers`, `worldbox_list_speeds` | — |
 | Action | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` | — |
 | Read | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_screenshot` | — |
-| Control | `worldbox_pause`, `worldbox_resume`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` | — |
+| Control | `worldbox_pause`, `worldbox_resume`, `worldbox_dismiss_window`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` | — |
 | Bus | `worldbox_send_message`, `worldbox_recv_messages` | 2 |
 
 ## Four scenario presets
@@ -123,7 +123,7 @@ naturally — pick the one that fits your agent.
 - `ActionGlobal` — terraforming, anything that's truly map-wide (paint_tile, etc.).
 - `ActionFaction` — actions an agent can perform on/from their kingdom (spawn, invoke_power).
 - `ControlWorld` — **destructive** world-lifecycle ops (generate_world wipes everything, save_world / load_world rewrite state). God-only on purpose.
-- `AdvanceTime` — **non-destructive** simulation-flow controls: pause, resume, set_speed. Granted to active-player roles so PvP agents can fast-forward through quiet phases (`worldbox_set_speed("x20")`) or pause to think without needing a god agent in the session. Spectator roles (Observer, Narrator) intentionally do NOT have it — they shouldn't be able to skip ahead while the actual players are still deliberating.
+- `AdvanceTime` — **non-destructive** simulation-flow controls: pause, resume, set_speed, dismiss_window. Granted to active-player roles so PvP agents can fast-forward through quiet phases (`worldbox_set_speed("x20")`) or pause to think without needing a god agent in the session. Spectator roles (Observer, Narrator) intentionally do NOT have it — they shouldn't be able to skip ahead while the actual players are still deliberating.
 
 Every command declares the permission it needs via `ctx.Require(...)` at the top of its
 `ExecuteAsync`. Missing permission returns HTTP 403 with `code: PERMISSION_DENIED`. Cross-

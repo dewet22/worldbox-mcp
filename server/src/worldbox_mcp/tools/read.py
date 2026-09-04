@@ -92,6 +92,21 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         return await client.call("query_actors", args)
 
     @server.tool(
+        name="worldbox_get_ui_state",
+        description=(
+            "Returns the game's UI state: `window_active` (an in-game window is open, which "
+            "freezes the simulation), `current_window` (its id: 'welcome' is the startup "
+            "screen shown after every launch, others include 'settings', 'kingdom', "
+            "'quit_game'), `config_paused` (the toggle set by worldbox_pause/resume) and "
+            "`effective_paused` (what the simulation actually does: config_paused OR a window "
+            "is open). If effective_paused is true but config_paused is false, a window is "
+            "blocking the game: call worldbox_dismiss_window."
+        ),
+    )
+    async def worldbox_get_ui_state() -> dict[str, Any]:
+        return await client.call("get_ui_state")
+
+    @server.tool(
         name="worldbox_screenshot",
         description=(
             "Captures the current game framebuffer so you can see what you just did before "

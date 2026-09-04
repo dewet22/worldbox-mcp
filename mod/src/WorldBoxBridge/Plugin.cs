@@ -53,6 +53,13 @@ public sealed class Plugin : BaseUnityPlugin
             var gameRefs = new GameRefs(Logger);
             var assetCatalog = new AssetCatalog(gameRefs, Logger);
             var worldAccess = new WorldAccess(gameRefs, Logger);
+            var gameUi = new GameUiAccess(gameRefs, Logger);
+            if (config.SuppressStartupWindow.Value && gameUi.SetDisableStartupWindow(true))
+            {
+                Logger.LogInfo(
+                    "[ui] Startup 'welcome' window suppressed (Game.suppress_startup_window=true)."
+                );
+            }
 
             // Multi-agent v0.3 Phase 2: load agents.json if it exists, else fall back to
             // legacy single-token mode (one God agent with the credential from BridgeConfig.Token).
@@ -67,6 +74,7 @@ public sealed class Plugin : BaseUnityPlugin
                 assetCatalog,
                 gameRefs,
                 worldAccess,
+                gameUi,
                 session
             );
             Logger.LogInfo($"{registry.Count} commands registered.");
@@ -123,6 +131,7 @@ public sealed class Plugin : BaseUnityPlugin
         AssetCatalog assetCatalog,
         GameRefs gameRefs,
         WorldAccess worldAccess,
+        GameUiAccess gameUi,
         SessionState session
     )
     {
@@ -156,11 +165,13 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ListCitiesCommand(worldAccess));
         registry.Register(new QueryActorsCommand(worldAccess));
         registry.Register(new ScreenshotCommand());
+        registry.Register(new GetUiStateCommand(gameUi, worldAccess));
 
         // Control — simulation flow + world lifecycle.
         registry.Register(new PauseCommand(gameRefs));
         registry.Register(new ResumeCommand(gameRefs));
         registry.Register(new SetSpeedCommand(assetCatalog, gameRefs));
+        registry.Register(new DismissWindowCommand(gameUi));
         registry.Register(new GenerateWorldCommand(worldAccess, Logger));
         registry.Register(new SaveWorldCommand(gameRefs, worldAccess));
         registry.Register(new LoadWorldCommand(gameRefs));

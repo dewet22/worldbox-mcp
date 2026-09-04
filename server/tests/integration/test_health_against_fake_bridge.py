@@ -254,8 +254,16 @@ async def test_screenshot_returns_image_block_and_metadata(
     assert body["args"] == {"max_dimension": 64, "format": "jpg", "quality": 80}
 
 
-async def test_list_speeds_forwards_to_bridge_command(
-    fake_bridge: tuple[FakeBridge, BridgeAddress],
+@pytest.mark.parametrize(
+    ("tool", "command"),
+    [
+        ("worldbox_get_ui_state", "get_ui_state"),
+        ("worldbox_dismiss_window", "dismiss_window"),
+        ("worldbox_list_speeds", "list_speeds"),
+    ],
+)
+async def test_ui_tools_forward_to_bridge_commands(
+    fake_bridge: tuple[FakeBridge, BridgeAddress], tool: str, command: str
 ) -> None:
     from worldbox_mcp.config import Settings
     from worldbox_mcp.server import build_server
@@ -263,9 +271,9 @@ async def test_list_speeds_forwards_to_bridge_command(
     bridge, address = fake_bridge
     server, client = build_server(Settings(bridge=address, worldbox_dir=None))
     try:
-        result = await server.call_tool("worldbox_list_speeds", {})
+        result = await server.call_tool(tool, {})
     finally:
         await client.aclose()
     assert not result.is_error
     _method, _path, body = bridge.calls[-1]
-    assert body == {"name": "list_speeds", "args": {}}
+    assert body == {"name": command, "args": {}}

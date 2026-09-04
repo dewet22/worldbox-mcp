@@ -4,7 +4,7 @@ title: Command reference
 
 # Command reference
 
-27 MCP tools, grouped by six categories. Asset ids (tile / actor / power / speed) come
+29 MCP tools, grouped by six categories. Asset ids (tile / actor / power / speed) come
 from the running game's registry — call the discovery tools to enumerate them; never
 hardcode. The v0.3 multi-agent additions (Meta `whoami` / `session_info` /
 `turn_advance` / `objective_status`, plus the Bus category) only carry meaningful payload
@@ -60,6 +60,7 @@ page tracks it but may lag.
 | `worldbox_list_kingdoms` | Alive kingdoms (filter via `include_wild`): `{id, name, race, king_name, capital_id, cities_count, units_count, wild}`. |
 | `worldbox_list_cities` | Alive cities (optional `kingdom_id` filter): `{id, name, kingdom_id, kingdom_name, leader_name, building_count, unit_count}`. |
 | `worldbox_query_actors` | Filtered actor list: args `{race?, kingdom_id?, in_rect?, alive=true, limit=500, offset=0}`. Default limit 500, max 5000. Pagination via `offset` + `has_more`. |
+| `worldbox_get_ui_state` | `{window_active, current_window, config_paused, effective_paused}`. `current_window` is the open window's id (`welcome` = startup screen). `effective_paused` is what the simulation does: `config_paused` OR any window open. |
 | `worldbox_screenshot` | Args `{max_dimension=1280, format="jpg"\|"png", quality=80}`. Returns an MCP image content block plus `{format, width, height, source_width, source_height, quality, bytes}`. Longest edge is downscaled to `max_dimension` (0 = full frame); a 1280 px JPEG is ~150-250 KB, a full Retina PNG ~2.8 MB. Last completed frame. |
 
 ---
@@ -70,6 +71,7 @@ page tracks it but may lag.
 |---|---|
 | `worldbox_pause` | Freeze the world before building a scenario. Returns `previous_paused` so you can detect state change. |
 | `worldbox_resume` | Unpause. |
+| `worldbox_dismiss_window` | Closes any open in-game window (startup `welcome` screen, settings, info panels, confirmations) via the game's own `ScrollWindow.hideAllEvent`. Returns `{dismissed, window}`. Gated on `AdvanceTime` like pause/resume. |
 | `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id from `worldbox_list_speeds` (`slow_mo`, `x1`, `x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`). Higher = simulation runs faster than real time. Returns `{speed_id, multiplier, previous}`; unknown ids get `UNKNOWN_ASSET` listing every valid id. |
 | `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async — poll `get_world_state` until `tick` advances. |
 | `worldbox_save_world` | Required `folder` (absolute path). Save format compatible with in-game load UI. Refuses if no world loaded. |
