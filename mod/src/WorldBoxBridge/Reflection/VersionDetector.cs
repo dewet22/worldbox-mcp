@@ -45,8 +45,9 @@ internal static class VersionDetector
     {
         try
         {
-            var managed = Path.Combine(Paths.GameRootPath, "worldbox_Data", "Managed");
-            var path = Path.Combine(managed, "Assembly-CSharp.dll");
+            // Paths.ManagedPath is resolved by BepInEx for the host platform: worldbox_Data/Managed
+            // on Windows/Linux, worldbox.app/Contents/Resources/Data/Managed on macOS.
+            var path = Path.Combine(Paths.ManagedPath, "Assembly-CSharp.dll");
             if (!File.Exists(path))
             {
                 return "missing";
