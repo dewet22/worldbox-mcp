@@ -74,8 +74,8 @@ page tracks it but may lag.
 | `worldbox_dismiss_window` | Closes any open in-game window (startup `welcome` screen, settings, info panels, confirmations) via the game's own `ScrollWindow.hideAllEvent`. Returns `{dismissed, window}`. Gated on `AdvanceTime` like pause/resume. |
 | `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id from `worldbox_list_speeds` (`slow_mo`, `x1`, `x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`). Higher = simulation runs faster than real time. Returns `{speed_id, multiplier, previous}`; unknown ids get `UNKNOWN_ASSET` listing every valid id. |
 | `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async — poll `get_world_state` until `tick` advances. |
-| `worldbox_save_world` | Required `folder` (absolute path). Save format compatible with in-game load UI. Refuses if no world loaded. |
-| `worldbox_load_world` | One of `path` (file on disk) or `bytes_b64` (base64 zipped save). Async. |
+| `worldbox_save_world` | Required `folder`: absolute path, or a name resolved under the game's `saves/` directory (in-game slots are `save1`, `save2`, …; `..` is rejected). Returns the resolved `path`. Save format compatible with the in-game load UI. Refuses if no world loaded. |
+| `worldbox_load_world` | One of `path` (save file, save folder, or a name under `saves/` such as `save1`) or `bytes_b64` (base64 zipped save). Async. |
 
 ---
 

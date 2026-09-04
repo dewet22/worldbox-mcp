@@ -30,9 +30,10 @@ internal sealed class SaveWorldCommand : ICommand
     public string Name => "save_world";
     public CommandCategory Category => CommandCategory.Control;
     public string Description =>
-        "Saves the current world to a folder on disk. `folder` is required (absolute path); "
-        + "the directory is created if missing. The save format is compatible with the "
-        + "in-game load UI.";
+        "Saves the current world to disk. `folder` is either an absolute path or a name "
+        + "resolved under the game's saves directory (the in-game slots are `save1`, `save2`, "
+        + "…). The directory is created if missing. The save format is compatible with the "
+        + "in-game load UI. Returns the resolved absolute `path`.";
     public bool RequiresMainThread => true;
 
     public JObject ArgsSchema =>
@@ -47,7 +48,8 @@ internal sealed class SaveWorldCommand : ICommand
                             new JProperty("type", "string"),
                             new JProperty(
                                 "description",
-                                "Absolute path to the target save folder (created if missing)."
+                                "Absolute path, or a name under the game's saves directory "
+                                    + "(e.g. 'save3' or 'before-the-flood'). Created if missing."
                             )
                         )
                     ),
@@ -74,9 +76,14 @@ internal sealed class SaveWorldCommand : ICommand
         var folder = args.Value<string?>("folder");
         var compress = args.Value<bool?>("compress") ?? true;
 
-        if (string.IsNullOrWhiteSpace(folder))
+        string resolved;
+        try
         {
-            throw new ArgumentException("folder is required (absolute path).");
+            resolved = SavePathResolver.ResolveFolder(folder, GameSavePaths.SavesRoot);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
         }
 
         // Pre-flight: a save only makes sense when a world is actually loaded.
@@ -115,13 +122,14 @@ internal sealed class SaveWorldCommand : ICommand
         {
             var savedMap = _saveWorldToDirectory.Invoke(
                 null,
-                new object[] { folder!, compress, true }
+                new object[] { resolved, compress, true }
             );
             return Task.FromResult<object?>(
                 new
                 {
                     saved = savedMap != null,
                     folder = folder,
+                    path = resolved,
                     compressed = compress,
                 }
             );
