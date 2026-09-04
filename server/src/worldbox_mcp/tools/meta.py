@@ -9,12 +9,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer
 
     from worldbox_mcp.client import BridgeClient
 
 
-def register(server: FastMCP, client: BridgeClient) -> None:
+def register(server: MCPServer, client: BridgeClient) -> None:
     """Register meta tools onto ``server``.
 
     Tool names use the ``worldbox_*`` prefix so they don't collide with tools from other
