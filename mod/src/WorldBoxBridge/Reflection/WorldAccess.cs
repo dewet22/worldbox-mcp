@@ -32,6 +32,8 @@ internal sealed class WorldAccess
     private FieldInfo? _tilesMapField;
     private FieldInfo? _mapStatsField;
     private MethodInfo? _isPausedMethod;
+    private Type? _configType;
+    private PropertyInfo? _worldLoadingProperty;
 
     private readonly Dictionary<TypeMemberKey, FieldInfo?> _fieldCache = new();
     private readonly Dictionary<TypeMemberKey, PropertyInfo?> _propertyCache = new();
@@ -117,6 +119,29 @@ internal sealed class WorldAccess
     public object? KingdomsManager => GetInstanceField(ref _kingdomsField, "kingdoms", _mapBoxType);
     public object? CitiesManager => GetInstanceField(ref _citiesField, "cities", _mapBoxType);
     public object? MapStats => GetInstanceField(ref _mapStatsField, "map_stats", _mapBoxType);
+
+    /// <summary>
+    /// <c>Config.worldLoading</c> (= <c>SmoothLoader.isLoading()</c>): true while the game is
+    /// generating or loading a world. MapBox already reports width/height during that phase,
+    /// so callers that need a fully initialised world must check this too.
+    /// </summary>
+    public bool? IsWorldLoading
+    {
+        get
+        {
+            _configType ??= _refs.Type("Config");
+            if (_configType == null)
+            {
+                return null;
+            }
+            _worldLoadingProperty ??= _refs.Property(
+                _configType,
+                "worldLoading",
+                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
+            );
+            return _worldLoadingProperty?.GetValue(null) as bool?;
+        }
+    }
 
     public bool? IsPaused
     {

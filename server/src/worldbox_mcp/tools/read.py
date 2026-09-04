@@ -99,8 +99,10 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "screen shown after every launch, others include 'settings', 'kingdom', "
             "'quit_game'), `config_paused` (the toggle set by worldbox_pause/resume) and "
             "`effective_paused` (what the simulation actually does: config_paused OR a window "
-            "is open). If effective_paused is true but config_paused is false, a window is "
-            "blocking the game: call worldbox_dismiss_window."
+            "is open) and `world_loading` (the game is still generating/loading a world; "
+            "worldbox_save_world refuses until it is false). If effective_paused is true but "
+            "config_paused is false, a window is blocking the game: call "
+            "worldbox_dismiss_window."
         ),
     )
     async def worldbox_get_ui_state() -> dict[str, Any]:

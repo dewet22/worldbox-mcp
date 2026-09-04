@@ -255,7 +255,7 @@ These are bugs / mismatches we hit and fixed. **If something in the reflection l
 
 6. **`Type.GetMethod(name, flags)` without explicit arg types throws `AmbiguousMatchException`** as soon as the named method has overloads. `Actor.getName` and `WorldTile.setTileType` both have multiple overloads. `WorldAccess.CachedMethod` enumerates `GetMethods()` and filters manually instead of using the convenience overload.
 
-7. **Game powers without a `click_action` delegate**: some entries in `AssetManager.powers` are UI-only (`plague`, `volcano`). They open submenus in-game. `invoke_power` returns `GAME_REJECTED` for these. Workaround for full coverage is on the v0.3+ roadmap.
+7. **Powers use different click delegates.** Most `GodPower`s set `click_action` (`(WorldTile, string)`), but the drops/bombs/drop-building templates (`rain`, `fire`, `bomb`, `volcano`, …) set `click_power_action` (`(WorldTile, GodPower)`); `invoke_power` tries both. Still not drivable: brush-only (`click_brush_action`), `toggle_action`, and powers reading live pointer state (`finger` → NRE, mapped to `GAME_REJECTED`).
 
 8. **`SaveManager.saveWorldToDirectory` NREs if no world is loaded** (calls deep into `World.world.items.diagnostic()`). `SaveWorldCommand` pre-flights with `_world.Width > 0` and returns `GAME_REJECTED` with a clear message.
 
@@ -349,7 +349,7 @@ Pending items, roughly in priority order:
 2. **Single multi-tenant MCP server (Phase 2.5)** — currently "N agents on one world" = N `worldbox-mcp` processes each with their own `WORLDBOX_MCP_TOKEN`. The bridge already supports it; what's missing is one MCP server that accepts multiple MCP clients with distinct bearer headers and forwards `ctx.request.headers["authorization"]` per-call. `BridgeClient.call(token=...)` is already plumbed; the work is in `tools/*.py` to take `ctx: Context` and extract the bearer.
 3. **Auto-resolve `kingdom_claim: "auto:N"`** — currently parked as `null` until claimed; need a hook on first world-load to bind the Nth alive kingdom to the agent. Today `RequireKingdomAccess` is permissive on null claims, so PvP scoping is partly best-effort.
 4. **`scripts/gen-docs.py`** — calls `worldbox_capabilities` against a running game and regenerates `docs/command-reference.md` from the JSON Schema. Removes the drift risk between code and doc tool counts (which bit us during the v0.3 docs sweep — "20 tools" appeared in 6 places).
-5. **Workaround for UI-only powers** (`plague`, `volcano`, …) — research a path through `World.world.disasters_manager` or similar to trigger them programmatically.
+5. **Remaining power delegates** — `invoke_power` now drives `click_action` and `click_power_action` (drops/bombs/plague/volcano all work). Still uncovered: `click_brush_action` (needs `Config.current_brush_data`), `toggle_action` (peace/civ toggles) and `click_special_action`.
 6. **`get_actor(name_or_id)`** — single-actor lookup so the agent can drill into a specific Actor's stats without scanning the whole `query_actors` output.
 7. **`terraform(action_id, x, y, radius)`** — wrap `AssetManager.terraform` for non-paint terrain mutations (raise/lower terrain, river carving, etc.).
 8. **Persistent message log** (v0.3.2 candidate) — opt-in JSONL on disk for replay / post-mortem.

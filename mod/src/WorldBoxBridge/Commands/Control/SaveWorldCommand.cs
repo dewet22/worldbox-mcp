@@ -86,12 +86,21 @@ internal sealed class SaveWorldCommand : ICommand
             throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
         }
 
-        // Pre-flight: a save only makes sense when a world is actually loaded.
+        // Pre-flight: a save only makes sense when a world is actually loaded. Width alone
+        // isn't enough — MapBox reports dimensions while generation/loading is still running
+        // and SaveManager NREs deep inside if invoked then.
         if ((_world.Width ?? 0) == 0)
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
                 "No world is currently loaded. Start or load a world in-game first."
+            );
+        }
+        if (_world.IsWorldLoading == true)
+        {
+            throw new BridgeRejectionException(
+                ErrorCode.GameRejected,
+                "The world is still loading/generating. Poll get_ui_state until world_loading is false, then retry."
             );
         }
 

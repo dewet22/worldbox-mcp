@@ -45,7 +45,7 @@ page tracks it but may lag.
 
 | Tool | Args | Effect |
 |---|---|---|
-| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal — every spawn-by-race, every disaster, every toggle. Returns `accepted: bool`. Some UI-only powers (`plague`, `volcano`) have no `click_action` delegate and return `GAME_REJECTED`. |
+| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal — every spawn-by-race, every disaster, and the drops/bombs families (`rain`, `fire`, `bomb`, `volcano`, …). Returns `{accepted: bool, via}`; `via` is the game delegate used (`click_action` or `click_power_action`), `accepted=false` means the game declined this time (some powers roll a chance). Brush-only/toggle powers and ones needing live mouse state (`finger`) return `GAME_REJECTED` with a reason. |
 | `worldbox_spawn` | `entity_id`, `x`, `y`, `count=1`, `adult=false`, `spawn_height=6` | Spawn actors **not exposed as GodPowers** — `dragon`, `cthulhu`, `kraken`, specific animals. Wild kingdom auto-assigned via `ActorAsset.kingdom_id_wild`. |
 | `worldbox_paint_tile` | `x`, `y`, `tile_id?`, `top_id?`, `radius=0` | Paints a Euclidean disc. Provide `tile_id` (ground), `top_id` (decoration), or both. Out-of-map cells silently skipped. |
 
@@ -60,7 +60,7 @@ page tracks it but may lag.
 | `worldbox_list_kingdoms` | Alive kingdoms (filter via `include_wild`): `{id, name, race, king_name, capital_id, cities_count, units_count, wild}`. |
 | `worldbox_list_cities` | Alive cities (optional `kingdom_id` filter): `{id, name, kingdom_id, kingdom_name, leader_name, building_count, unit_count}`. |
 | `worldbox_query_actors` | Filtered actor list: args `{race?, kingdom_id?, in_rect?, alive=true, limit=500, offset=0}`. Default limit 500, max 5000. Pagination via `offset` + `has_more`. |
-| `worldbox_get_ui_state` | `{window_active, current_window, config_paused, effective_paused}`. `current_window` is the open window's id (`welcome` = startup screen). `effective_paused` is what the simulation does: `config_paused` OR any window open. |
+| `worldbox_get_ui_state` | `{window_active, current_window, config_paused, effective_paused, world_loading}`. `current_window` is the open window's id (`welcome` = startup screen). `effective_paused` is what the simulation does: `config_paused` OR any window open. `world_loading` is true while a world is generating/loading (`save_world` refuses then). |
 | `worldbox_screenshot` | Args `{max_dimension=1280, format="jpg"\|"png", quality=80}`. Returns an MCP image content block plus `{format, width, height, source_width, source_height, quality, bytes}`. Longest edge is downscaled to `max_dimension` (0 = full frame); a 1280 px JPEG is ~150-250 KB, a full Retina PNG ~2.8 MB. Last completed frame. |
 
 ---
@@ -116,7 +116,7 @@ Every error response follows this shape:
 | `BAD_ARGS` | JSON shape doesn't match the tool's schema. |
 | `UNKNOWN_ASSET` | An asset id wasn't found in the live registry. Use the included `did_you_mean` (Levenshtein top-5) to self-correct. |
 | `OUT_OF_BOUNDS` | `(x, y)` outside the current map dimensions. |
-| `GAME_REJECTED` | Game logic refused the action (e.g. spawning a land animal on water, or `plague`/`volcano` which lack a `click_action` delegate). |
+| `GAME_REJECTED` | Game logic refused the action (e.g. spawning a land animal on water, a brush-only power, `save_world` while the world is still loading). |
 | `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. |
 | `PERMISSION_DENIED` _(v0.3)_ | The agent's role lacks the permission this command requires. HTTP 403. |
 | `FACTION_SCOPE_VIOLATION` _(v0.3)_ | The agent tried to act on a kingdom it doesn't claim. HTTP 403. |

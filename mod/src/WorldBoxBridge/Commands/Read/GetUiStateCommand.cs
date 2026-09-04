@@ -33,7 +33,9 @@ internal sealed class GetUiStateCommand : ICommand
         + "simulation), current_window (its id, e.g. 'welcome' for the startup screen, "
         + "'settings', 'kingdom'), config_paused (the pause toggle set by pause/resume) and "
         + "effective_paused (what the simulation actually does: config_paused OR a window is "
-        + "open). If effective_paused is true but config_paused is false, call dismiss_window.";
+        + "open), and world_loading (the game is still generating/loading a world; save_world "
+        + "and similar refuse until it is false). If effective_paused is true but config_paused "
+        + "is false, call dismiss_window.";
     public bool RequiresMainThread => true;
 
     public JObject ArgsSchema =>
@@ -58,6 +60,7 @@ internal sealed class GetUiStateCommand : ICommand
                 current_window = _ui.CurrentWindowId(),
                 config_paused = _ui.ConfigPaused ?? false,
                 effective_paused = _world.IsPaused ?? false,
+                world_loading = _world.IsWorldLoading ?? false,
             }
         );
     }

@@ -27,8 +27,10 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "lightning, tsunami, earthquake, …), every toggle (peace, civilization, …) and "
             "every modifier the in-game god-mode UI exposes. Discover valid power_id values "
             "via `worldbox_list_powers`. x/y are tile coordinates within the map. Returns "
-            "`{power_id, x, y, accepted}` where `accepted=false` means the game's logic "
-            "refused the action."
+            "`{power_id, x, y, accepted, via}`; `accepted=false` means the game declined this "
+            "time (drop-style powers such as rain or bombs roll a chance, so retry). Powers "
+            "that need live mouse/drag state (e.g. 'finger') or a brush are rejected with "
+            "GAME_REJECTED and a reason — use worldbox_paint_tile / worldbox_spawn instead."
         ),
     )
     async def worldbox_invoke_power(power_id: str, x: int, y: int) -> dict[str, Any]:

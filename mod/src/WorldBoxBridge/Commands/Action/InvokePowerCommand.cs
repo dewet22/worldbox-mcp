@@ -16,10 +16,13 @@ namespace WorldBoxBridge.Commands.Action;
 /// and modifiers. The full list comes from <c>list_powers</c>.
 /// </summary>
 /// <remarks>
-/// Mechanism: every <c>GodPower</c> carries a <c>click_action</c> delegate of type
-/// <c>PowerActionWithID(WorldTile tile, string powerId) → bool</c>. The game's UI just
-/// calls that delegate when the user clicks the power button on a tile; we do the same
-/// from the bridge.
+/// Mechanism: a <c>GodPower</c> carries one of several click delegates. Most use
+/// <c>click_action</c> (<c>PowerActionWithID(WorldTile, string powerId) → bool</c>); the
+/// drops / bombs / drop-building families (rain, fire, bomb, volcano, …) use
+/// <c>click_power_action</c> (<c>PowerAction(WorldTile, GodPower) → bool</c>) instead. The
+/// game's UI calls whichever is set when the user clicks a tile; we try them in that order.
+/// Brush-only and toggle powers (<c>click_brush_action</c>, <c>toggle_action</c>) are not
+/// covered yet and are rejected with a clear message.
 /// </remarks>
 internal sealed class InvokePowerCommand : ICommand
 {
@@ -27,8 +30,8 @@ internal sealed class InvokePowerCommand : ICommand
     private readonly GameRefs _refs;
     private readonly ManualLogSource _log;
 
-    private MethodInfo? _delegateInvoke;
     private FieldInfo? _clickActionField;
+    private FieldInfo? _clickPowerActionField;
     private FieldInfo? _mapBoxInstanceField;
     private FieldInfo? _tilesMapField;
 
@@ -46,7 +49,10 @@ internal sealed class InvokePowerCommand : ICommand
         + "disasters (meteor, nuke, plague, lightning, …), global toggles (peace, civ, …) "
         + "and modifiers. Discover valid power_id values via list_powers. For powers that "
         + "target a position (most), pass x and y; for global toggles, x/y are typically "
-        + "ignored but must still be inside the map.";
+        + "ignored but must still be inside the map. Returns {power_id, x, y, accepted, via}; "
+        + "accepted=false means the game declined this time (some powers roll a chance). "
+        + "Powers that need live mouse/drag state (e.g. 'finger') or a brush are rejected "
+        + "with GAME_REJECTED — use paint_tile / spawn instead.";
     public bool RequiresMainThread => true;
 
     public JObject ArgsSchema =>
@@ -110,36 +116,58 @@ internal sealed class InvokePowerCommand : ICommand
             throw new BridgeRejectionException(ErrorCode.OutOfBounds, why);
         }
 
-        // 3. Cache the click_action FieldInfo across calls (one type lookup per session).
-        _clickActionField ??= power
-            .GetType()
-            .GetField(
-                "click_action",
-                BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
-            );
-        if (_clickActionField == null)
+        // 3. Pick the delegate the game itself would call. FieldInfos are cached per session.
+        const BindingFlags Inst =
+            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+        var powerType = power.GetType();
+        _clickActionField ??= powerType.GetField("click_action", Inst);
+        _clickPowerActionField ??= powerType.GetField("click_power_action", Inst);
+        if (_clickActionField == null && _clickPowerActionField == null)
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
-                "GodPower.click_action field not found in this WorldBox build."
+                "GodPower.click_action / click_power_action fields not found in this WorldBox build."
             );
         }
-        var del = _clickActionField.GetValue(power) as Delegate;
-        if (del == null)
-        {
-            throw new BridgeRejectionException(
-                ErrorCode.GameRejected,
-                $"Power '{powerId}' has no click_action delegate (probably UI-only)."
-            );
-        }
-        _delegateInvoke ??= del.GetType().GetMethod("Invoke");
 
-        // 4. Invoke. Delegate signature: bool (WorldTile tile, string powerId).
+        string via;
+        object?[] callArgs;
+        var del = _clickActionField?.GetValue(power) as Delegate;
+        if (del != null)
+        {
+            via = "click_action"; // bool (WorldTile tile, string powerId)
+            callArgs = new object?[] { tile, powerId };
+        }
+        else if ((del = _clickPowerActionField?.GetValue(power) as Delegate) != null)
+        {
+            via = "click_power_action"; // bool (WorldTile tile, GodPower power)
+            callArgs = new object?[] { tile, power };
+        }
+        else
+        {
+            throw new BridgeRejectionException(
+                ErrorCode.GameRejected,
+                $"Power '{powerId}' has neither click_action nor click_power_action; it is a "
+                    + "brush-, toggle- or UI-only power that invoke_power can't drive yet."
+            );
+        }
+
+        // 4. Invoke.
         bool result;
         try
         {
-            var raw = _delegateInvoke!.Invoke(del, new object?[] { tile, powerId });
-            result = raw is bool b && b;
+            result = del.DynamicInvoke(callArgs) is bool b && b;
+        }
+        catch (TargetInvocationException tie) when (tie.InnerException is NullReferenceException)
+        {
+            // The game's handler dereferenced state only a real pointer interaction sets
+            // (e.g. 'finger' copies player_control.first_pressed_type from the mouse press).
+            // That is a limitation of driving it from the API, not a crash worth a stack trace.
+            throw new BridgeRejectionException(
+                ErrorCode.GameRejected,
+                $"Power '{powerId}' threw NullReferenceException inside the game — it depends on "
+                    + "live mouse/drag state the API can't supply. Use paint_tile or spawn instead."
+            );
         }
         catch (TargetInvocationException tie)
         {
@@ -154,6 +182,7 @@ internal sealed class InvokePowerCommand : ICommand
                 x,
                 y,
                 accepted = result,
+                via,
             }
         );
     }
