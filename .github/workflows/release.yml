@@ -70,7 +70,7 @@ jobs:
           $version = "${{ needs.release-please.outputs.version }}"
           $stage = "stage/WorldBoxBridge"
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          Copy-Item "mod/src/WorldBoxBridge/bin/Release/net462/WorldBoxBridge.dll" "$stage/"
+          Copy-Item "mod/src/WorldBoxBridge/bin/Release/WorldBoxBridge.dll" "$stage/"
           Copy-Item "scripts/install-mod.ps1" "$stage/"
           Copy-Item "README.md" "$stage/"
           Copy-Item "LICENSE" "$stage/"

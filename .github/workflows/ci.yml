@@ -87,11 +87,6 @@ jobs:
   build-mod:
     name: Build mod
     runs-on: windows-latest
-    # KNOWN LIMITATION: this job needs UnityEngine.* + Assembly-CSharp.dll from a local
-    # WorldBox install (resolved via WORLDBOX_DIR). CI runners don't have those, so the
-    # build genuinely can't compile. The mod ZIP is built locally and uploaded manually
-    # per CLAUDE.md "Release process". Tracked: wire a Unity-refs cache into CI later.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v5
@@ -107,16 +102,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: WorldBoxBridge-dll
-          path: mod/src/WorldBoxBridge/bin/Release/net462/WorldBoxBridge.dll
+          path: mod/src/WorldBoxBridge/bin/Release/WorldBoxBridge.dll
           if-no-files-found: error
 
   test-mod:
     name: Test mod (xUnit)
     runs-on: windows-latest
     needs: build-mod
-    # Same as build-mod: the test project links sources that ultimately depend on the
-    # Unity refs. Soft-fail until CI has them.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v5

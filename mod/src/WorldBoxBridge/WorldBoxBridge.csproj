@@ -19,32 +19,12 @@
     <PackageReference Include="Newtonsoft.Json"/>
   </ItemGroup>
 
-  <!-- UnityEngine + Assembly-CSharp resolved from a local WorldBox install (see Directory.Build.props). -->
-  <ItemGroup Condition="'$(HaveWorldBoxRefs)' == 'true'">
-    <Reference Include="UnityEngine">
-      <HintPath>$(WorldBoxManagedDir)\UnityEngine.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(WorldBoxManagedDir)\UnityEngine.CoreModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.IMGUIModule">
-      <HintPath>$(WorldBoxManagedDir)\UnityEngine.IMGUIModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.ImageConversionModule">
-      <HintPath>$(WorldBoxManagedDir)\UnityEngine.ImageConversionModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="UnityEngine.ScreenCaptureModule">
-      <HintPath>$(WorldBoxManagedDir)\UnityEngine.ScreenCaptureModule.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="Assembly-CSharp">
-      <HintPath>$(WorldBoxManagedDir)\Assembly-CSharp.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+  <!-- UnityEngine reference assemblies from NuGet (version pinned centrally). Compile-time only,
+       never copied next to the plugin: BepInEx loads the game's own UnityEngine.*.dll. The mod
+       reaches WorldBox's own code (Assembly-CSharp) purely via reflection, so it needs no
+       reference to the game install at all. -->
+  <ItemGroup>
+    <PackageReference Include="UnityEngine.Modules" ExcludeAssets="runtime" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

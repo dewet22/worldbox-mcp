@@ -22,27 +22,7 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
-  <!-- Resolve UnityEngine + Assembly-CSharp references from a local WorldBox install. -->
-  <!--
-    Resolution order:
-      1. <WorldBoxManagedDir> if explicitly defined (e.g. in csproj overrides)
-      2. $(WORLDBOX_MANAGED_DIR) environment variable
-      3. $(WORLDBOX_DIR)/worldbox_Data/Managed
-      4. Common Steam library paths (Windows)
-    Falls back to a NuGet stub if none found, which is enough for `dotnet restore` to succeed
-    but won't produce a working plugin.
-  -->
-  <PropertyGroup>
-    <WorldBoxManagedDir Condition="'$(WorldBoxManagedDir)' == '' AND '$(WORLDBOX_MANAGED_DIR)' != ''">$(WORLDBOX_MANAGED_DIR)</WorldBoxManagedDir>
-    <WorldBoxManagedDir Condition="'$(WorldBoxManagedDir)' == '' AND '$(WORLDBOX_DIR)' != ''">$(WORLDBOX_DIR)\worldbox_Data\Managed</WorldBoxManagedDir>
-    <WorldBoxManagedDir Condition="'$(WorldBoxManagedDir)' == '' AND Exists('X:\GAMES\steamapps\common\worldbox\worldbox_Data\Managed')">X:\GAMES\steamapps\common\worldbox\worldbox_Data\Managed</WorldBoxManagedDir>
-    <WorldBoxManagedDir Condition="'$(WorldBoxManagedDir)' == '' AND Exists('C:\Program Files (x86)\Steam\steamapps\common\worldbox\worldbox_Data\Managed')">C:\Program Files (x86)\Steam\steamapps\common\worldbox\worldbox_Data\Managed</WorldBoxManagedDir>
-    <HaveWorldBoxRefs Condition="'$(WorldBoxManagedDir)' != '' AND Exists('$(WorldBoxManagedDir)\UnityEngine.CoreModule.dll')">true</HaveWorldBoxRefs>
-  </PropertyGroup>
-
-  <Target Name="ReportWorldBoxRefs" BeforeTargets="ResolveAssemblyReferences" Condition="'$(MSBuildProjectName)' == 'WorldBoxBridge'">
-    <Message Importance="high" Text="WorldBoxBridge: WorldBoxManagedDir = '$(WorldBoxManagedDir)' (HaveWorldBoxRefs=$(HaveWorldBoxRefs))" />
-    <Warning Condition="'$(HaveWorldBoxRefs)' != 'true'" Text="WorldBox UnityEngine references not found. Set WORLDBOX_DIR or WORLDBOX_MANAGED_DIR. Build will fail." />
-  </Target>
+  <!-- UnityEngine references come from the UnityEngine.Modules NuGet package (see
+       Directory.Packages.props); no local WorldBox install is needed to build. -->
 
 </Project>

@@ -10,6 +10,12 @@
     <PackageVersion Include="BepInEx.PluginInfoProps" Version="2.1.0" />
     <PackageVersion Include="HarmonyX"                Version="2.16.1" />
 
+    <!-- Unity reference assemblies. MUST match the engine version WorldBox ships (see /health
+         unity_version; 0.51.2 = 2022.3.60f1). Compile-time only: at runtime the plugin binds to
+         the game's real UnityEngine.*.dll. Keeps the build independent of a local game install,
+         so CI and release builds work on a bare runner. -->
+    <PackageVersion Include="UnityEngine.Modules"     Version="2022.3.60" />
+
     <!-- JSON: BepInEx bundles Newtonsoft.Json on Mono; pin a known-compatible version -->
     <PackageVersion Include="Newtonsoft.Json"         Version="13.0.4" />
 
