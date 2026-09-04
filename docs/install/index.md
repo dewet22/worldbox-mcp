@@ -31,6 +31,18 @@ The script:
 - Installs both into your WorldBox install directory.
 - Generates a random per-install auth token at `<worldbox>/BepInEx/config/WorldBoxBridge.cfg`.
 
+On Linux and macOS, BepInEx only loads when the game is started through the `run_bepinex.sh`
+launcher that ships with it. Set it as the Steam launch option for WorldBox
+(Properties → Launch Options):
+
+```
+"<worldbox>/run_bepinex.sh" %command%
+```
+
+On macOS `<worldbox>` is normally
+`~/Library/Application Support/Steam/steamapps/common/worldbox`. Without the launch option the
+game runs unmodded and the bridge never starts.
+
 Launch WorldBox once. `BepInEx/LogOutput.log` should contain a line like:
 
 ```
