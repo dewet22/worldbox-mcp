@@ -11,7 +11,7 @@
 
 `worldbox-mcp` is a two-piece bridge that lets any [MCP](https://modelcontextprotocol.io)-compatible AI client — Claude Code, OpenCode, Codex, Cursor, Continue, … — directly control the live game [WorldBox](https://www.superworldbox.com/).
 
-**26 MCP tools** spanning discovery, action, observation, simulation control, multi-agent identity, and an inter-agent message bus. The agent observes the world, chooses what to do, acts on it, then observes the outcome — a full agentic loop running against an actual running game. Since v0.3, multiple AI agents can share the same world simultaneously with role-based permissions, fog-of-war, turn-taking, and direct messaging — see [`docs/multi-agent.md`](docs/multi-agent.md).
+**27 MCP tools** spanning discovery, action, observation, simulation control, multi-agent identity, and an inter-agent message bus. The agent observes the world, chooses what to do, acts on it, then observes the outcome — a full agentic loop running against an actual running game. Since v0.3, multiple AI agents can share the same world simultaneously with role-based permissions, fog-of-war, turn-taking, and direct messaging — see [`docs/multi-agent.md`](docs/multi-agent.md).
 
 ---
 
@@ -156,12 +156,12 @@ Or paste the full god-mode ecology prompt from [`examples/prompts/godmode-ecolog
 ```text
 ```
 
-## The 26 tools
+## The 27 tools
 
 | Category | Tools | What for |
 |---|---|---|
 | **Meta** | `worldbox_health`, `worldbox_capabilities`, `worldbox_whoami`, `worldbox_session_info`, `worldbox_turn_advance`, `worldbox_objective_status` | Liveness, introspection, multi-agent identity, turn rotation, scoreboard |
-| **Discovery** | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers` | Enumerate asset ids the running game exposes — ~20 tiles, ~320 actors, ~340 powers on stock 0.51.x |
+| **Discovery** | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers`, `worldbox_list_speeds` | Enumerate asset ids the running game exposes — ~20 tiles, ~320 actors, ~340 powers, 10 speeds on stock 0.51.x |
 | **Action** | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` | Modify the world: trigger powers, spawn creatures, paint terrain |
 | **Read** | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_screenshot` | Observe before deciding (fog-of-war filtered in multi-agent mode) |
 | **Control** | `worldbox_pause`, `worldbox_resume`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` | Simulation flow + world lifecycle |

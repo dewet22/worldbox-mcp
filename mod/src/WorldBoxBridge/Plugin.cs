@@ -142,6 +142,7 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ListTilesCommand(assetCatalog));
         registry.Register(new ListActorsCommand(assetCatalog));
         registry.Register(new ListPowersCommand(assetCatalog));
+        registry.Register(new ListSpeedsCommand(assetCatalog, gameRefs));
 
         // Actions — modify the world.
         registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, Logger));

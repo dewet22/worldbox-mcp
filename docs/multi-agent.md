@@ -21,7 +21,7 @@ compatible. Total surface = 26.
 | Category | Tools | New in v0.3 |
 |---|---|---|
 | Meta | `worldbox_health`, `worldbox_capabilities`, `worldbox_whoami`, `worldbox_session_info`, `worldbox_turn_advance`, `worldbox_objective_status` | 4 |
-| Discovery | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers` | — |
+| Discovery | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers`, `worldbox_list_speeds` | — |
 | Action | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` | — |
 | Read | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_screenshot` | — |
 | Control | `worldbox_pause`, `worldbox_resume`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` | — |

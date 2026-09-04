@@ -4,7 +4,7 @@ title: Command reference
 
 # Command reference
 
-26 MCP tools, grouped by six categories. Asset ids (tile / actor / power / speed) come
+27 MCP tools, grouped by six categories. Asset ids (tile / actor / power / speed) come
 from the running game's registry — call the discovery tools to enumerate them; never
 hardcode. The v0.3 multi-agent additions (Meta `whoami` / `session_info` /
 `turn_advance` / `objective_status`, plus the Bus category) only carry meaningful payload
@@ -37,6 +37,7 @@ page tracks it but may lag.
 | `worldbox_list_tiles` | All `TileType` ids (e.g. `sand`, `soil_high`, `lava0`, `deep_ocean`, …). On stock 0.51.x: 20 entries. Inputs for `worldbox_paint_tile`. |
 | `worldbox_list_actors` | All `ActorAsset` ids (`human`, `elf`, `dragon`, `wolf`, …). 322 on stock 0.51.x. Inputs for `worldbox_spawn`. |
 | `worldbox_list_powers` | All `GodPower` ids (spawn-by-race + disasters + toggles). 339 on stock 0.51.x. Inputs for `worldbox_invoke_power`. |
+| `worldbox_list_speeds` | All `WorldTimeScaleAsset` ids with `multiplier`, plus `current`. 10 on stock 0.51.x (`slow_mo`, `x1`–`x5`, `x10`, `x15`, `x20`, `x40`). Inputs for `worldbox_set_speed`. |
 
 ---
 
@@ -69,7 +70,7 @@ page tracks it but may lag.
 |---|---|
 | `worldbox_pause` | Freeze the world before building a scenario. Returns `previous_paused` so you can detect state change. |
 | `worldbox_resume` | Unpause. |
-| `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id (`slow_mo`, `x1`, `x2`, `x3`, `x5`, `x10`, `x15`, `x20`). Higher = simulation runs faster than real time. |
+| `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id from `worldbox_list_speeds` (`slow_mo`, `x1`, `x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`). Higher = simulation runs faster than real time. Returns `{speed_id, multiplier, previous}`; unknown ids get `UNKNOWN_ASSET` listing every valid id. |
 | `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async — poll `get_world_state` until `tick` advances. |
 | `worldbox_save_world` | Required `folder` (absolute path). Save format compatible with in-game load UI. Refuses if no world loaded. |
 | `worldbox_load_world` | One of `path` (file on disk) or `bytes_b64` (base64 zipped save). Async. |

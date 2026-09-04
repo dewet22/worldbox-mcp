@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 def register(server: MCPServer, client: BridgeClient) -> None:
-    """Register the three discovery tools onto ``server``."""
+    """Register the discovery tools onto ``server``."""
 
     @server.tool(
         name="worldbox_list_tiles",
@@ -42,6 +42,19 @@ def register(server: MCPServer, client: BridgeClient) -> None:
     )
     async def worldbox_list_actors() -> dict[str, Any]:
         return await client.call("list_actors")
+
+    @server.tool(
+        name="worldbox_list_speeds",
+        description=(
+            "Lists every simulation speed (WorldTimeScaleAsset) in the running build with its "
+            "`multiplier`, and reports the active one as `current`. Returns `{items: [{id, "
+            "multiplier, ticks?, ...}], count, current}`. The ids are the only valid inputs "
+            "for `worldbox_set_speed`; on stock WorldBox 0.51.x they are `slow_mo`, `x1`, "
+            "`x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`."
+        ),
+    )
+    async def worldbox_list_speeds() -> dict[str, Any]:
+        return await client.call("list_speeds")
 
     @server.tool(
         name="worldbox_list_powers",
