@@ -1,8 +1,13 @@
 """Error mapping between the bridge's JSON envelope and the MCP boundary.
 
 The bridge returns errors in a stable shape (see ``docs/protocol.md``). We surface those
-errors as Python exceptions, attaching the full envelope on the exception instance so the
-MCP tool wrapper can pass it through to the agent unmodified.
+errors as Python exceptions, attaching the full envelope on the exception instance.
+
+Both exception types derive from the MCP SDK's :class:`ToolError`. Since mcp 2.x the server
+only forwards ``ToolError`` subclasses to the model verbatim; any other exception raised by
+a tool is masked as ``Error executing tool <name>``. A bridge rejection (unknown asset, bad
+args, game refused) is an anticipated failure the agent must be able to read and act on,
+so it has to travel as a ``ToolError`` -- including the ``did_you_mean`` hints.
 """
 
 from __future__ import annotations
@@ -10,18 +15,24 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from mcp.server.mcpserver.exceptions import ToolError
 
-class BridgeError(RuntimeError):
+
+class BridgeError(ToolError):
     """Raised when the bridge returns a non-OK envelope."""
 
     def __init__(self, code: str, message: str, *, detail: dict[str, Any] | None = None) -> None:
-        super().__init__(f"[{code}] {message}")
         self.code = code
         self.message = message
         self.detail: dict[str, Any] = detail or {}
+        text = f"[{code}] {message}"
+        hints = self.detail.get("did_you_mean")
+        if isinstance(hints, list) and hints:
+            text += " Did you mean: " + ", ".join(str(h) for h in hints) + "?"
+        super().__init__(text)
 
 
-class TransportError(RuntimeError):
+class TransportError(ToolError):
     """Raised when the HTTP transport itself fails (timeout, connection refused, etc.)."""
 
     def __init__(self, message: str, *, cause: Exception | None = None) -> None:
