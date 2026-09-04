@@ -35,6 +35,9 @@ updates:
       # Pin BepInEx — bumps must be manual (cross-version testing required)
       - dependency-name: "BepInEx.Core"
       - dependency-name: "BepInEx.PluginInfoProps"
+      # Pin Newtonsoft.Json to the version WorldBox bundles in Managed/ (13.0.2). The game's
+      # copy wins at runtime, so any API added in a newer nuget throws MissingMethodException.
+      - dependency-name: "Newtonsoft.Json"
       # Cap FluentAssertions at 6.x — v7+ shipped under a paid commercial license
       # ($130/dev/year via Xceed). v6 was the last MIT/Apache release. Stay there until
       # we either pay or migrate to AwesomeAssertions / Shouldly. Tracked separately.
