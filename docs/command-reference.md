@@ -59,7 +59,7 @@ page tracks it but may lag.
 | `worldbox_list_kingdoms` | Alive kingdoms (filter via `include_wild`): `{id, name, race, king_name, capital_id, cities_count, units_count, wild}`. |
 | `worldbox_list_cities` | Alive cities (optional `kingdom_id` filter): `{id, name, kingdom_id, kingdom_name, leader_name, building_count, unit_count}`. |
 | `worldbox_query_actors` | Filtered actor list: args `{race?, kingdom_id?, in_rect?, alive=true, limit=500, offset=0}`. Default limit 500, max 5000. Pagination via `offset` + `has_more`. |
-| `worldbox_screenshot` | `{format: "png", width, height, base64, bytes}`. Last completed frame. PNGs at 1080p are 400-600 KB. |
+| `worldbox_screenshot` | Args `{max_dimension=1280, format="jpg"\|"png", quality=80}`. Returns an MCP image content block plus `{format, width, height, source_width, source_height, quality, bytes}`. Longest edge is downscaled to `max_dimension` (0 = full frame); a 1280 px JPEG is ~150-250 KB, a full Retina PNG ~2.8 MB. Last completed frame. |
 
 ---
 

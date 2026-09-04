@@ -7,7 +7,10 @@ guesswork.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import json
+from typing import TYPE_CHECKING, Any, Literal
+
+from mcp.types import ImageContent, TextContent
 
 if TYPE_CHECKING:
     from mcp.server.mcpserver import MCPServer
@@ -91,11 +94,27 @@ def register(server: MCPServer, client: BridgeClient) -> None:
     @server.tool(
         name="worldbox_screenshot",
         description=(
-            "Captures the current game framebuffer as a base64-encoded PNG. Useful so "
-            "the agent can see what it just did before deciding the next move. Returns "
-            "`{format, width, height, base64, bytes}`. The image is the most recently "
-            "completed frame."
+            "Captures the current game framebuffer so you can see what you just did before "
+            "deciding the next move. Returns the picture as an image content block plus a "
+            "JSON block `{format, width, height, source_width, source_height, quality, bytes}`. "
+            "By default the longest edge is downscaled to 1280 px and encoded as JPEG "
+            "(quality 80), which keeps the payload small; pass `max_dimension=0` for the "
+            "full-resolution frame, or `format='png'` for lossless output. The image is the "
+            "most recently completed frame."
         ),
     )
-    async def worldbox_screenshot() -> dict[str, Any]:
-        return await client.call("screenshot")
+    async def worldbox_screenshot(
+        max_dimension: int = 1280,
+        format: Literal["jpg", "png"] = "jpg",
+        quality: int = 80,
+    ) -> list[ImageContent | TextContent]:
+        result = await client.call(
+            "screenshot",
+            {"max_dimension": max_dimension, "format": format, "quality": quality},
+        )
+        data = str(result.pop("base64", ""))
+        mime = "image/png" if result.get("format") == "png" else "image/jpeg"
+        return [
+            ImageContent(type="image", data=data, mime_type=mime),
+            TextContent(type="text", text=json.dumps(result)),
+        ]

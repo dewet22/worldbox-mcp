@@ -26,6 +26,7 @@
     <Compile Include="..\..\src\WorldBoxBridge\AssetSuggester.cs" Link="Linked\AssetSuggester.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Http\ErrorCode.cs" Link="Linked\Http\ErrorCode.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Action\BridgeRejectionException.cs" Link="Linked\Commands\Action\BridgeRejectionException.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Commands\Read\ScreenshotScaler.cs" Link="Linked\Commands\Read\ScreenshotScaler.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\AgentRole.cs" Link="Linked\Session\AgentRole.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Permission.cs" Link="Linked\Session\Permission.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Agent.cs" Link="Linked\Session\Agent.cs" />
