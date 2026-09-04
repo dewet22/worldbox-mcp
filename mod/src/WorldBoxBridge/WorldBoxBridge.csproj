@@ -15,7 +15,6 @@
   <ItemGroup>
     <PackageReference Include="BepInEx.Core"/>
     <PackageReference Include="BepInEx.PluginInfoProps"/>
-    <PackageReference Include="HarmonyX"/>
     <PackageReference Include="Newtonsoft.Json"/>
   </ItemGroup>
 
