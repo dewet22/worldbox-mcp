@@ -1,9 +1,10 @@
 using System.Threading;
 using System.Threading.Tasks;
+using BepInEx.Logging;
 using Newtonsoft.Json.Linq;
+using WorldBoxBridge.Commands.Action;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Session;
-using WorldBoxBridge.Threading;
 
 namespace WorldBoxBridge.Commands.Discovery;
 
@@ -14,6 +15,9 @@ namespace WorldBoxBridge.Commands.Discovery;
 internal sealed class ListPowersCommand : ICommand
 {
     private readonly AssetCatalog _catalog;
+    private readonly PowerDelegateFields _delegateFields;
+    private readonly ManualLogSource _log;
+    private bool _warnedFlagDerivation;
 
     private static readonly string[] ExtraFields =
     {
@@ -24,13 +28,25 @@ internal sealed class ListPowersCommand : ICommand
         "show_in_clans_panel",
     };
 
-    public ListPowersCommand(AssetCatalog catalog) => _catalog = catalog;
+    public ListPowersCommand(
+        AssetCatalog catalog,
+        PowerDelegateFields delegateFields,
+        ManualLogSource log
+    )
+    {
+        _catalog = catalog;
+        _delegateFields = delegateFields;
+        _log = log;
+    }
 
     public string Name => "list_powers";
     public CommandCategory Category => CommandCategory.Discovery;
     public string Description =>
         "Enumerates every PowerAsset registered in this WorldBox build (disasters, toggles, "
-        + "modifiers). Returned ids are the valid inputs for `invoke_power`.";
+        + "modifiers). Returned ids are the valid inputs for `invoke_power`. Items flagged "
+        + "supports_radius accept invoke_power's radius argument (applied via the game's brush "
+        + "system); items flagged is_toggle are global on/off switches (x/y ignored). Both "
+        + "flags are omitted when false.";
     public bool RequiresMainThread => true;
 
     public JObject ArgsSchema =>
@@ -48,6 +64,69 @@ internal sealed class ListPowersCommand : ICommand
     {
         // HttpBridge already marshalled us onto the main thread.
         var items = _catalog.ListAssets("powers", ExtraFields);
+        foreach (var item in items)
+        {
+            // Fail-soft per item, matching AssetCatalog's discovery style: one asset whose
+            // reflection misbehaves at worst lacks its flags, it must never take down the
+            // whole listing, which is the recovery tool agents rely on.
+            try
+            {
+                if (item["id"] is not string id || _catalog.Resolve("powers", id) is not { } power)
+                {
+                    continue;
+                }
+                // Both flags come from the same field reads and the same selector invoke_power
+                // uses, so discovery cannot drift from behaviour.
+                var delegates = _delegateFields.Read(power);
+                var hasClick = delegates.ClickAction != null;
+                var hasClickPower = delegates.ClickPowerAction != null;
+                var hasClickBrush = delegates.ClickBrushAction != null;
+                var hasClickPowerBrush = delegates.ClickPowerBrushAction != null;
+                var hasToggle = delegates.ToggleAction != null;
+
+                var radiusProbe = PowerDelegateSelector.Select(
+                    hasClick,
+                    hasClickPower,
+                    hasClickBrush,
+                    hasClickPowerBrush,
+                    hasToggle,
+                    radius: PowerDelegateSelector.MinRadius
+                );
+                if (
+                    radiusProbe.Path
+                    is PowerDelegatePath.ClickBrushAction
+                        or PowerDelegatePath.ClickPowerBrushAction
+                )
+                {
+                    item["supports_radius"] = true;
+                }
+
+                var defaultProbe = PowerDelegateSelector.Select(
+                    hasClick,
+                    hasClickPower,
+                    hasClickBrush,
+                    hasClickPowerBrush,
+                    hasToggle,
+                    radius: null
+                );
+                if (defaultProbe.Path == PowerDelegatePath.ToggleAction)
+                {
+                    item["is_toggle"] = true;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                if (!_warnedFlagDerivation)
+                {
+                    _warnedFlagDerivation = true;
+                    _log.LogWarning(
+                        $"[list_powers] flag derivation failed for '{item["id"]}' "
+                            + $"({ex.GetType().Name}: {ex.Message}), flags omitted; further "
+                            + "occurrences are not logged."
+                    );
+                }
+            }
+        }
         return Task.FromResult<object?>(new { items, count = items.Count });
     }
 }

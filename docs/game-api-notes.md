@@ -190,13 +190,51 @@ v0.1.1.
 |---|---|
 | Paint a tile | `WorldTile.setTileType(string id)`, string overload that does the asset lookup internally. Optional `WorldTile.setTopTileType(TopTileType asset, bool updateStats=true)` for decoration overlay. The game handles dirty-flagging + stats updates. |
 | Spawn an actor | `MapBox.instance.units.spawnNewUnit(string id, WorldTile tile, bool spawnSound=false, bool miracle=false, float spawnHeight=6f, Subspecies sub=null, bool giveOwnerlessItems=false, bool adult=false)`. Returns the new `Actor` (null on unknown id). Auto-assigns wild kingdom via `ActorAsset.kingdom_id_wild`. |
-| Invoke a power | A `GodPower` carries one of several click delegates. Most set `PowerActionWithID click_action` (`bool (WorldTile, string powerId)`); the drops / bombs / drop-building templates (`rain`, `fire`, `bomb`, `volcano`, ...) set `PowerAction click_power_action` (`bool (WorldTile, GodPower)`) instead. Resolve `AssetManager.powers.get(id)`, try `click_action` then `click_power_action`, invoke with the matching args. Returns `bool` = accepted (drops roll `falling_chance`). Still uncovered: `click_brush_action` (needs brush state), `toggle_action`, `click_special_action`. `finger` NREs because `drawFinger` reads `player_control.first_pressed_type`, set only by a real mouse press. |
+| Invoke a power | A `GodPower` carries five click delegates plus a toggle. `PowerActionWithID click_action` and `click_brush_action` share `bool (WorldTile, string powerId)`; `PowerAction click_power_action` and `click_power_brush_action` share `bool (WorldTile, GodPower)`; `PowerToggleAction toggle_action` is `void (string powerId)` (invoked by `PowerButton` with just the id, no tile). Resolve `AssetManager.powers.get(id)`, pick a delegate (see brush machinery below), invoke with the matching args. Returns `bool` = accepted (drops roll `falling_chance`). Still uncovered: `click_special_action`. `finger` NREs because `drawFinger` reads `player_control.first_pressed_type`, set only by a real mouse press. |
 | Pause | `Config.paused` static bool property. Setter toggles. |
 | Set speed | `Config.setWorldSpeed(string speed_id, bool updateDebug=true)`, resolves via `AssetManager.time_scales.get(id)` internally. |
 | Generate world | `MapBox.instance.setMapSize(int zone_x, int zone_y)` then `MapBox.instance.generateNewMap()`. Map size = zone × 64. Generation runs asynchronously over many frames via `SmoothLoader`. |
 | Save world | `SaveManager.saveWorldToDirectory(string folder, bool compress=true, bool checkFolder=true)`, static, writes a folder of files. |
 | Load world | `SaveManager.loadMapFromBytes(byte[] zippedBytes)`, static, async via `SmoothLoader`. |
 | Screenshot | `ScreenCapture.CaptureScreenshotAsTexture()` then `texture.EncodeToPNG()`. Main-thread only, runs in our `PlayerLoop` Update phase. Destroy the texture immediately after to avoid VRAM/GC pressure. |
+
+---
+
+## Brush machinery, how radius reaches a power
+
+All verified against the 0.51.2 decompile.
+
+- The brush delegates expand the affected area **inside the delegate**, not in the caller:
+  `PlayerControl.clickPower` hands them only the clicked tile. The standard bodies
+  (`PowerLibrary.loopWithCurrentBrush`, `loopWithCurrentBrushPowerForDropsFull` /
+  `...Random`) read `Config.current_brush_data` and call
+  `MapBox.loopWithBrush(centerTile, brushData, perTileAction, power)`, which iterates
+  `BrushData.pos` (a precomputed offset array) with bounds checks.
+- In-game delegate precedence (`PlayerControl.clickPower`): the power-delegate family is
+  checked first, brush variant preferred, `click_power_brush_action` >
+  `click_power_action`, then `click_brush_action` > `click_action`.
+- `Config.current_brush` is a public static string property (default `"circ_5"`); its
+  setter populates `Config.current_brush_data` via `Brush.get(id)`. Brushes are assets in
+  `AssetManager.brush_library`.
+- `Brush.get(int pSize, string pID = "circ_")` auto-creates missing sizes: it clones
+  `circ_1` as `circ_N`, sets `size`, and calls `brush_library.post_init()`, whose
+  `generate_action` (inherited from `circ_1`, a filled-circle generator parameterised by
+  `size`) rebuilds the pixel grid. Arbitrary radii therefore work natively.
+- The drops template (`$template_drops$`: rain, fire, lava, acid, ...) sets **both**
+  `click_power_action` (single tile) and `click_power_brush_action` (area), which is why
+  single-tile invocation worked before the bridge drove brushes at all.
+- The bridge (`invoke_power` with `radius`) ensures `circ_<radius>` exists, then sets
+  `Config.current_brush` around each brush-delegate invocation and restores the previous
+  brush in a `finally`, so the player's own brush selection never visibly changes, even
+  during multi-frame pulse runs.
+- There is no intensity parameter anywhere in the game's power model. The interactive
+  "storm" is repetition: holding the mouse (or the shift modifier,
+  `HotkeyLibrary.many_mod`) re-fires the click delegate once per frame in
+  `PlayerControl.update`, and dragging moves the sampled tile between frames. The bridge's
+  `pulses` / `x2`+`y2` arguments reproduce exactly that, one delegate call per PlayerLoop
+  frame via the dispatcher's per-frame job, with the target tile interpolated along the
+  drag line. Note the in-game `click_interval` throttle lives in `PlayerControl`, not in
+  the delegates, so bridge pulses are not subject to it.
 
 ---
 
@@ -262,11 +300,13 @@ breaks, read this list before debugging anything else.**
 
 7. **Powers use different click delegates.** Most `GodPower`s set `click_action`, typed
    `(WorldTile, string)`. The drops, bombs and drop-building families (`rain`, `fire`, `bomb`,
-   `volcano`, `plague`, `acid`) set `click_power_action`, typed `(WorldTile, GodPower)` instead.
-   `invoke_power` tries both and reports which one fired in `via`. Still not drivable:
-   brush-only powers (`click_brush_action`), `toggle_action` toggles, and anything reading live
-   pointer state. `finger` reads `player_control.first_pressed_type`, which only a real mouse
-   press sets, so it throws inside the game and is reported as `GAME_REJECTED`.
+   `volcano`, `plague`, `acid`) set `click_power_action`, typed `(WorldTile, GodPower)` instead,
+   and often a brush variant too (`click_brush_action` / `click_power_brush_action`, same two
+   signatures, expanding `Config.current_brush_data` internally; see the brush machinery
+   section). `invoke_power` drives all four plus `toggle_action` and reports which one fired in
+   `via`. Still not drivable: `click_special_action`, and anything reading live pointer state.
+   `finger` reads `player_control.first_pressed_type`, which only a real mouse press sets, so it
+   throws inside the game and is reported as `GAME_REJECTED`.
 
 8. **`SaveManager.saveWorldToDirectory` throws a `NullReferenceException` when no world is
    loaded**, deep inside `World.world.items.diagnostic()`. `SaveWorldCommand` pre-flights on map

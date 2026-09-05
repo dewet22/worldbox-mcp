@@ -36,7 +36,7 @@ page tracks it but may lag.
 |---|---|
 | `worldbox_list_tiles` | All `TileType` ids (e.g. `sand`, `soil_high`, `lava0`, `deep_ocean`, ...). On stock 0.51.x: 20 entries. Inputs for `worldbox_paint_tile`. |
 | `worldbox_list_actors` | All `ActorAsset` ids (`human`, `elf`, `dragon`, `wolf`, ...). 322 on stock 0.51.x. Inputs for `worldbox_spawn`. |
-| `worldbox_list_powers` | All `GodPower` ids (spawn-by-race + disasters + toggles). 339 on stock 0.51.x. Inputs for `worldbox_invoke_power`. |
+| `worldbox_list_powers` | All `GodPower` ids (spawn-by-race + disasters + toggles). 339 on stock 0.51.x. Inputs for `worldbox_invoke_power`. Items carry `supports_radius: true` when the power accepts `invoke_power`'s `radius` argument, and `is_toggle: true` for global on/off switches (x/y ignored); both flags are omitted when false. |
 | `worldbox_list_speeds` | All `WorldTimeScaleAsset` ids with `multiplier`, plus `current`. 10 on stock 0.51.x (`slow_mo`, `x1`–`x5`, `x10`, `x15`, `x20`, `x40`). Inputs for `worldbox_set_speed`. |
 
 ---
@@ -45,7 +45,7 @@ page tracks it but may lag.
 
 | Tool | Args | Effect |
 |---|---|---|
-| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal, every spawn-by-race, every disaster, and the drops/bombs families (`rain`, `fire`, `bomb`, `volcano`, ...). Returns `{accepted: bool, via}`; `via` is the game delegate used (`click_action` or `click_power_action`), `accepted=false` means the game declined this time (some powers roll a chance). Brush-only/toggle powers and ones needing live mouse state (`finger`) return `GAME_REJECTED` with a reason. Requires the global action scope (God role) in a multi-agent session, same as `worldbox_paint_tile`; a FactionPlayer uses `worldbox_spawn`. |
+| `worldbox_invoke_power` | `power_id`, `x`, `y`, `radius?`, `pulses?`, `x2?`, `y2?` | Universal, every spawn-by-race, every disaster, the drops/bombs families (`rain`, `fire`, `bomb`, `volcano`, ...), brush tools and global toggles. Optional `radius` (1-50) applies brush-driven powers (`supports_radius` in `list_powers`) over a circular area; `radius` on any other power returns `GAME_REJECTED`. Optional `pulses` (1-200) applies the power once per game frame that many times, the equivalent of holding the mouse button (~60/s); with `x2`/`y2` the pulses sweep from (x, y) to (x2, y2) like a click-hold-drag. Without `radius`, brush-only powers run at a minimal radius-1 brush and `is_toggle` powers flip their global state (x/y ignored but must be in-bounds; `pulses` rejected). Returns `{accepted: bool, via}` plus `{radius, brush}` when a brush was used; multi-pulse calls return `{pulses, accepted_count, pulses_applied}` instead of `accepted`, take pulses/60 seconds, and stop early with `stopped: turn_ended \| world_changed \| deadline \| error` when the caller's turn ends, the world is replaced mid-run, the 25 s budget runs out, or a pulse throws (`error_code`/`error_message` then carry the failure). `via` is the game delegate driven (`click_action`, `click_power_action`, `click_brush_action`, `click_power_brush_action` or `toggle_action`); `accepted=false` means the game declined this time (some powers roll a chance). Powers needing live mouse state (`finger`) return `GAME_REJECTED` with a reason. Requires the global action scope (God role) in a multi-agent session, same as `worldbox_paint_tile`; a FactionPlayer uses `worldbox_spawn`. |
 | `worldbox_spawn` | `entity_id`, `x`, `y`, `count=1`, `adult=false`, `spawn_height=6` | Spawn actors **not exposed as GodPowers**, `dragon`, `cthulhu`, `kraken`, specific animals. Wild kingdom auto-assigned via `ActorAsset.kingdom_id_wild`. |
 | `worldbox_paint_tile` | `x`, `y`, `tile_id?`, `top_id?`, `radius=0` | Paints a Euclidean disc. Provide `tile_id` (ground), `top_id` (decoration), or both. Out-of-map cells silently skipped. |
 
@@ -137,7 +137,7 @@ your version-proof contract:
 ```text
 list_tiles()  → [{id, color_hex?, has_biome_tags?}, ...]
 list_actors() → [{id, race?, asset_type?}, ...]
-list_powers() → [{id, tab_id?, target_type?}, ...]
+list_powers() → [{id, tab_id?, target_type?, supports_radius?, is_toggle?}, ...]
 ```
 
 Asset ids returned here are valid inputs for the action primitives **in the same session**.

@@ -37,6 +37,8 @@ namespace WorldBoxBridge.Threading;
 public static class MainThreadDispatcher
 {
     private static readonly ConcurrentQueue<PendingAction> Queue = new();
+    private static readonly ConcurrentQueue<PerFrameJob> IncomingJobs = new();
+    private static readonly List<PerFrameJob> ActiveJobs = new(); // main-thread only
     private static ManualLogSource? _log;
     private static bool _registered;
 
@@ -128,11 +130,7 @@ public static class MainThreadDispatcher
             )
         );
 
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
-        }
-
+        RegisterCancellation(tcs, cancellationToken);
         return tcs.Task;
     }
 
@@ -154,11 +152,107 @@ public static class MainThreadDispatcher
         );
     }
 
+    /// <summary>
+    /// Runs <paramref name="step"/> once per Unity frame on the main thread until it returns
+    /// false, then completes the returned task with <paramref name="onCompleted"/>'s value.
+    /// The first step runs on the frame AFTER registration, so a job registered from inside a
+    /// dispatched action is spaced one full frame from that action, the synthetic equivalent
+    /// of holding the mouse button down.
+    /// </summary>
+    public static Task<T> RunPerFrameOnMainThreadAsync<T>(
+        Func<bool> step,
+        Func<T> onCompleted,
+        TimeSpan? timeout = null,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (step == null)
+        {
+            throw new ArgumentNullException(nameof(step));
+        }
+        if (!_registered)
+        {
+            throw new InvalidOperationException(
+                "MainThreadDispatcher not registered. Call Bootstrap() during plugin Awake()."
+            );
+        }
+
+        var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var effectiveTimeout = timeout ?? DefaultTimeout;
+        IncomingJobs.Enqueue(
+            new PerFrameJob(
+                step: step,
+                complete: () =>
+                {
+                    try
+                    {
+                        tcs.TrySetResult(onCompleted());
+                    }
+                    catch (Exception ex)
+                    {
+                        tcs.TrySetException(ex);
+                    }
+                },
+                fail: ex => tcs.TrySetException(ex),
+                isAlreadyDone: () => tcs.Task.IsCompleted,
+                onTimeout: () =>
+                    tcs.TrySetException(
+                        new TimeoutException(
+                            $"Per-frame job exceeded its deadline of {effectiveTimeout.TotalSeconds:F1}s."
+                        )
+                    ),
+                deadline: DateTime.UtcNow + effectiveTimeout
+            )
+        );
+        RegisterCancellation(tcs, cancellationToken);
+        return tcs.Task;
+    }
+
+    /// <summary>
+    /// Wires cancellation into <paramref name="tcs"/> WITHOUT leaking the registration: the
+    /// tokens passed here are typically process-lifetime (the bridge's shutdown token), so an
+    /// undisposed registration would pin the TCS and its captured closures forever, a slow
+    /// unbounded leak over a long game session. The registration is disposed as soon as the
+    /// task settles by any route.
+    /// </summary>
+    private static void RegisterCancellation<T>(
+        TaskCompletionSource<T> tcs,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!cancellationToken.CanBeCanceled)
+        {
+            return;
+        }
+        var registration = cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+        tcs.Task.ContinueWith(
+            static (_, state) => ((CancellationTokenRegistration)state!).Dispose(),
+            registration,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default
+        );
+    }
+
     private static void Tick()
     {
         UpdateCount++;
         LastTick = Time.frameCount;
         UnityVersion ??= Application.unityVersion;
+
+        // Per-frame jobs first, and ingest before the action-queue drain below: a job
+        // registered by an action running this frame must not step until the NEXT frame.
+        while (IncomingJobs.TryDequeue(out var newJob))
+        {
+            ActiveJobs.Add(newJob);
+        }
+        for (var i = ActiveJobs.Count - 1; i >= 0; i--)
+        {
+            if (!ActiveJobs[i].RunStep())
+            {
+                ActiveJobs.RemoveAt(i);
+            }
+        }
 
         // Bound the per-frame work to avoid frame stutter from request bursts.
         const int maxPerFrame = 32;
@@ -229,6 +323,61 @@ public static class MainThreadDispatcher
             }
         }
         return false;
+    }
+
+    private sealed class PerFrameJob
+    {
+        private readonly Func<bool> _step;
+        private readonly Action _complete;
+        private readonly Action<Exception> _fail;
+        private readonly Func<bool> _isAlreadyDone;
+        private readonly Action _onTimeout;
+        private readonly DateTime _deadline;
+
+        public PerFrameJob(
+            Func<bool> step,
+            Action complete,
+            Action<Exception> fail,
+            Func<bool> isAlreadyDone,
+            Action onTimeout,
+            DateTime deadline
+        )
+        {
+            _step = step;
+            _complete = complete;
+            _fail = fail;
+            _isAlreadyDone = isAlreadyDone;
+            _onTimeout = onTimeout;
+            _deadline = deadline;
+        }
+
+        /// <summary>One frame's worth of work. Returns false when the job is finished.</summary>
+        public bool RunStep()
+        {
+            if (_isAlreadyDone())
+            {
+                return false; // cancelled from another thread
+            }
+            if (DateTime.UtcNow > _deadline)
+            {
+                _onTimeout();
+                return false;
+            }
+            try
+            {
+                if (_step())
+                {
+                    return true;
+                }
+                _complete();
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _fail(ex);
+                return false;
+            }
+        }
     }
 
     private readonly struct PendingAction

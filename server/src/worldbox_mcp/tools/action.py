@@ -24,20 +24,52 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         description=(
             "Invokes any GodPower on a tile. Universal action: covers every spawn-by-race "
             "(by passing a race id like 'human'), every disaster (meteorite, nuke, plague, "
-            "lightning, tsunami, earthquake, ...), every toggle (peace, civilization, ...) and "
-            "every modifier the in-game god-mode UI exposes. Discover valid power_id values "
-            "via `worldbox_list_powers`. x/y are tile coordinates within the map. Returns "
-            "`{power_id, x, y, accepted, via}`; `accepted=false` means the game declined this "
-            "time (drop-style powers such as rain or bombs roll a chance, so retry). Powers "
-            "that need live mouse/drag state (e.g. 'finger') or a brush are rejected with "
-            "GAME_REJECTED and a reason, use worldbox_paint_tile / worldbox_spawn instead. "
-            "In a multi-agent session this needs the global action scope (God role), same as "
-            "worldbox_paint_tile: god powers are map-wide and cannot be scoped to a faction. "
-            "A FactionPlayer places creatures with worldbox_spawn instead."
+            "lightning, tsunami, earthquake, ...), area drops (rain, fire, lava, ...), every "
+            "toggle (peace, civilization, ...) and every modifier the in-game god-mode UI "
+            "exposes. Discover valid power_id values via `worldbox_list_powers`. x/y are tile "
+            "coordinates within the map. Optional radius (1-50) applies the power over a "
+            "circular brush of that radius, only for powers flagged `supports_radius` in "
+            "list_powers; radius on any other power is rejected with GAME_REJECTED. Without "
+            "radius, brush-only powers run at a minimal radius-1 brush, and powers flagged "
+            "`is_toggle` flip their global state (x/y ignored but must be in-bounds). Returns "
+            "`{power_id, x, y, accepted, via}` plus `{radius, brush}` when a brush was used. "
+            "Optional pulses (1-200) applies the power once per game frame that many times, "
+            "the equivalent of holding the mouse button (~60 pulses/s, so one click of rain "
+            "is barely a drizzle; a storm is pulses=60+); with x2/y2 the pulses sweep from "
+            "(x, y) to (x2, y2) like a click-hold-drag. Multi-pulse calls return "
+            "`{pulses, accepted_count, pulses_applied}` instead of `accepted` and take "
+            "pulses/60 seconds; a run stops early with `stopped: turn_ended | world_changed "
+            "| deadline | error` when the caller's turn ends, the world is replaced mid-run, "
+            "the 25s budget runs out, or a pulse throws (error_code/error_message then carry "
+            "the failure). "
+            "`accepted=false` means the game declined this time (drop-style powers such as "
+            "rain or bombs roll a chance, so retry). Powers that need live mouse/drag state "
+            "(e.g. 'finger') are rejected with GAME_REJECTED and a reason, use "
+            "worldbox_paint_tile / worldbox_spawn instead. In a multi-agent session this "
+            "needs the global action scope (God role), same as worldbox_paint_tile: god "
+            "powers are map-wide and cannot be scoped to a faction. A FactionPlayer places "
+            "creatures with worldbox_spawn instead."
         ),
     )
-    async def worldbox_invoke_power(power_id: str, x: int, y: int) -> dict[str, Any]:
-        return await client.call("invoke_power", {"power_id": power_id, "x": x, "y": y})
+    async def worldbox_invoke_power(
+        power_id: str,
+        x: int,
+        y: int,
+        radius: int | None = None,
+        pulses: int | None = None,
+        x2: int | None = None,
+        y2: int | None = None,
+    ) -> dict[str, Any]:
+        args: dict[str, Any] = {"power_id": power_id, "x": x, "y": y}
+        if radius is not None:
+            args["radius"] = radius
+        if pulses is not None:
+            args["pulses"] = pulses
+        if x2 is not None:
+            args["x2"] = x2
+        if y2 is not None:
+            args["y2"] = y2
+        return await client.call("invoke_power", args)
 
     @server.tool(
         name="worldbox_spawn",

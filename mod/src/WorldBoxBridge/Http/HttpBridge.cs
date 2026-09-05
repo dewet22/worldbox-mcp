@@ -517,16 +517,45 @@ internal sealed class HttpBridge : IDisposable
             object? result;
             if (command.RequiresMainThread)
             {
-                result = await MainThreadDispatcher
+                // Two awaits, deliberately: the dispatcher call starts ExecuteAsync on the main
+                // thread; the command's own task is then awaited HERE, off the main thread.
+                // Blocking on it inside the dispatched callback (GetResult) would deadlock any
+                // command whose task completes on a later frame, invoke_power's multi-pulse
+                // path returns exactly such a task, completed by subsequent dispatcher ticks.
+                var commandTask = await MainThreadDispatcher
                     .RunOnMainThreadAsync(
-                        () =>
-                            command
-                                .ExecuteAsync(args, capturedCtx, cancellationToken)
-                                .GetAwaiter()
-                                .GetResult(),
+                        () => command.ExecuteAsync(args, capturedCtx, cancellationToken),
                         cancellationToken: cancellationToken
                     )
                     .ConfigureAwait(false);
+                // Bound the second await too: a multi-frame command self-limits via its
+                // dispatcher job deadline, but that invariant lives in the command, this
+                // backstop keeps a future misbehaving command from parking the handler forever.
+                // The linked CTS is cancelled on the normal path so the 60s timer (and its
+                // registration on the long-lived shutdown token) is released immediately
+                // rather than lingering per request.
+                using var backstopCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken
+                );
+                var backstop = Task.Delay(TimeSpan.FromSeconds(60), backstopCts.Token);
+                var finished = await Task.WhenAny(commandTask, backstop).ConfigureAwait(false);
+                if (finished != commandTask)
+                {
+                    // Observe the abandoned task's eventual fault so it can never surface as
+                    // an UnobservedTaskException.
+                    _ = commandTask.ContinueWith(
+                        static t => _ = t.Exception,
+                        CancellationToken.None,
+                        TaskContinuationOptions.OnlyOnFaulted
+                            | TaskContinuationOptions.ExecuteSynchronously,
+                        TaskScheduler.Default
+                    );
+                    throw new TimeoutException(
+                        "Command task did not complete within 60s of starting on the main thread."
+                    );
+                }
+                backstopCts.Cancel();
+                result = await commandTask.ConfigureAwait(false);
             }
             else
             {
