@@ -15,7 +15,7 @@ Two components, shipped from this monorepo:
 
 End user runs `claude mcp add worldbox -- uvx worldbox-mcp` (or equivalent for their client). The server spawns on demand via `uvx`, talks HTTP to the bridge, no manual install or Python virtualenv needed.
 
-**27 MCP tools** across meta / discovery / action / read / control / bus — see `docs/command-reference.md` for the live list. Multi-agent layer (v0.3+) is documented in `docs/multi-agent.md`: same architecture supports four scenarios (PvP / coop / hierarchical / sandbox) configured via `BepInEx/config/WorldBoxBridge.agents.json`. If that file is absent, the bridge runs in legacy single-tenant mode.
+**29 MCP tools** across meta / discovery / action / read / control / bus — see `docs/command-reference.md` for the live list. Multi-agent layer (v0.3+) is documented in `docs/multi-agent.md`: same architecture supports four scenarios (PvP / coop / hierarchical / sandbox) configured via `BepInEx/config/WorldBoxBridge.agents.json`. If that file is absent, the bridge runs in legacy single-tenant mode.
 
 ---
 
@@ -41,7 +41,7 @@ mod/                                   BepInEx C# plugin
 ├── NuGet.config                       Explicit nuget.org + bepinex.dev feeds
 ├── src/WorldBoxBridge/
 │   ├── Plugin.cs                      BepInEx entry — wires config, session, dispatcher, registry, HTTP
-│   ├── BridgeConfig.cs                Token + host + port + enabled (BepInEx ConfigFile)
+│   ├── BridgeConfig.cs                Token + host + port + enabled + suppress_startup_window
 │   ├── PluginInfo.cs                  Version constant — tracked by release-please via the
 │   │                                    `// x-release-please-version` marker, do NOT edit by hand
 │   ├── Http/
@@ -76,9 +76,9 @@ mod/                                   BepInEx C# plugin
 │   │   ├── Action/                    invoke_power, spawn, paint_tile (+ BridgeRejectionException
 │   │   │                                in its own file, linkable from tests)
 │   │   ├── Read/                      get_world_state, get_tile, list_kingdoms, list_cities,
-│   │   │                                query_actors (faction-filtered), screenshot
-│   │   ├── Control/                   pause, resume, set_speed, generate_world, save_world,
-│   │   │                                load_world
+│   │   │                                query_actors (faction-filtered), screenshot, get_ui_state
+│   │   ├── Control/                   pause, resume, set_speed, dismiss_window, generate_world,
+│   │   │                                save_world, load_world
 │   │   └── Bus/                       send_message, recv_messages (v0.3+)
 │   └── AssetSuggester.cs              Levenshtein for did_you_mean
 └── tests/WorldBoxBridge.Tests/        xUnit, net8, linked-sources (no Unity dep).
@@ -111,7 +111,7 @@ docs/                                  MkDocs Material — published at fullya99
 ├── architecture.md                    Component layout, thread model, session layer
 ├── multi-agent.md                     (v0.3) Multi-agent walkthrough: roles, perms, fog, bus, presets
 ├── protocol.md                        HTTP/JSON spec, both Authorization: Bearer + legacy X-WB-Token
-├── command-reference.md               27 tools + error codes
+├── command-reference.md               29 tools + error codes
 ├── game-api-notes.md                  ★ verified reflection paths into WorldBox internals
 ├── compatibility.md                   WorldBox × mod version matrix
 ├── development.md                     local dev + testing
@@ -282,7 +282,7 @@ These are bugs / mismatches we hit and fixed. **If something in the reflection l
 
 6. **`Type.GetMethod(name, flags)` without explicit arg types throws `AmbiguousMatchException`** as soon as the named method has overloads. `Actor.getName` and `WorldTile.setTileType` both have multiple overloads. `WorldAccess.CachedMethod` enumerates `GetMethods()` and filters manually instead of using the convenience overload.
 
-7. **Game powers without a `click_action` delegate**: some entries in `AssetManager.powers` are UI-only (`plague`, `volcano`). They open submenus in-game. `invoke_power` returns `GAME_REJECTED` for these. Workaround for full coverage is on the v0.3+ roadmap.
+7. **Powers use different click delegates.** Most `GodPower`s set `click_action` (`(WorldTile, string)`), but the drops/bombs/drop-building templates (`rain`, `fire`, `bomb`, `volcano`, …) set `click_power_action` (`(WorldTile, GodPower)`); `invoke_power` tries both. Still not drivable: brush-only (`click_brush_action`), `toggle_action`, and powers reading live pointer state (`finger` → NRE, mapped to `GAME_REJECTED`).
 
 8. **`SaveManager.saveWorldToDirectory` NREs if no world is loaded** (calls deep into `World.world.items.diagnostic()`). `SaveWorldCommand` pre-flights with `_world.Width > 0` and returns `GAME_REJECTED` with a clear message.
 
@@ -378,7 +378,7 @@ Pending items, roughly in priority order:
 2. **Single multi-tenant MCP server (Phase 2.5)** — currently "N agents on one world" = N `worldbox-mcp` processes each with their own `WORLDBOX_MCP_TOKEN`. The bridge already supports it; what's missing is one MCP server that accepts multiple MCP clients with distinct bearer headers and forwards `ctx.request.headers["authorization"]` per-call. `BridgeClient.call(token=...)` is already plumbed; the work is in `tools/*.py` to take `ctx: Context` and extract the bearer.
 3. **Auto-resolve `kingdom_claim: "auto:N"`** — currently parked as `null` until claimed; need a hook on first world-load to bind the Nth alive kingdom to the agent. Today `RequireKingdomAccess` is permissive on null claims, so PvP scoping is partly best-effort.
 4. **`scripts/gen-docs.py`** — calls `worldbox_capabilities` against a running game and regenerates `docs/command-reference.md` from the JSON Schema. Removes the drift risk between code and doc tool counts (which bit us during the v0.3 docs sweep — "20 tools" appeared in 6 places).
-5. **Workaround for UI-only powers** (`plague`, `volcano`, …) — research a path through `World.world.disasters_manager` or similar to trigger them programmatically.
+5. **Remaining power delegates** — `invoke_power` now drives `click_action` and `click_power_action` (drops/bombs/plague/volcano all work). Still uncovered: `click_brush_action` (needs `Config.current_brush_data`), `toggle_action` (peace/civ toggles) and `click_special_action`.
 6. **`get_actor(name_or_id)`** — single-actor lookup so the agent can drill into a specific Actor's stats without scanning the whole `query_actors` output.
 7. **`terraform(action_id, x, y, radius)`** — wrap `AssetManager.terraform` for non-paint terrain mutations (raise/lower terrain, river carving, etc.).
 8. **Persistent message log** (v0.3.2 candidate) — opt-in JSONL on disk for replay / post-mortem.

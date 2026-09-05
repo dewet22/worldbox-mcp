@@ -51,6 +51,19 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         return await client.call("set_speed", {"speed_id": speed_id})
 
     @server.tool(
+        name="worldbox_dismiss_window",
+        description=(
+            "Closes any open in-game window: the startup 'welcome' screen, settings, info "
+            "panels, confirmations. Open windows freeze the simulation, so call this when "
+            "worldbox_get_ui_state reports window_active=true (typically right after the game "
+            "launches). Returns `{dismissed, window}`; window is the id that was open, or null "
+            "if nothing was."
+        ),
+    )
+    async def worldbox_dismiss_window() -> dict[str, Any]:
+        return await client.call("dismiss_window")
+
+    @server.tool(
         name="worldbox_generate_world",
         description=(
             "Regenerates the world map. All kingdoms / cities / actors are wiped. Optional "
@@ -75,8 +88,10 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         name="worldbox_save_world",
         description=(
             "Saves the current world to disk via the game's native save format. `folder` is "
-            "required (absolute path). Save files are compatible with the in-game load UI. "
-            "Fails with GAME_REJECTED if no world is currently loaded."
+            "either an absolute path or a name resolved under the game's saves directory, "
+            "where the in-game slots live as `save1`, `save2`, ... (so `folder='save3'` shows "
+            "up in the in-game load menu). Returns the resolved absolute `path`, which "
+            "worldbox_load_world accepts back. Fails with GAME_REJECTED if no world is loaded."
         ),
     )
     async def worldbox_save_world(folder: str, compress: bool = True) -> dict[str, Any]:
@@ -85,9 +100,10 @@ def register(server: MCPServer, client: BridgeClient) -> None:
     @server.tool(
         name="worldbox_load_world",
         description=(
-            "Loads a previously-saved world. Provide either `path` (absolute path to a save "
-            "file on disk) or `bytes_b64` (base64-encoded zipped save bytes). Like "
-            "generate_world the load runs asynchronously — poll worldbox_get_world_state "
+            "Loads a previously-saved world. Provide either `path` (a save file, a save "
+            "folder, or a name under the game's saves directory such as `save1` or whatever "
+            "worldbox_save_world returned) or `bytes_b64` (base64-encoded zipped save bytes). "
+            "Like generate_world the load runs asynchronously — poll worldbox_get_world_state "
             "until tick advances."
         ),
     )

@@ -25,9 +25,10 @@ internal sealed class LoadWorldCommand : ICommand
     public string Name => "load_world";
     public CommandCategory Category => CommandCategory.Control;
     public string Description =>
-        "Loads a world from a save file. Either `bytes_b64` (base64-encoded zipped save) or "
-        + "`path` (absolute path to a save file on disk). Like generate_world, the load runs "
-        + "asynchronously over many frames.";
+        "Loads a world from a save. Either `bytes_b64` (base64-encoded zipped save) or "
+        + "`path`: a save file, a save folder, or a name under the game's saves directory "
+        + "(e.g. `save1`, or whatever save_world returned). Like generate_world, the load "
+        + "runs asynchronously over many frames.";
     public bool RequiresMainThread => true;
 
     public JObject ArgsSchema =>
@@ -42,7 +43,8 @@ internal sealed class LoadWorldCommand : ICommand
                             new JProperty("type", "string"),
                             new JProperty(
                                 "description",
-                                "Absolute path to a .save / .map file produced by save_world."
+                                "Save file, save folder, or a name under the game's saves "
+                                    + "directory (e.g. 'save1')."
                             )
                         )
                     ),
@@ -103,14 +105,8 @@ internal sealed class LoadWorldCommand : ICommand
         }
         else
         {
-            if (!File.Exists(path))
-            {
-                throw new BridgeRejectionException(
-                    ErrorCode.BadArgs,
-                    $"path '{path}' does not exist."
-                );
-            }
-            data = File.ReadAllBytes(path!);
+            path = ResolveMapFile(path!);
+            data = File.ReadAllBytes(path);
         }
 
         _loadMapFromBytes ??= saveMgrType.GetMethod(
@@ -142,8 +138,40 @@ internal sealed class LoadWorldCommand : ICommand
                 scheduled = true,
                 bytes = data.Length,
                 source = !string.IsNullOrEmpty(path) ? "path" : "bytes_b64",
+                path = path,
                 note = "Load runs asynchronously. Poll get_world_state until tick advances.",
             }
         );
+    }
+
+    /// <summary>Turns whatever the caller passed (file, folder, or slot name) into a map file path.</summary>
+    private static string ResolveMapFile(string path)
+    {
+        string resolved;
+        try
+        {
+            resolved = SavePathResolver.ResolveFolder(path, GameSavePaths.SavesRoot);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
+        }
+        if (Directory.Exists(resolved))
+        {
+            return SavePathResolver.FindMapFile(resolved)
+                ?? throw new BridgeRejectionException(
+                    ErrorCode.BadArgs,
+                    $"'{resolved}' contains no map.wbox / map.wbax / map.json."
+                );
+        }
+        if (!File.Exists(resolved))
+        {
+            throw new BridgeRejectionException(
+                ErrorCode.BadArgs,
+                $"path '{path}' not found (resolved to '{resolved}'). Pass a save file, a save "
+                    + "folder, or a name under the game's saves directory."
+            );
+        }
+        return resolved;
     }
 }

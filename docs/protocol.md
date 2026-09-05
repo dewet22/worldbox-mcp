@@ -151,6 +151,21 @@ Returns the list of registered commands with their JSON Schemas. The Python serv
 
 Edit `<worldbox>/BepInEx/config/WorldBoxBridge.cfg` and set `enabled = false`. The mod hot-reloads the file every 2 seconds and stops accepting commands. New requests get `503 DISABLED`. Set back to `true` to resume — no restart required.
 
+## Startup window
+
+WorldBox shows a `welcome` window after every launch, and any open window freezes the
+simulation (`get_world_state.paused` reports `true` even though nobody paused it). The bridge
+sets the game's own `Config.disable_startup_window` flag at plugin start so that window never
+appears; control it with the `[Game]` section of `WorldBoxBridge.cfg`:
+
+```ini
+[Game]
+suppress_startup_window = true
+```
+
+Set it to `false` for the vanilla startup screen. `get_ui_state` reports whether a window is
+open and which, and `dismiss_window` closes it either way.
+
 ## Stability promise
 
 - Endpoint paths, error codes, and the JSON envelope shape are part of the `0.x` SemVer contract.
