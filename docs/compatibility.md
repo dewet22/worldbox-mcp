@@ -13,7 +13,8 @@ Status legend: ✅ tested & green · ⚠️ partial (specific commands disabled)
 
 ## Reading the matrix
 
-- We track WorldBox releases via the [daily compat-check workflow](https://github.com/fullya99/worldbox-mcp/actions/workflows/compat-check.yml). A new WorldBox version automatically opens an issue with the `wb-update` label.
+- We track WorldBox releases via the [daily compat-check workflow](https://github.com/fullya99/worldbox-mcp/actions/workflows/compat-check.yml), which reads the build id of the game's `public` branch on Steam and compares it against `.github/worldbox-build-baseline.txt`, the build this matrix was last verified against. A build that does not match opens an issue labelled `wb-update`, once per build. After re-testing, write the new build id into that file to close the loop.
+- WorldBox 0.51.2 is Steam build `19962337`, published on 2025-09-13.
 - A version is considered ✅ only after the [e2e smoke suite](development.md#end-to-end-smoke-tests) passes against a real install.
 - If you run into a combination not yet listed, please open an issue with your `BepInEx/LogOutput.log`.
 
