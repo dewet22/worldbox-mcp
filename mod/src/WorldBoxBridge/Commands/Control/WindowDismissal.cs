@@ -52,11 +52,14 @@ public static class WindowDismissal
     /// </remarks>
     public static DismissResult Run(IGameUiAccess ui)
     {
-        var window = ui.CurrentWindowId();
         if (!(ui.IsWindowActive() ?? false))
         {
             return DismissResult.NothingOpen;
         }
+        // Still before HideAllWindows, but no longer before the guard: reading it costs two
+        // reflective invokes inside the frame, and on the common path there is nothing open
+        // to name.
+        var window = ui.CurrentWindowId();
         return ui.HideAllWindows() ? DismissResult.Closed(window) : DismissResult.NotSupported;
     }
 }

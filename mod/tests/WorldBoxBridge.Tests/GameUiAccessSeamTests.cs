@@ -58,6 +58,8 @@ public class GameUiAccessSeamTests
         result.Window.Should().BeNull();
         result.Unsupported.Should().BeFalse();
         ui.HideCalls.Should().Be(0);
+        // Not just unused: never read. Each read is two reflective invokes inside the frame.
+        ui.WindowIdReadsBeforeHide.Should().Be(0);
     }
 
     [Fact]

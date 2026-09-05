@@ -77,12 +77,19 @@ public static class SavePathResolver
     public static string ResolveMapFile(string? path, string savesRoot)
     {
         var resolved = ResolveFolder(path, savesRoot);
+        // FindMapFile does its own Directory.Exists, so ask it first rather than probing the
+        // same directory twice. load_world runs on the Unity main thread, where every syscall
+        // is inside the frame. Only the two error paths pay for a second look.
+        var map = FindMapFile(resolved);
+        if (map != null)
+        {
+            return map;
+        }
         if (Directory.Exists(resolved))
         {
-            return FindMapFile(resolved)
-                ?? throw new ArgumentException(
-                    $"'{resolved}' contains no {string.Join(" / ", MapFileNames)}."
-                );
+            throw new ArgumentException(
+                $"'{resolved}' contains no {string.Join(" / ", MapFileNames)}."
+            );
         }
         if (!File.Exists(resolved))
         {
