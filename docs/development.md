@@ -136,7 +136,10 @@ CI skips this suite by default.
      status and envelope.
    - Category semantics matter: **Action and Control are turn-gated** in `turn_based` sessions,
      Meta, Discovery, Read and Bus are not. That is why `turn_advance` lives in Meta rather than
-     Control, otherwise a session could deadlock permanently.
+     Control, otherwise a session could deadlock permanently. A gated command that unblocks the
+     whole session rather than advancing one agent can opt out by name in
+     `TurnGate.AlwaysAllowed`, which is how `dismiss_window` works. Permission gating still
+     applies on top, so weigh that before reaching for it.
 2. **Register it** in `Plugin.cs#RegisterCommands`, one line.
 3. **Server side**, `server/src/worldbox_mcp/tools/<category>.py`: add a
    `@server.tool(name="worldbox_<your_name>", description=...)` function. The description is what

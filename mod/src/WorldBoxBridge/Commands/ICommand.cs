@@ -5,17 +5,6 @@ using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands;
 
-/// <summary>Logical grouping of a command, surfaced in <c>capabilities()</c> metadata.</summary>
-public enum CommandCategory
-{
-    Meta,
-    Discovery,
-    Action,
-    Read,
-    Control,
-    Bus,
-}
-
 /// <summary>
 /// Contract every HTTP-exposed command implements. One <see cref="ICommand"/> instance lives
 /// for the lifetime of the plugin and is invoked concurrently from many request threads, keep

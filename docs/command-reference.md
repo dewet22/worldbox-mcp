@@ -71,7 +71,7 @@ page tracks it but may lag.
 |---|---|
 | `worldbox_pause` | Freeze the world before building a scenario. Returns `previous_paused` so you can detect state change. |
 | `worldbox_resume` | Unpause. |
-| `worldbox_dismiss_window` | Closes any open in-game window (startup `welcome` screen, settings, info panels, confirmations) via the game's own `ScrollWindow.hideAllEvent`. Returns `{dismissed, window}`. Gated on `AdvanceTime` like pause/resume. |
+| `worldbox_dismiss_window` | Closes any open in-game window (startup `welcome` screen, settings, info panels, confirmations) via the game's own `ScrollWindow.hideAllEvent`. Returns `{dismissed, window}`. Gated on `AdvanceTime` like pause/resume, but unlike them it is exempt from the turn gate in `turn_based` sessions: an open window blocks everyone, so any agent holding the permission can clear it. |
 | `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id from `worldbox_list_speeds` (`slow_mo`, `x1`, `x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`). Higher = simulation runs faster than real time. Returns `{speed_id, multiplier, previous}`; unknown ids get `UNKNOWN_ASSET` listing every valid id. |
 | `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async, poll `get_world_state` until `tick` advances. |
 | `worldbox_save_world` | Required `folder`: absolute path, or a name resolved under the game's `saves/` directory (in-game slots are `save1`, `save2`, ...; `..` is rejected). Returns the resolved `path`. Save format compatible with the in-game load UI. Refuses if no world loaded. |

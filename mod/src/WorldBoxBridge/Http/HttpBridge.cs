@@ -487,13 +487,14 @@ internal sealed class HttpBridge : IDisposable
         try
         {
             // Turn-based gate (Phase 4): in turn_based sessions, action + control commands
-            // are reserved for the current-turn agent. God-role agents (ActionGlobal) bypass
-            // the gate so a hierarchical "DM" can always intervene. Meta / Discovery / Read /
-            // Bus commands are not gated, they can be called any time.
+            // are reserved for the current-turn agent, minus the shared unblocks TurnGate
+            // exempts. God-role agents (ActionGlobal) bypass the gate so a hierarchical "DM"
+            // can always intervene. Meta / Discovery / Read / Bus commands are not gated,
+            // they can be called any time.
             if (
                 _session.TurnBased
                 && _session.TurnOrder is not null
-                && IsTurnGatedCategory(command.Category)
+                && TurnGate.IsTurnGated(command.Name, command.Category)
                 && !ctx.Has(Permission.ActionGlobal)
             )
             {
@@ -584,14 +585,6 @@ internal sealed class HttpBridge : IDisposable
             );
         }
     }
-
-    /// <summary>
-    /// Categories whose commands are reserved for the current-turn agent in turn_based
-    /// sessions. Action = modifies the world; Control = changes the simulation flow. The
-    /// rest (Meta/Discovery/Read/Bus) stay open so spectators and read-tools work anytime.
-    /// </summary>
-    private static bool IsTurnGatedCategory(CommandCategory category) =>
-        category is CommandCategory.Action or CommandCategory.Control;
 
     private HttpResponse CapabilitiesResponse()
     {
