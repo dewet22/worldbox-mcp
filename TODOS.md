@@ -73,20 +73,24 @@ Nothing queued. The Debt section is the natural queue.
 
 ## 🧹 Debt
 
-- [ ] **One `load_world` call can wedge the game for good.** `LoadWorldCommand` declares
-      `RequiresMainThread => true` and then calls `File.ReadAllBytes`. Absolute paths are
-      accepted by design, so a FIFO, a character device, or a multi-GB file blocks or loops
-      *inside* `MainThreadDispatcher.Tick`. The 30s deadline does not save it:
-      `MainThreadDispatcher.cs:171` tests `DateTime.UtcNow > pending.Deadline` **before**
-      calling `pending.Run()`, and nothing interrupts an action once it is running. The game
-      hangs until the process is killed. `save_world` has the same shape on the write side.
-      Reachable by any token holder, which is the agent itself with one bad path.
-      Found by the adversarial pass of the pre-merge review on #56, verified against the
-      dispatcher source. Not fixed there because the honest fix is a threading change:
-      `RequiresMainThread => false`, with only the `loadMapFromBytes` invoke marshalled through
-      `MainThreadDispatcher.RunOnMainThreadAsync`. Nothing before that line touches a Unity
-      API. That path cannot be exercised without the game, so it wants its own PR and a manual
-      check against a running WorldBox.
+- [ ] **Verify the `load_world` threading fix against a running game.** The fix is in:
+      `LoadWorldCommand` now reports `RequiresMainThread => false`, resolves the path and reads
+      the file on the pool thread, and marshals nothing but the `loadMapFromBytes` call. Two
+      things about it cannot be exercised on a bare machine and want a live check. First that a
+      load still works at all, by `path` and by `bytes_b64`, since the command changed which
+      thread it starts on. Second that `GameSavePaths.Capture()` really does run before any
+      request: it samples `Application.persistentDataPath` in `Plugin.Awake` because that
+      property is main-thread only, and if it is ever missed, every `load_world` by name fails
+      with `GAME_CRASH` instead of resolving. A bare `save1` load proves both at once.
+- [ ] **`save_world` can still stall a frame, and the load fix does not transfer.** The write
+      that blocks is the game's own `SaveManager.saveWorldToDirectory`, which serializes the
+      live world and writes it in one call, so it has to hold the main thread. Our own
+      pre-invoke work there is `Path.GetFullPath` and two `MapBox` reads, no filesystem call, so
+      there is nothing to move off-thread the way `load_world` moved its read. The residual is
+      real but smaller: it needs an attacker who can plant a non-regular `map.wbox` at the
+      destination, where `load_world` only needed a bad `path` argument. Fixing it properly
+      means bounding the game's call, which nothing in net462 can do, or reimplementing the
+      save format. Recorded rather than attempted.
 - [ ] Roadmap item 9: `fix(ci):` commits land under "Dependencies" in the generated changelog.
       Cosmetic, but easier to fix before the next minor than after.
 - [ ] `RequestContext.RequireKingdomAccess` has no call site anywhere in the mod. The method is

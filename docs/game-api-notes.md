@@ -288,6 +288,17 @@ breaks, read this list before debugging anything else.**
     do not use, and after any mod dependency change check the built DLL's references
     (`strings WorldBoxBridge.dll | grep -i monomod`) and make one live `/capabilities` call.
 
+11. **The main-thread deadline does not interrupt anything, so never queue blocking I/O.**
+    `MainThreadDispatcher.Tick` tests `DateTime.UtcNow > pending.Deadline` *before* it calls
+    `pending.Run()`. An action that has started runs to completion, in the middle of a frame,
+    whatever it does. `load_world` used to call `File.ReadAllBytes` from there while accepting
+    absolute paths by contract, so one call naming a FIFO, a character device or a very large
+    file froze the game until the process was killed, and `LogOutput.log` said nothing. Anything
+    that can block, the filesystem, a socket, a lock, belongs on the pool thread, with only the
+    game call marshalled. The related trap: `Application.persistentDataPath` is itself a
+    main-thread-only Unity API, so a command that resolves save paths off-thread has to read it
+    from a value sampled at start-up (`GameSavePaths.Capture`), not on demand.
+
 ---
 
 ## Two registry families, do not confuse them

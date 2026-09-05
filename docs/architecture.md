@@ -133,12 +133,12 @@ does pin content hashes. See [development.md](development.md) for how to regener
 2. Python server validates args with Pydantic, builds a JSON command envelope, sends `POST /cmd` with `Authorization: Bearer <token>` (the legacy `X-WB-Token` header is still accepted).
 3. Mod's HTTP handler verifies the bearer against the `AgentRegistry`, resolves it into a `RequestContext` (agent id, role, kingdom claim, permissions, scenario flags), then parses the JSON body.
 4. The bridge runs the per-command permission gate (`ctx.Require(Permission.X)`) and (in turn-based sessions) checks that the caller holds the current turn. Both fail fast before any game-state work.
-5. Bridge enqueues an `Action` on the main-thread dispatcher with a `TaskCompletionSource`.
+5. Bridge enqueues an `Action` on the main-thread dispatcher with a `TaskCompletionSource`. A command that reports `RequiresMainThread == false` skips this step and runs on the pool thread, marshalling only the calls that need a frame. `load_world` is the case to copy: it resolves the path and reads the file on the pool thread and queues nothing but the `loadMapFromBytes` call.
 6. Next Unity frame: dispatcher pops the action, the command runs with `RequestContext` in scope (so it can fog-of-war-filter reads or scope writes to the caller's kingdom), sets the TCS result.
 7. HTTP handler awaits the TCS, serializes the result, returns `200 OK`.
 8. Python server returns the result to the MCP client.
 
-For long-running commands the dispatcher enforces a 30-second timeout to keep the game from freezing if a reflection call goes pathological, see [protocol.md](protocol.md).
+The dispatcher's 30-second deadline is a **queueing** deadline, not a watchdog. `MainThreadDispatcher.Tick` compares it against the clock just before it calls an action, so an action that waited too long for a frame is dropped with `MAIN_THREAD_TIMEOUT`, and an action that has started runs to completion whatever it does. Nothing on the main thread can be interrupted. That is why blocking I/O must never be queued: see the `RequiresMainThread` remarks on `LoadWorldCommand`, and gotcha 11 in [game-api-notes.md](game-api-notes.md).
 
 ## Threading model summary
 

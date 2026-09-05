@@ -39,6 +39,11 @@ public sealed class Plugin : BaseUnityPlugin
 
             MainThreadDispatcher.Bootstrap(Logger);
 
+            // Awake runs on the main thread, which is the only place persistentDataPath can be
+            // read. load_world resolves save paths on the HTTP thread, so it has to be sampled
+            // here or not at all.
+            GameSavePaths.Capture();
+
             var configPath = Path.Combine(Paths.ConfigPath, "WorldBoxBridge.cfg");
             var config = BridgeConfig.Load(configPath);
             config.AssertLoopbackOnly();

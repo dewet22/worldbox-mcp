@@ -34,6 +34,7 @@
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Action\ActionPermissions.cs" Link="Linked\Commands\Action\ActionPermissions.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Read\ScreenshotScaler.cs" Link="Linked\Commands\Read\ScreenshotScaler.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Control\SavePathResolver.cs" Link="Linked\Commands\Control\SavePathResolver.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Commands\Control\SaveFileReader.cs" Link="Linked\Commands\Control\SaveFileReader.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\AgentRole.cs" Link="Linked\Session\AgentRole.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Permission.cs" Link="Linked\Session\Permission.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Agent.cs" Link="Linked\Session\Agent.cs" />

@@ -75,7 +75,7 @@ page tracks it but may lag.
 | `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id from `worldbox_list_speeds` (`slow_mo`, `x1`, `x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`). Higher = simulation runs faster than real time. Returns `{speed_id, multiplier, previous}`; unknown ids get `UNKNOWN_ASSET` listing every valid id. |
 | `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async, poll `get_world_state` until `tick` advances. |
 | `worldbox_save_world` | Required `folder`: absolute path, or a name resolved under the game's `saves/` directory (in-game slots are `save1`, `save2`, ...; `..` is rejected). Returns the resolved `path`. Save format compatible with the in-game load UI. Refuses if no world loaded. |
-| `worldbox_load_world` | One of `path` (save file, save folder, or a name under `saves/` such as `save1`) or `bytes_b64` (base64 zipped save). `bytes_b64` wins if both are given. Async. The response reports what was actually read: `source` is `path` or `bytes_b64`, and `path` carries the resolved file when one was read, `null` otherwise. |
+| `worldbox_load_world` | One of `path` (save file, save folder, or a name under `saves/` such as `save1`) or `bytes_b64` (base64 zipped save). `bytes_b64` wins if both are given. Async. The response reports what was actually read: `source` is `path` or `bytes_b64`, and `path` carries the resolved file when one was read, `null` otherwise. The file is read off the Unity main thread and refused above 256 MiB, which is far past any real save: `path` accepts absolute paths, and reading an arbitrary one during a frame used to be able to freeze the game. |
 
 ---
 
@@ -121,7 +121,7 @@ Every error response follows this shape:
 | `PERMISSION_DENIED` _(v0.3)_ | The agent's role lacks the permission this command requires. HTTP 403. |
 | `FACTION_SCOPE_VIOLATION` _(v0.3)_ | The agent tried to act on a kingdom it doesn't claim. HTTP 403. |
 | `TURN_NOT_YOURS` _(v0.3)_ | Turn-based mode is active and another agent currently holds the slot. HTTP 409. |
-| `MAIN_THREAD_TIMEOUT` | A command exceeded 30s on Unity's main thread. Safety valve so the game doesn't hang. |
+| `MAIN_THREAD_TIMEOUT` | A command waited more than 30s for a Unity frame and was dropped before it ran. The deadline is checked before the action starts, so it never abandons work already under way. |
 | `UNAUTHORIZED` | Missing or wrong bearer credential (either `Authorization: Bearer <token>` or the legacy `X-WB-Token: <token>`). Should never happen if `worldbox-mcp` auto-discovered your config. |
 | `DISABLED` | `enabled = false` in `BepInEx/config/WorldBoxBridge.cfg`. The kill-switch is engaged. |
 
