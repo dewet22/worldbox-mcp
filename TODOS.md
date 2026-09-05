@@ -5,16 +5,23 @@
 
 ## 🔄 Pick up here, 2026-09-05, third session of the day
 
-**Where things stand**: `main` is at `ec3dbab` and **`v0.6.0` is out**. #63 closed the previous
-session, then #60 cut the release, squashed because it is release-please's own PR and that is the
-single exception to the merge-commit rule. Its changelog landed six entries with no duplicates,
-one `feat`, four `fix`, one `refactor`, which is the merge-body convention holding across five
-merges. Both post-release chores are done: `uv lock` moved the project to 0.6.0, and
-[compatibility.md](docs/compatibility.md) carries a 🔵 row for it. `gen-docs.py --check` is clean
-and the tool count is still 29.
+**Where things stand**: `main` is at `c5a1669`, clean, and **`v0.6.0` is out**. PyPI serves it
+and the GitHub release carries `WorldBoxBridge-v0.6.0.zip` with its `.sha256`. Four PRs landed:
+#63 closed the previous session, #60 cut the release, #64 ran the post-release chores, #65 fixed
+an install page that had been telling readers to expect a `mod_version` from a release family
+whose DLLs never load. Only #60 was squashed, because it is release-please's own PR and that is
+the single exception. 213 xUnit and 84 pytest are green here, `gen-docs.py --check` is clean, and
+the tool count is still 29.
+
+**Read this before merging #66.** It is release-please proposing 0.6.1, and it exists because a
+commit in #65 was typed `fix(docs)` when it ships no code at all. Merging it would publish a
+release whose only content is a corrected sample response and a check script. The convention in
+[CLAUDE.md](CLAUDE.md) has been widened to say so. Leave #66 open: the next `feat:` or real
+`fix:` will roll into it and it becomes an honest release. Nobody has to merge it for its own
+sake.
 
 **The one thing owed to a running game, and it now costs more**: two releases in a row, 0.5.0 and
-0.6.0, ship on static evidence alone. 213 xUnit and 80 pytest are green on this machine and not
+0.6.0, ship on static evidence alone. Every test this repo has is green on this machine and not
 one of them can see the game. The machine these sessions run on has no WorldBox install, so the
 live pass is blocked on hardware, not forgotten. The Debt section leads with what a single live
 run would settle, and the ZIP to install now downloads straight off the 0.6.0 release instead of
@@ -64,9 +71,10 @@ needing a rebuild.
 
 **Next step**: the live pass, and nothing else is close in value. Install the 0.6.0 ZIP from the
 GitHub release on a machine that has WorldBox and run the four checks the Blocked section names.
-One session there closes four Debt items and turns both 🔵 rows into ✅ or into bug reports. The
-next thing after that, if the live pass has to wait, is the `SemaphoreSlim` in `HandleClientAsync`,
-which needs no game and closes two Debt items at once.
+One session there closes four Debt items and turns both 🔵 rows into ✅ or into bug reports. If
+the live pass has to wait for hardware, the `SemaphoreSlim` in `HandleClientAsync` is the item to
+take: it needs no game and closes two Debt entries at once. Do not open #66 as a way of feeling
+productive, see the note above.
 
 ---
 
