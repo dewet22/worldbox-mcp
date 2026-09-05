@@ -5,53 +5,61 @@
 
 ## 🔄 Pick up here, 2026-09-05
 
-**Where things stand**: v0.4.0 shipped and the four items that were queued after it are done.
-PyPI has `worldbox-mcp 0.4.0`, the GitHub release carries `WorldBoxBridge-v0.4.0.zip` plus its
-`.sha256`, and CI attached them on its own for the first time. The mod builds and tests from a
-bare checkout with no game installed, on Windows, Linux and macOS.
+**Where things stand**: `v0.5.0` is out. PyPI has `worldbox-mcp 0.5.0`, the GitHub release carries
+`WorldBoxBridge-v0.5.0.zip` plus its `.sha256`, and `uv.lock` was refreshed after the bump. Nobody
+has run it against a game yet, so [compatibility.md](docs/compatibility.md) lists it 🔵 rather than
+✅. That marker is new: the matrix previously had no way to say "released, unverified", which is the
+state every release sits in for a while.
 
-Anyone still running a 0.3.x mod DLL has a plugin that silently fails to load. Tell them to
-upgrade, because `LogOutput.log` looks perfectly normal in that state and the exception only
-shows up in Unity's own `Player.log`.
+**Breaking in 0.5.0**: a `FactionPlayer` agent calling `invoke_power` now gets `PERMISSION_DENIED`.
+God powers are map-wide and WorldBox scopes none of them to a kingdom, so they carry the same gate
+as `paint_tile`. Nothing legitimate is lost, `spawn` covers all 322 actor assets and still accepts
+either scope. The alternative, classifying per power off `GodPower.tab_id`, was rejected because it
+fails open: the game owns that field, no version documents it, and a new disaster in an unknown tab
+would be allowed by default.
 
-What landed after the release:
+What landed today, across #54, #55 and #56:
 
-- `compat-check.yml` works again (#48). It had failed on every scheduled run since at least
-  2026-08-24, and the missing `wb-update` label was only the outermost of three faults. Steam's
-  `UpToDateCheck` endpoint does not know appid 1206560 and answers with an error body, which the
-  workflow stored as the current version, then compared against a file that never existed. It now
-  reads the `public` branch build id from `api.steamcmd.net` and compares it against
-  `.github/worldbox-build-baseline.txt`, seeded with build `19962337`, which is 0.51.2. The
-  `wb-update` and `needs-triage` labels exist now, and `needs-triage` is referenced by both issue
-  templates, so every bug report filed so far had silently lost it.
-- `xunit.runner.visualstudio` 4.0.0 (#46), reviewed and merged. The major is an alignment with
-  the core framework, not a break: same target frameworks, still runs xunit v1/v2/v3, and 104
-  tests were discovered before and after. Worth knowing for later: upstream says the package
-  will probably be deprecated once the third-party VSTest runners move to Microsoft Testing
-  Platform.
-- `dismiss_window` is no longer turn-gated (#50). An open window freezes the simulation for the
-  whole session, so clearing it is a shared unblock, not a move. The decision moved into a
-  `TurnGate` class the test project can link, which `HttpBridge` cannot.
-- `scripts/gen-docs.py` (#52) generates the tool counts and verifies the inventories, with
-  `--check` wired into CI. See [development.md](docs/development.md) for how it works.
+- The bridge stopped lying about what it did. `load_world` reported `source: "path"` for a load that
+  read nothing but the base64 payload, and every argument error came back as 500 `GAME_CRASH`.
+  Commands raise `BridgeRejectionException(BadArgs)` directly now, so a 500 means something actually
+  broke. Do not throw `ArgumentException` from a command, the router has no arm for it.
+- Save path containment is decided by resolving, not by the shape of the string. Two rounds of
+  prefix rules leaked in opposite directions before that landed, and the story is in the commit
+  message of `a26ac03` if you are ever tempted to go back to prefix matching.
+- `actionlint` runs in CI, pinned to 1.7.7 and verified by content hash. `uv lock --check` guards
+  the lockfile and skips release-please's own branch.
+- `gen-docs.py` also checks the screenshot defaults on both sides of the bridge, plus the third copy
+  in the command reference row.
+- Six Debt items cleared, three new ones recorded below.
 
-**In flight**: nothing on the working tree. release-please has #49 open, `chore(main): release
-0.5.0`, because the `dismiss_window` change landed as a `feat`. Merge it when you want 0.5.0 cut,
-and squash that one, it is the single exception to the merge-commit rule.
+**Two things that cost real time, both now documented**
 
-**Next step**: nothing is blocking. Cut 0.5.0, then pick from the Debt section.
+- `gh pr merge --merge` puts the PR title in the merge commit body, and PR titles here are
+  Conventional Commits, so release-please counts the work twice. Every entry in the 0.5.0 changelog
+  that predates the fix is duplicated. Pass `--body` with a prose review note.
+- release-please read the `BREAKING CHANGE` footer and proposed `1.0.0`. That was forced back to
+  0.5.0 with a `Release-As:` footer, because the per-kingdom action scope is enforced nowhere and
+  `load_world` can still hang the game. Expect the same on the next breaking change.
+
+**In flight**: nothing. Working tree clean, `main` at the lockfile refresh, all 16 CI checks green.
+
+**Next step**: the `load_world` main-thread hazard in the Debt section is the only item that can
+hurt a user today. It wants its own PR and a manual check against a running WorldBox.
 
 **Know before you touch anything**
 
 - `packages.lock.json` is committed for both mod projects. Change a package version, restore
   normally, and CI fails with NU1004. Regenerate with
   `dotnet restore mod/WorldBoxBridge.sln --force-evaluate` and commit the result.
-- Merge PRs with a merge commit, never a squash. The repo takes the PR title as the squash
-  subject, so squashing hides the `feat:` commits inside and release-please skips the minor bump.
+- Merge PRs with a merge commit, never a squash, and give that merge a prose body. Both halves
+  matter, and only one of them used to be written down.
 - Prose, comments and commits are all in English, and the repo is deliberately free of em dashes
   outside code blocks and table notation. Keep it that way.
 - Every stated tool count is generated. Run `uv run python ../scripts/gen-docs.py --write` from
   `server/` after adding or removing a tool, do not edit the numbers by hand.
+- After a release lands, run `uv lock` from `server/` and commit it. Skip it and the next ordinary
+  PR fails on the lockfile check, which is the design rather than a bug.
 
 ---
 
@@ -61,7 +69,7 @@ Nothing.
 
 ## 🎯 Next up
 
-Cut 0.5.0. See the header block.
+Nothing queued. The Debt section is the natural queue.
 
 ## 🧹 Debt
 

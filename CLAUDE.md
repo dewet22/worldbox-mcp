@@ -27,8 +27,12 @@ the bridge runs single-tenant.
 
 ## Status
 
-- **Latest**: `v0.4.0`, 2026-09-05. PyPI and the GitHub Release are both current, and CI attaches
-  the mod ZIP by itself.
+- **Latest**: `v0.5.0`, 2026-09-05. PyPI and the GitHub Release are both current, and CI attaches
+  the mod ZIP by itself. Not yet verified against a live game, see
+  [compatibility](docs/compatibility.md).
+- **Breaking in 0.5.0**: a `FactionPlayer` agent can no longer call `invoke_power` and gets
+  `PERMISSION_DENIED`. God powers are map-wide, so they carry the same gate as `paint_tile`.
+  Creature placement stays available through `spawn`.
 - **Careful**: the released DLLs for 0.3.0 to 0.3.3 do not load at all. If someone reports a dead
   mod on those versions, that is why, and `LogOutput.log` looks perfectly normal in that state.
 - `main` is the shipping branch. release-please keeps a release PR open as commits land.

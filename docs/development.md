@@ -184,8 +184,12 @@ a throwaway tree. A check that stays quiet when the docs drift would be worse th
      `ctx.RequireKingdomAccess` for fog-of-war and faction binding.
    - Reuse `AssetCatalog.Resolve` for any asset id, which gives you `did_you_mean` for free, and
      `WorldAccess` for `MapBox`, units, kingdoms and cities.
-   - Throw `BridgeRejectionException` for structured errors. `HttpBridge` maps it to the right
-     status and envelope.
+   - Throw `BridgeRejectionException` for structured errors, including plain argument
+     validation. `HttpBridge` maps it to the right status and envelope. Do not throw
+     `ArgumentException` from a command: the router has no arm for it, so it comes back as
+     500 `GAME_CRASH` and tells the agent the game broke when the agent asked wrongly. Pure
+     helpers with no bridge dependency, `SavePathResolver` and `ScreenshotScaler`, do signal
+     with `ArgumentException`, and their callers translate at the boundary.
    - Category semantics matter: **Action and Control are turn-gated** in `turn_based` sessions,
      Meta, Discovery, Read and Bus are not. That is why `turn_advance` lives in Meta rather than
      Control, otherwise a session could deadlock permanently. A gated command that unblocks the

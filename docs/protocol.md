@@ -112,11 +112,11 @@ Content-Type: application/json
 | Code | HTTP | Meaning |
 |---|---|---|
 | `UNKNOWN_COMMAND` | 404 | The `name` field doesn't match a registered command. |
-| `BAD_ARGS` | 400 | Args fail JSON-schema validation. |
+| `BAD_ARGS` | 400 | Args fail JSON-schema validation, or a command rejected a value: a missing coordinate, a count out of range, a save path that does not resolve. Commands raise it explicitly rather than letting an exception escape. |
 | `UNKNOWN_ASSET` | 400 | An asset id (`tile_id` / `entity_id` / `power_id`) doesn't exist in this WorldBox build. Response includes `did_you_mean: [...]` (Levenshtein top-5). |
 | `OUT_OF_BOUNDS` | 400 | Coordinates are outside the current map. |
 | `GAME_REJECTED` | 422 | The game accepted the dispatch but the action was logically refused. |
-| `GAME_CRASH` | 500 | An exception bubbled up from `Assembly-CSharp`. Full type + message + stack top in response. |
+| `GAME_CRASH` | 500 | An exception bubbled up from `Assembly-CSharp` or from the bridge itself. Full type + message + stack top in response. Argument validation never lands here, so a 500 means something actually broke. |
 | `MAIN_THREAD_TIMEOUT` | 504 | Command exceeded 30s on the main thread; it was abandoned. |
 | `UNAUTHORIZED` | 401 | Missing or wrong bearer credential. |
 | `DISABLED` | 503 | `enabled = false` in `WorldBoxBridge.cfg`. The kill-switch is active. |
