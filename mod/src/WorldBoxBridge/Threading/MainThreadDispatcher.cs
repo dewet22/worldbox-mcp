@@ -33,6 +33,11 @@ namespace WorldBoxBridge.Threading;
 /// started runs to completion whatever it does. Nothing here can interrupt the main thread, so
 /// blocking I/O must never be queued: gotcha 11 in <c>docs/game-api-notes.md</c> has the case
 /// that taught us, and <c>LoadWorldCommand</c> the shape that avoids it.</para>
+///
+/// <para><b>Both queues are bounded, and to the same number.</b> <c>Tick</c> drains at most 32
+/// queued actions per frame, and at most 32 per-frame jobs may be registered at once. A queued
+/// action that misses its turn simply runs next frame; a job refused at the gate comes back as
+/// <c>BUSY</c>, because there is no later frame at which it would cost less.</para>
 /// </remarks>
 public static class MainThreadDispatcher
 {
@@ -52,6 +57,23 @@ public static class MainThreadDispatcher
     public static string? UnityVersion { get; private set; }
 
     public static TimeSpan DefaultTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How many per-frame jobs may be registered at once. The same number as <c>maxPerFrame</c>
+    /// in <see cref="Tick"/> and for the same reason: 32 delegate invocations is the most frame
+    /// time this dispatcher is willing to spend on bridge work. The action queue has always been
+    /// bounded that way, and a job that steps every frame until its deadline needed the same
+    /// bound, only for longer: an <c>invoke_power</c> run with pulses holds its slot for up to
+    /// its whole 25 s budget.
+    /// </summary>
+    private const int MaxActiveJobs = 32;
+
+    /// <summary>
+    /// Admission for <see cref="RunPerFrameOnMainThreadAsync{T}"/>. Taken on the registering
+    /// thread and returned in <see cref="Tick"/>, on the main thread, where the job leaves
+    /// <see cref="ActiveJobs"/>. That is the only exit a job has, so the count cannot drift.
+    /// </summary>
+    private static readonly ConcurrencyGate JobSlots = new(MaxActiveJobs);
 
     /// <summary>
     /// Unique marker type identifying our subsystem inside the PlayerLoop tree. Using a
@@ -177,6 +199,19 @@ public static class MainThreadDispatcher
             );
         }
 
+        if (!JobSlots.TryEnter())
+        {
+            // Refused rather than queued. A job that cannot step is worth less than one that
+            // never started, and the caller gets a 503 it can retry, where a silent queue would
+            // hand it a task that only starts moving once someone else's 25 s run ends.
+            return Task.FromException<T>(
+                new DispatcherSaturatedException(
+                    $"The dispatcher already has {MaxActiveJobs} per-frame jobs running and "
+                        + "cannot take another. Retry once one of them finishes."
+                )
+            );
+        }
+
         var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
         var effectiveTimeout = timeout ?? DefaultTimeout;
         IncomingJobs.Enqueue(
@@ -251,6 +286,7 @@ public static class MainThreadDispatcher
             if (!ActiveJobs[i].RunStep())
             {
                 ActiveJobs.RemoveAt(i);
+                JobSlots.Exit();
             }
         }
 

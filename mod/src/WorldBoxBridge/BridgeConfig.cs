@@ -19,6 +19,7 @@ internal sealed class BridgeConfig
     public ConfigEntry<string> Host { get; }
     public ConfigEntry<int> Port { get; }
     public ConfigEntry<string> Token { get; }
+    public ConfigEntry<int> MaxConcurrentRequests { get; }
     public ConfigEntry<bool> SuppressStartupWindow { get; }
 
     private BridgeConfig(ConfigFile file)
@@ -44,6 +45,20 @@ internal sealed class BridgeConfig
             "token",
             string.Empty,
             "Shared secret. Sent by clients in the X-WB-Token header. Generated automatically if empty."
+        );
+
+        MaxConcurrentRequests = file.Bind(
+            "Bridge",
+            "max_concurrent_requests",
+            8,
+            new ConfigDescription(
+                "How many requests the bridge executes at once. Past this, a request waits a "
+                    + "few seconds for a slot and is then refused with 503 BUSY rather than "
+                    + "queued, because a request in flight can hold a whole save file in "
+                    + "memory. Read once at startup, so a change here needs a game restart, "
+                    + "unlike 'enabled'.",
+                new AcceptableValueRange<int>(1, 64)
+            )
         );
 
         SuppressStartupWindow = file.Bind(

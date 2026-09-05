@@ -22,6 +22,14 @@ public static class ErrorCode
     public const string MainThreadTimeout = "MAIN_THREAD_TIMEOUT";
     public const string Internal = "INTERNAL";
 
+    /// <summary>
+    /// The bridge is already running as much work as it admits at once. Distinct from
+    /// <see cref="MainThreadTimeout"/>, which means the frame never came, and from
+    /// <see cref="Disabled"/>, which means somebody turned the bridge off: this one clears on
+    /// its own and the caller should retry.
+    /// </summary>
+    public const string Busy = "BUSY";
+
     // v0.3 multi-agent additions:
     public const string PermissionDenied = "PERMISSION_DENIED";
     public const string FactionScopeViolation = "FACTION_SCOPE_VIOLATION";
