@@ -3,84 +3,83 @@
 > What to do next. This file keeps only the future. Anything done leaves here and lives in the
 > CHANGELOG, which release-please generates from the commits.
 
-## 🔄 Pick up here, 2026-09-05
+## 🔄 Pick up here, 2026-09-05, second session of the day
 
-**Where things stand**: `v0.5.0` is out. PyPI has `worldbox-mcp 0.5.0`, the GitHub release carries
-`WorldBoxBridge-v0.5.0.zip` plus its `.sha256`, and `uv.lock` was refreshed after the bump. Nobody
-has run it against a game yet, so [compatibility.md](docs/compatibility.md) lists it 🔵 rather than
-✅. That marker is new: the matrix previously had no way to say "released, unverified", which is the
-state every release sits in for a while.
+**Where things stand**: `main` is at `81111f4`, clean, 213 xUnit and 80 pytest green on a bare
+machine. Three PRs landed in this order and the order mattered: #58 the `load_world` threading
+fix, #57 dewet22's radius, pulses and drag for `invoke_power`, #62 a follow-up correcting two
+things #57's review turned up. `v0.5.0` is still the published version. **#60 is open and now
+proposes 0.6.0**, up from the 0.5.1 it proposed this morning, because #57 carried a `feat:`. Its
+changelog is five entries with no duplicates, which is the merge-body convention working.
 
-**Breaking in 0.5.0**: a `FactionPlayer` agent calling `invoke_power` now gets `PERMISSION_DENIED`.
-God powers are map-wide and WorldBox scopes none of them to a kingdom, so they carry the same gate
-as `paint_tile`. Nothing legitimate is lost, `spawn` covers all 322 actor assets and still accepts
-either scope. The alternative, classifying per power off `GodPower.tab_id`, was rejected because it
-fails open: the game owns that field, no version documents it, and a new disaster in an unknown tab
-would be allowed by default.
+**The one thing owed to a running game**: nothing here has been checked against WorldBox. The
+machine these sessions run on has no game installed, so the live pass is genuinely blocked, not
+forgotten. The Debt section leads with what a single live run would settle, and the ZIP to
+install is rebuildable from `main` exactly as `release.yml` does it.
 
-What landed today, across #54, #55 and #56:
+**Do not redo these three arguments**, each cost a review round.
 
-- The bridge stopped lying about what it did. `load_world` reported `source: "path"` for a load that
-  read nothing but the base64 payload, and every argument error came back as 500 `GAME_CRASH`.
-  Commands raise `BridgeRejectionException(BadArgs)` directly now, so a 500 means something actually
-  broke. Do not throw `ArgumentException` from a command, the router has no arm for it.
-- Save path containment is decided by resolving, not by the shape of the string. Two rounds of
-  prefix rules leaked in opposite directions before that landed, and the story is in the commit
-  message of `a26ac03` if you are ever tempted to go back to prefix matching.
-- `actionlint` runs in CI, pinned to 1.7.7 and verified by content hash. `uv lock --check` guards
-  the lockfile and skips release-please's own branch.
-- `gen-docs.py` also checks the screenshot defaults on both sides of the bridge, plus the third copy
-  in the command reference row.
-- Six Debt items cleared, three new ones recorded below.
-
-**Two things that cost real time, both now documented**
-
-- `gh pr merge --merge` puts the PR title in the merge commit body, and PR titles here are
-  Conventional Commits, so release-please counts the work twice. Every entry in the 0.5.0 changelog
-  that predates the fix is duplicated. Pass `--body` with a prose review note.
-- release-please read the `BREAKING CHANGE` footer and proposed `1.0.0`. That was forced back to
-  0.5.0 with a `Release-As:` footer, because at the time the per-kingdom action scope was enforced
-  nowhere and `load_world` could hang the game. Both have since been dealt with, but expect the
-  same proposal on the next breaking change.
-
-**In flight**: this PR plus two others, and none of them is yours to forget.
-
-- **This one, #58.** `load_world` no longer reads the save from the Unity main thread, and a path
-  that is not a regular file is refused before it is opened. One thing is still owed on it, a
-  check against a running WorldBox. The Debt item below says exactly what to run.
-- **#60, release-please proposing 0.5.1.** Cut from the single `refactor:` commit in #59, which
-  is the useful discovery: `refactor:` bumps the patch here, while the `ci:` commits in #61
-  contributed nothing to it, which is what the new convention is for. Its branch name starts with
-  `release-please--`, so the compatibility-matrix check stands down on it as designed.
-- **#57, from dewet22**, `feat:` adding radius, pulses and drag to `invoke_power` by driving the
-  brush and toggle delegates. Green, unreviewed. Read the note at the end of "Not committed to"
-  before reviewing it.
-
-**Next step**: run the live check below. Then review #57.
+- `load_world` reads off the main thread and marshals only `loadMapFromBytes`. The reason is
+  that the dispatcher's 30s deadline is a *queueing* deadline, tested before the action runs,
+  so it stops nothing that has started. Gotcha 11 in
+  [game-api-notes](docs/game-api-notes.md) is the canonical statement.
+- **An `await` inside a command that reports `RequiresMainThread => true` does not resume on a
+  pool thread.** Unity installs `UnityEngine.UnitySynchronizationContext` on the main thread, it
+  is in the UnityEngine.Modules reference assembly the mod compiles against, and the engine
+  pumps it from the player loop. The continuation comes back to the main thread but outside the
+  dispatcher, so it escapes the deadline and the `maxPerFrame` bound. #62 first shipped the
+  opposite claim and an adversarial pass caught it. Reaching for `ConfigureAwait(false)` or
+  `Task.Run` to get back onto the main thread is what leaves it.
+- **`BrushAccess` deliberately does not trust the id the game hands back.** Preferring it over
+  the constructed `circ_<radius>` swaps a value that is correct on stock builds for one whose
+  provenance nobody has verified, because `Brush.get(int, string)`'s return type is recorded
+  nowhere. It logs disagreement instead. The Debt item says what one live call turns that into.
 
 **Know before you touch anything**
 
-- `packages.lock.json` is committed for both mod projects. Change a package version, restore
-  normally, and CI fails with NU1004. Regenerate with
-  `dotnet restore mod/WorldBoxBridge.sln --force-evaluate` and commit the result.
-- Merge PRs with a merge commit, never a squash, and give that merge a prose body. Both halves
-  matter, and only one of them used to be written down.
+- `packages.lock.json` is committed for both mod projects, and `mod/Directory.Build.props` sets
+  `RestorePackagesWithLockFile`, so this is real: change a package version and CI fails with
+  NU1004 until you regenerate with `dotnet restore mod/WorldBoxBridge.sln --force-evaluate`.
+- Merge PRs with a merge commit, never a squash, and give that merge a prose body that is not a
+  Conventional Commit. Both halves matter. #60's clean changelog is the evidence.
 - Prose, comments and commits are all in English, and the repo is deliberately free of em dashes
-  outside code blocks and table notation. Keep it that way.
+  outside code blocks and table notation.
 - Every stated tool count is generated. Run `uv run python ../scripts/gen-docs.py --write` from
-  `server/` after adding or removing a tool, do not edit the numbers by hand.
-- After a release lands, run `uv lock` from `server/` and commit it. Skip it and the next ordinary
-  PR fails on the lockfile check, which is the design rather than a bug.
+  `server/`, never edit a count by hand.
+- After the release lands, run `uv lock` from `server/` and commit it, then write the 0.6.0 row
+  in [compatibility.md](docs/compatibility.md). Skip either and the next ordinary PR fails, which
+  is the design.
+- `.NET` on this box: `export DOTNET_ROOT=$HOME/.dotnet` and
+  `PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"`.
+- There is no `CODEMAP.md` and no `archives/` here, on purpose. A context audit will flag both,
+  plus a missing `docs/README.md`, the CHANGELOG date format, missing status headers on the
+  `docs/` pages, a PowerShell snippet in `multi-agent.md` read as dead links, and two test
+  tokens one of which is literally named `test-token-do-not-use`. All expected, none real.
+
+**Next step**: merge #60 to cut 0.6.0, which publishes to PyPI and attaches the mod ZIP, then do
+the two post-release chores above. Or run the live pass first if a machine with the game is
+available, since 0.6.0 would otherwise ship a second unverified release on top of 0.5.0.
 
 ---
 
 ## 🔴 Blocked
 
-Nothing.
+- **Every live verification, on hardware rather than on a decision.** The machine these sessions
+  run on has no WorldBox install, so nothing in the Debt list that needs a running game can be
+  closed from here. Four items are waiting on one session at a machine that has the game: the
+  `load_world` load path, the `IsWorldLoading` pre-flight, what `Brush.get(int, string)` returns,
+  and dewet22's two untested guards in `invoke_power`. Build the ZIP the way `release.yml` does,
+  Release plus `-warnaserror` plus `restore --locked-mode`, then stage the DLL with
+  `scripts/install-mod.ps1`, the README and the LICENSE.
 
 ## 🎯 Next up
 
-Nothing queued. The Debt section is the natural queue.
+1. **Merge #60 and cut 0.6.0.** It publishes to PyPI and attaches the mod ZIP, so it is the one
+   irreversible step in the list. Decide first whether shipping a second unverified release on
+   top of 0.5.0 is what you want, or whether the live pass comes first.
+2. **The two chores the release creates**, both of which fail the next ordinary PR if skipped:
+   `uv lock` from `server/`, and the 0.6.0 row in [compatibility.md](docs/compatibility.md).
+3. Then the Debt section, which is the natural queue.
 
 ## 🧹 Debt
 
