@@ -35,6 +35,9 @@ updates:
       # Pin BepInEx — bumps must be manual (cross-version testing required)
       - dependency-name: "BepInEx.Core"
       - dependency-name: "BepInEx.PluginInfoProps"
+      # Pin Newtonsoft.Json to the version WorldBox bundles in Managed/ (13.0.2). The game's
+      # copy wins at runtime, so any API added in a newer nuget throws MissingMethodException.
+      - dependency-name: "Newtonsoft.Json"
       # Pin UnityEngine.Modules to the engine version WorldBox ships (2022.3.60f1 for 0.51.2).
       # Bumping it must follow a game update, not a package release.
       - dependency-name: "UnityEngine.Modules"
