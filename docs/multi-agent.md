@@ -153,6 +153,11 @@ Behavior:
 
 - Only the current-turn agent may issue **Action** or **Control** commands. Other agents
   attempting them get HTTP 409 `TURN_NOT_YOURS`.
+- One exception: `worldbox_dismiss_window` stays open to every agent that holds
+  `AdvanceTime`, whoever has the turn. An open window freezes the simulation for the whole
+  session, so clearing it is a shared unblock and not a move, and no command can open one in
+  the first place. Observer and Narrator still cannot call it, they do not have the
+  permission.
 - **Read / Discovery / Meta / Bus** commands stay open. You can always check the state and
   message peers, regardless of whose turn it is.
 - `worldbox_turn_advance` ends your turn. The next agent in `turn_order` becomes active.

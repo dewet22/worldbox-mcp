@@ -25,6 +25,8 @@
   <ItemGroup>
     <Compile Include="..\..\src\WorldBoxBridge\AssetSuggester.cs" Link="Linked\AssetSuggester.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Http\ErrorCode.cs" Link="Linked\Http\ErrorCode.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Commands\CommandCategory.cs" Link="Linked\Commands\CommandCategory.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Commands\TurnGate.cs" Link="Linked\Commands\TurnGate.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Action\BridgeRejectionException.cs" Link="Linked\Commands\Action\BridgeRejectionException.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Read\ScreenshotScaler.cs" Link="Linked\Commands\Read\ScreenshotScaler.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Control\SavePathResolver.cs" Link="Linked\Commands\Control\SavePathResolver.cs" />

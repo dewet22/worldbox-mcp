@@ -40,8 +40,9 @@ internal sealed class DismissWindowCommand : ICommand
         CancellationToken cancellationToken
     )
     {
-        // Same gate as pause/resume: a simulation-flow control everyone in the session
-        // experiences identically, with no griefing potential.
+        // Same permission as pause/resume: a simulation-flow control everyone in the session
+        // experiences identically, with no griefing potential. Unlike them it is exempt from
+        // the turn gate, see TurnGate.AlwaysAllowed for why.
         ctx.Require(Permission.AdvanceTime);
         var window = _ui.CurrentWindowId();
         var active = _ui.IsWindowActive() ?? false;
