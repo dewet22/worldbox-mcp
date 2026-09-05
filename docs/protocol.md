@@ -173,7 +173,9 @@ frame. Only `invoke_power` with `pulses` registers one today. Filling that regis
 `503 BUSY`, with a message that names the registry rather than the request cap.
 
 Authentication runs before admission, so a flood of bad tokens cannot spend the slots, and
-`GET /capabilities` is never gated because it reads no game state.
+`GET /capabilities` is never gated because it reads no game state. `GET /health` is gated like
+any other command, because it is one: a saturated bridge answering `BUSY` to a connection check
+is reporting something true about itself.
 
 ## Startup window
 
