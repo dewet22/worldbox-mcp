@@ -199,7 +199,7 @@ A daily CI cron monitors WorldBox releases on Steam and opens a tracking issue w
 
 ## Contributing
 
-Issues, PRs, new commands welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). The shortest path to a useful contribution: pick a power id from `list_powers` that has interesting arguments (like a disaster with a radius), and add a typed convenience wrapper around `invoke_power` for it.
+Issues, PRs, new commands welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: drive `click_special_action` (the last power delegate `invoke_power` cannot reach), or a `get_actor(name_or_id)` single-actor lookup.
 
 ## License
 

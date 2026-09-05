@@ -63,7 +63,10 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "Returns `{items: [{id, tab_id?, target_type?, ...}], count}`. Powers cover "
             "spawn buttons, disasters (meteor, nuke, plague, ...), toggles "
             "(toggle_peace, toggle_civ, ...), and modifiers. Power ids are the valid "
-            "inputs for `worldbox_invoke_power` (Phase 3)."
+            "inputs for `worldbox_invoke_power`. Items flagged `supports_radius` accept "
+            "invoke_power's radius argument (applied via the game's brush system); items "
+            "flagged `is_toggle` are global on/off switches (x/y ignored). Both flags are "
+            "omitted when false."
         ),
     )
     async def worldbox_list_powers() -> dict[str, Any]:

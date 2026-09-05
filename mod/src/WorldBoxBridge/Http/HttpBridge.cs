@@ -517,16 +517,18 @@ internal sealed class HttpBridge : IDisposable
             object? result;
             if (command.RequiresMainThread)
             {
-                result = await MainThreadDispatcher
+                // Two awaits, deliberately: the dispatcher call starts ExecuteAsync on the main
+                // thread; the command's own task is then awaited HERE, off the main thread.
+                // Blocking on it inside the dispatched callback (GetResult) would deadlock any
+                // command whose task completes on a later frame — invoke_power's multi-pulse
+                // path returns exactly such a task, completed by subsequent dispatcher ticks.
+                var commandTask = await MainThreadDispatcher
                     .RunOnMainThreadAsync(
-                        () =>
-                            command
-                                .ExecuteAsync(args, capturedCtx, cancellationToken)
-                                .GetAwaiter()
-                                .GetResult(),
+                        () => command.ExecuteAsync(args, capturedCtx, cancellationToken),
                         cancellationToken: cancellationToken
                     )
                     .ConfigureAwait(false);
+                result = await commandTask.ConfigureAwait(false);
             }
             else
             {

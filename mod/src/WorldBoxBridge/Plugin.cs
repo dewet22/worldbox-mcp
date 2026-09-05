@@ -55,6 +55,7 @@ public sealed class Plugin : BaseUnityPlugin
             var worldAccess = new WorldAccess(gameRefs, Logger);
             var gameUi = new GameUiAccess(gameRefs, Logger);
             var gameSpeed = new GameSpeedAccess(gameRefs);
+            var brushAccess = new BrushAccess(gameRefs, Logger);
             if (config.SuppressStartupWindow.Value && gameUi.SetDisableStartupWindow(true))
             {
                 Logger.LogInfo(
@@ -77,6 +78,7 @@ public sealed class Plugin : BaseUnityPlugin
                 worldAccess,
                 gameUi,
                 gameSpeed,
+                brushAccess,
                 session
             );
             Logger.LogInfo($"{registry.Count} commands registered.");
@@ -135,6 +137,7 @@ public sealed class Plugin : BaseUnityPlugin
         WorldAccess worldAccess,
         GameUiAccess gameUi,
         GameSpeedAccess gameSpeed,
+        BrushAccess brushAccess,
         SessionState session
     )
     {
@@ -157,7 +160,7 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ListSpeedsCommand(assetCatalog, gameSpeed));
 
         // Actions, modify the world.
-        registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, Logger));
+        registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, brushAccess, Logger));
         registry.Register(new SpawnCommand(assetCatalog, worldAccess, Logger));
         registry.Register(new PaintTileCommand(assetCatalog, worldAccess, Logger));
 

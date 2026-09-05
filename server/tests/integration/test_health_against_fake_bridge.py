@@ -285,6 +285,79 @@ async def test_screenshot_defaults_to_jpeg_mime(
     assert body["args"] == {"max_dimension": 1280, "format": "jpg", "quality": 80}
 
 
+async def test_invoke_power_forwards_radius(
+    fake_bridge: tuple[FakeBridge, BridgeAddress],
+) -> None:
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    bridge, address = fake_bridge
+    server, client = build_server(Settings(bridge=address, worldbox_dir=None))
+    try:
+        result = await server.call_tool(
+            "worldbox_invoke_power", {"power_id": "rain", "x": 10, "y": 20, "radius": 7}
+        )
+    finally:
+        await client.aclose()
+
+    assert not result.is_error
+    _method, _path, body = bridge.calls[-1]
+    assert body["name"] == "invoke_power"
+    assert body["args"] == {"power_id": "rain", "x": 10, "y": 20, "radius": 7}
+
+
+async def test_invoke_power_forwards_pulses_and_drag_endpoint(
+    fake_bridge: tuple[FakeBridge, BridgeAddress],
+) -> None:
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    bridge, address = fake_bridge
+    server, client = build_server(Settings(bridge=address, worldbox_dir=None))
+    try:
+        result = await server.call_tool(
+            "worldbox_invoke_power",
+            {"power_id": "rain", "x": 10, "y": 20, "pulses": 60, "x2": 90, "y2": 80},
+        )
+    finally:
+        await client.aclose()
+
+    assert not result.is_error
+    _method, _path, body = bridge.calls[-1]
+    assert body["name"] == "invoke_power"
+    assert body["args"] == {
+        "power_id": "rain",
+        "x": 10,
+        "y": 20,
+        "pulses": 60,
+        "x2": 90,
+        "y2": 80,
+    }
+
+
+async def test_invoke_power_omits_radius_by_default(
+    fake_bridge: tuple[FakeBridge, BridgeAddress],
+) -> None:
+    """Radius left out must not reach the bridge at all — the pre-radius wire format,
+    byte for byte, so older mod builds keep working."""
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    bridge, address = fake_bridge
+    server, client = build_server(Settings(bridge=address, worldbox_dir=None))
+    try:
+        result = await server.call_tool(
+            "worldbox_invoke_power", {"power_id": "meteor", "x": 1, "y": 2}
+        )
+    finally:
+        await client.aclose()
+
+    assert not result.is_error
+    _method, _path, body = bridge.calls[-1]
+    assert body["name"] == "invoke_power"
+    assert body["args"] == {"power_id": "meteor", "x": 1, "y": 2}
+
+
 @pytest.mark.parametrize(
     ("tool", "command"),
     [
