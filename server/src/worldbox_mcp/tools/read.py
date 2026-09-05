@@ -18,6 +18,17 @@ if TYPE_CHECKING:
     from worldbox_mcp.client import BridgeClient
 
 
+# Screenshot defaults. These mirror ScreenshotScaler's constants in the mod
+# (DefaultMaxDimension, DefaultQuality, Jpg), because the schema the model reads has to state
+# what the bridge will actually do, and a schema default of None would say nothing. Naming
+# them here means the signature and the description cannot drift from each other, and
+# `scripts/gen-docs.py --check` compares them against the C# side so they cannot drift from
+# the bridge either.
+SCREENSHOT_MAX_DIMENSION = 1280
+SCREENSHOT_QUALITY = 80
+SCREENSHOT_FORMAT: Literal["jpg", "png"] = "jpg"
+
+
 def register(server: MCPServer, client: BridgeClient) -> None:
     @server.tool(
         name="worldbox_get_world_state",
@@ -114,16 +125,17 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "Captures the current game framebuffer so you can see what you just did before "
             "deciding the next move. Returns the picture as an image content block plus a "
             "JSON block `{format, width, height, source_width, source_height, quality, bytes}`. "
-            "By default the longest edge is downscaled to 1280 px and encoded as JPEG "
-            "(quality 80), which keeps the payload small; pass `max_dimension=0` for the "
-            "full-resolution frame, or `format='png'` for lossless output. The image is the "
-            "most recently completed frame."
+            f"By default the longest edge is downscaled to {SCREENSHOT_MAX_DIMENSION} px and "
+            f"encoded as {SCREENSHOT_FORMAT.upper()} (quality {SCREENSHOT_QUALITY}), which "
+            "keeps the payload small; pass `max_dimension=0` for the full-resolution frame, "
+            "or `format='png'` for lossless output. The image is the most recently completed "
+            "frame."
         ),
     )
     async def worldbox_screenshot(
-        max_dimension: int = 1280,
-        format: Literal["jpg", "png"] = "jpg",
-        quality: int = 80,
+        max_dimension: int = SCREENSHOT_MAX_DIMENSION,
+        format: Literal["jpg", "png"] = SCREENSHOT_FORMAT,
+        quality: int = SCREENSHOT_QUALITY,
     ) -> list[ImageContent | TextContent]:
         result = await client.call(
             "screenshot",

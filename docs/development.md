@@ -156,6 +156,21 @@ It also cross-checks the two sides of the bridge. The mod declares one command f
 server exposes tools, because `/capabilities` is served by the HTTP layer rather than by an
 `ICommand`. Any other gap means a tool was added on one side only.
 
+The same idea covers the screenshot defaults, which are stated three times by necessity: the
+MCP schema has to tell the model what it will get, `ScreenshotScaler` has to apply it when the
+caller says nothing, and the `worldbox_screenshot` row in
+[command-reference.md](command-reference.md) documents it for people. The check reads
+`SCREENSHOT_MAX_DIMENSION`, `SCREENSHOT_QUALITY` and `SCREENSHOT_FORMAT` off `tools/read.py`,
+compares them with `DefaultMaxDimension`, `DefaultQuality` and `DefaultFormat`, and then
+against the `max_dimension=` and `quality=` tokens in that row.
+
+Three failure modes are reported rather than passed over: a constant renamed on either side,
+a `const` that is an alias of another (`DefaultFormat = Jpg` resolves through), and a
+command-reference row reworded until the tokens no longer match. The last one matters most:
+a check that goes quiet because it can no longer find what it was comparing is worse than no
+check. The one thing still hand-maintained in that row is the "~150-250 KB" size estimate,
+which is prose about a value rather than the value.
+
 The script itself is covered by `server/tests/unit/test_gen_docs.py`, which drives it against
 a throwaway tree. A check that stays quiet when the docs drift would be worse than no check.
 

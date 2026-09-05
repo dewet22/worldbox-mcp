@@ -49,7 +49,7 @@ internal sealed class GetTileCommand : ICommand
     {
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
         {
-            throw new ArgumentException("x and y are required integers.");
+            throw new BridgeRejectionException(ErrorCode.BadArgs, "x and y are required integers.");
         }
         var x = (int)xT!;
         var y = (int)yT!;

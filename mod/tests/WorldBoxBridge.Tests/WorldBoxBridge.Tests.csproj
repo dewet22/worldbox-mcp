@@ -27,6 +27,9 @@
     <Compile Include="..\..\src\WorldBoxBridge\Http\ErrorCode.cs" Link="Linked\Http\ErrorCode.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\CommandCategory.cs" Link="Linked\Commands\CommandCategory.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\TurnGate.cs" Link="Linked\Commands\TurnGate.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Reflection\IGameUiAccess.cs" Link="Linked\Reflection\IGameUiAccess.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Commands\Control\WindowDismissal.cs" Link="Linked\Commands\Control\WindowDismissal.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Commands\Read\UiStateReport.cs" Link="Linked\Commands\Read\UiStateReport.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Action\BridgeRejectionException.cs" Link="Linked\Commands\Action\BridgeRejectionException.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Action\ActionPermissions.cs" Link="Linked\Commands\Action\ActionPermissions.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Commands\Read\ScreenshotScaler.cs" Link="Linked\Commands\Read\ScreenshotScaler.cs" />

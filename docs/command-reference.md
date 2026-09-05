@@ -61,7 +61,7 @@ page tracks it but may lag.
 | `worldbox_list_cities` | Alive cities (optional `kingdom_id` filter): `{id, name, kingdom_id, kingdom_name, leader_name, building_count, unit_count}`. |
 | `worldbox_query_actors` | Filtered actor list: args `{race?, kingdom_id?, in_rect?, alive=true, limit=500, offset=0}`. Default limit 500, max 5000. Pagination via `offset` + `has_more`. |
 | `worldbox_get_ui_state` | `{window_active, current_window, config_paused, effective_paused, world_loading}`. `current_window` is the open window's id (`welcome` = startup screen). `effective_paused` is what the simulation does: `config_paused` OR any window open. `world_loading` is true while a world is generating/loading (`save_world` refuses then). |
-| `worldbox_screenshot` | Args `{max_dimension=1280, format="jpg"\|"png", quality=80}`. Returns an MCP image content block plus `{format, width, height, source_width, source_height, quality, bytes}`. Longest edge is downscaled to `max_dimension` (0 = full frame); a 1280 px JPEG is ~150-250 KB, a full Retina PNG ~2.8 MB. Last completed frame. |
+| `worldbox_screenshot` | Args `{max_dimension=1280, format="jpg"(default)\|"png", quality=80}`. Returns an MCP image content block plus `{format, width, height, source_width, source_height, quality, bytes}`. Longest edge is downscaled to `max_dimension` (0 = full frame); a 1280 px JPEG is ~150-250 KB, a full Retina PNG ~2.8 MB. Last completed frame. |
 
 ---
 
@@ -113,11 +113,11 @@ Every error response follows this shape:
 | Code | Meaning |
 |---|---|
 | `UNKNOWN_COMMAND` | No tool with that name. Call `worldbox_capabilities`. |
-| `BAD_ARGS` | JSON shape doesn't match the tool's schema. |
+| `BAD_ARGS` | JSON shape doesn't match the tool's schema, or a command rejected an argument value (a missing coordinate, a count out of range, an unresolvable save path). Commands raise it explicitly, so a fault inside the bridge or the game is never reported as one. |
 | `UNKNOWN_ASSET` | An asset id wasn't found in the live registry. Use the included `did_you_mean` (Levenshtein top-5) to self-correct. |
 | `OUT_OF_BOUNDS` | `(x, y)` outside the current map dimensions. |
 | `GAME_REJECTED` | Game logic refused the action (e.g. spawning a land animal on water, a brush-only power, `save_world` while the world is still loading). |
-| `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. |
+| `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. Argument validation does not land here: commands raise `BAD_ARGS` directly rather than throwing, so a 500 means the bridge or the game actually broke. |
 | `PERMISSION_DENIED` _(v0.3)_ | The agent's role lacks the permission this command requires. HTTP 403. |
 | `FACTION_SCOPE_VIOLATION` _(v0.3)_ | The agent tried to act on a kingdom it doesn't claim. HTTP 403. |
 | `TURN_NOT_YOURS` _(v0.3)_ | Turn-based mode is active and another agent currently holds the slot. HTTP 409. |

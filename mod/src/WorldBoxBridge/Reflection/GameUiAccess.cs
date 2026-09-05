@@ -14,7 +14,7 @@ namespace WorldBoxBridge.Reflection;
 /// window freezes the simulation, and the welcome window is open after every launch until
 /// someone closes it. All members are fail-soft: a missing symbol logs once and returns null/false.
 /// </remarks>
-internal sealed class GameUiAccess
+internal sealed class GameUiAccess : IGameUiAccess
 {
     private const BindingFlags Static =
         BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
@@ -114,7 +114,8 @@ internal sealed class GameUiAccess
 
     /// <summary>
     /// Sets <c>Config.disable_startup_window</c>, which the game checks at the end of world
-    /// loading before showing the "welcome" window. Must run before the first world loads, /// i.e. from plugin Awake, to take effect. Returns false if the field is missing.
+    /// loading before showing the "welcome" window. Must run before the first world loads,
+    /// i.e. from plugin Awake, to take effect. Returns false if the field is missing.
     /// </summary>
     public bool SetDisableStartupWindow(bool value)
     {

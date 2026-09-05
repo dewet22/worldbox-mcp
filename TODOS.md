@@ -39,9 +39,7 @@ What landed after the release:
 0.5.0`, because the `dismiss_window` change landed as a `feat`. Merge it when you want 0.5.0 cut,
 and squash that one, it is the single exception to the merge-commit rule.
 
-**Next step**: nothing is blocking. The Debt section below is the natural queue, and the two
-protocol-correctness items in it are the ones worth doing first, `load_world` lying about its
-source and `invoke_power` letting a FactionPlayer trigger global disasters.
+**Next step**: nothing is blocking. Cut 0.5.0, then pick from the Debt section.
 
 **Know before you touch anything**
 
@@ -63,48 +61,32 @@ Nothing.
 
 ## 🎯 Next up
 
-- [ ] `actionlint` is not wired into anything. `CLAUDE.md` says it catches a mangled
-      `[email protected]` action ref, and it would, but nothing runs it: it is absent from
-      `ci.yml` and from `.pre-commit-config.yaml`, and `.gitignore` only ignores the binary
-      someone once downloaded by hand. Either add a step to `ci.yml`, which is a few lines and
-      validated clean on all four workflows today, or delete the sentence. A rule nothing
-      enforces is worse than no rule.
-- [ ] `server/uv.lock` still declares `worldbox-mcp 0.3.3` while `pyproject.toml` is at 0.4.0.
-      release-please bumps the version but not the lockfile, and `uv sync --frozen` does not
-      revalidate it, which is why CI never noticed. Harmless today, confusing later. Decide
-      whether release-please should own the file or whether the release checklist should.
+Cut 0.5.0. See the header block.
 
 ## 🧹 Debt
 
-Found during the pre-merge review of #37 to #42. None of these are regressions from that batch,
-they are pre-existing and were surfaced, not introduced.
-
-- [ ] `Commands/Control/LoadWorldCommand.cs:140` reports `source: "path"` and echoes the caller's
-      raw path whenever `path` is non-empty, even when `bytes_b64` was supplied and actually used.
-      The guard only rejects the case where both are empty. The response lies about what was read.
-- [ ] `invoke_power` gates on `RequireAny(ActionFaction, ActionGlobal)`, while its sibling
-      `paint_tile` requires `ActionGlobal` with an explicit comment about not letting a
-      FactionPlayer reshape an opponent's territory. #42 widened which powers actually fire, so a
-      FactionPlayer in a PvP session can now drop a volcano anywhere on the map. Either match
-      `paint_tile`, or classify per power.
-- [ ] `Commands/Control/SavePathResolver.cs` documents that a relative name can never escape the
-      saves directory. That is not quite true: `Path.IsPathRooted` returns true for Windows
-      drive-relative forms like `C:foo` and `\foo`, which skip the `..` check entirely. Behaviour
-      is no worse than before the helper existed, but the stated invariant is false.
-- [ ] `Commands/Control/SetSpeedCommand.cs:129` duplicates `ListSpeedsCommand.CurrentSpeedId`
-      almost line for line, and its copy bypasses the `GameRefs` cache by calling `GetField`
-      directly on every read. Extract one helper.
-- [ ] `server/src/worldbox_mcp/tools/read.py` repeats the screenshot defaults (1280, jpg, 80) as
-      bare literals that must track `ScreenshotScaler`'s constants. Nothing catches the drift.
-      Either comment the coupling or pass `None` and let the bridge decide.
-- [ ] `LoadWorldCommand.ResolveMapFile` has three untested branches. It cannot be linked into the
-      test project today because it reads `GameSavePaths.SavesRoot`, which touches
-      `Application.persistentDataPath`. Parameterise it the way `SavePathResolver.ResolveFolder`
-      already takes `savesRoot`, then test it.
-- [ ] `GameUiAccess` has no interface seam, so the branch logic in `DismissWindowCommand` and
-      `GetUiStateCommand` cannot be unit tested even though it is Unity-type-free at the surface.
+- [ ] **One `load_world` call can wedge the game for good.** `LoadWorldCommand` declares
+      `RequiresMainThread => true` and then calls `File.ReadAllBytes`. Absolute paths are
+      accepted by design, so a FIFO, a character device, or a multi-GB file blocks or loops
+      *inside* `MainThreadDispatcher.Tick`. The 30s deadline does not save it:
+      `MainThreadDispatcher.cs:171` tests `DateTime.UtcNow > pending.Deadline` **before**
+      calling `pending.Run()`, and nothing interrupts an action once it is running. The game
+      hangs until the process is killed. `save_world` has the same shape on the write side.
+      Reachable by any token holder, which is the agent itself with one bad path.
+      Found by the adversarial pass of the pre-merge review on #56, verified against the
+      dispatcher source. Not fixed there because the honest fix is a threading change:
+      `RequiresMainThread => false`, with only the `loadMapFromBytes` invoke marshalled through
+      `MainThreadDispatcher.RunOnMainThreadAsync`. Nothing before that line touches a Unity
+      API. That path cannot be exercised without the game, so it wants its own PR and a manual
+      check against a running WorldBox.
 - [ ] Roadmap item 9: `fix(ci):` commits land under "Dependencies" in the generated changelog.
       Cosmetic, but easier to fix before the next minor than after.
+- [ ] `RequestContext.RequireKingdomAccess` has no call site anywhere in the mod. The method is
+      documented as the guard for "who may act on which kingdom" and nothing invokes it, so the
+      per-kingdom action scope is not enforced at all. Either wire it into `spawn` (the one
+      Action command a FactionPlayer can still reach) or delete it and say plainly in
+      [multi-agent.md](docs/multi-agent.md) that claims scope reads, not writes.
+- [ ] `docs/compatibility.md` is still updated by hand after a release, and nothing checks it.
 
 ## 💡 Not committed to
 

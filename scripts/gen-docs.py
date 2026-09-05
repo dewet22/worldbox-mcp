@@ -65,6 +65,41 @@ INVENTORY_FILES: list[str] = [
 
 SKIP_DIRS = frozenset({".git", ".venv", "archives", "node_modules", "site"})
 
+# The screenshot defaults are stated on both sides of the bridge: the MCP schema has to tell
+# the model what it will get, and the mod has to apply it when the caller says nothing. Two
+# statements of one value, so they are checked against each other. Maps a `const` in
+# ScreenshotScaler.cs to the module constant in the Python tool.
+SCREENSHOT_SCALER = (
+    REPO_ROOT / "mod" / "src" / "WorldBoxBridge" / "Commands" / "Read" / "ScreenshotScaler.cs"
+)
+COMMAND_REFERENCE = REPO_ROOT / "docs" / "command-reference.md"
+
+# The command reference states the same three values a third time, in the worldbox_screenshot
+# row. Matched by token so a reworded row fails loudly rather than passing silently. The
+# format entry needs the "(default)" marker in the row for the same reason: listing
+# `format="jpg"|"png"` says which values are legal but not which one you get, so the row could
+# have claimed PNG and nothing would have noticed.
+SCREENSHOT_ROW = re.compile(r"^\|\s*`worldbox_screenshot`\s*\|.*$", re.MULTILINE)
+SCREENSHOT_ROW_TOKENS: list[tuple[str, str, str]] = [
+    ("SCREENSHOT_MAX_DIMENSION", "max_dimension=", r"max_dimension=(\d+)"),
+    ("SCREENSHOT_QUALITY", "quality=", r"quality=(\d+)"),
+    ("SCREENSHOT_FORMAT", 'format="', r'format="(\w+)"\(default\)'),
+]
+
+SCREENSHOT_DEFAULTS: list[tuple[str, str]] = [
+    ("DefaultMaxDimension", "SCREENSHOT_MAX_DIMENSION"),
+    ("DefaultQuality", "SCREENSHOT_QUALITY"),
+    ("DefaultFormat", "SCREENSHOT_FORMAT"),
+]
+
+# A const is a number, a string literal, or another const in the same class. The last form
+# matters: `DefaultFormat = Jpg` is how the bridge names its default without restating "jpg",
+# and a checker that could not follow it would report the constant as missing.
+CSHARP_CONST = re.compile(
+    r"public\s+const\s+(?:int|string)\s+(?P<name>\w+)\s*=\s*"
+    r"(?P<value>\d+|\"[^\"]*\"|[A-Za-z_]\w*)\s*;"
+)
+
 # Identifiers that match the tool naming pattern without being tools. Add to this set when a
 # new one appears, the alternative is a check that lets a renamed tool slip through.
 NOT_A_TOOL: frozenset[str] = frozenset(
@@ -267,12 +302,110 @@ def check_parity(surface: Surface, report: Report) -> None:
         )
 
 
+def csharp_screenshot_defaults(scaler: Path) -> dict[str, str]:
+    """The `const` values ScreenshotScaler declares, as strings, aliases resolved."""
+    raw = {
+        m.group("name"): m.group("value")
+        for m in CSHARP_CONST.finditer(scaler.read_text(encoding="utf-8"))
+    }
+    resolved: dict[str, str] = {}
+    for name, value in raw.items():
+        seen: set[str] = set()
+        # `A = B; B = "jpg"` resolves to "jpg". `seen` stops a cycle, which the C# compiler
+        # would reject anyway, from spinning here.
+        while value in raw and value not in seen:
+            seen.add(value)
+            value = raw[value]
+        resolved[name] = value.strip('"')
+    return resolved
+
+
+def python_screenshot_defaults() -> dict[str, str]:
+    """The defaults the MCP schema advertises, read off the tool module itself."""
+    module = importlib.import_module("worldbox_mcp.tools.read")
+    # Absent stays absent rather than becoming the string "None", which would be reported as a
+    # value drift and send the reader looking for a constant set to the wrong number.
+    return {
+        py: str(getattr(module, py))
+        for _, py in SCREENSHOT_DEFAULTS
+        if hasattr(module, py)
+    }
+
+
+def check_screenshot_defaults(
+    report: Report,
+    scaler: Path = SCREENSHOT_SCALER,
+    python_values: dict[str, str] | None = None,
+    reference: Path = COMMAND_REFERENCE,
+) -> None:
+    """The screenshot defaults the MCP schema promises must be what the bridge applies."""
+    if not scaler.exists():
+        report.fail(f"{scaler} is missing; the screenshot defaults cannot be checked.")
+        return
+    csharp = csharp_screenshot_defaults(scaler)
+    python = python_screenshot_defaults() if python_values is None else python_values
+    for cs_name, py_name in SCREENSHOT_DEFAULTS:
+        if cs_name not in csharp:
+            report.fail(
+                f"ScreenshotScaler no longer declares `const ... {cs_name}`, so the Python "
+                f"default {py_name} in tools/read.py has nothing to be checked against."
+            )
+            continue
+        if py_name not in python:
+            report.fail(
+                f"tools/read.py no longer declares {py_name}, so ScreenshotScaler.{cs_name} "
+                f"has nothing to be checked against."
+            )
+            continue
+        if csharp[cs_name] != python[py_name]:
+            report.fail(
+                f"screenshot default drift: ScreenshotScaler.{cs_name} is {csharp[cs_name]!r} "
+                f"but tools/read.py {py_name} is {python[py_name]!r}. The schema would "
+                f"promise the model something the bridge does not do."
+            )
+    check_screenshot_row(report, python, reference=reference)
+
+
+def check_screenshot_row(
+    report: Report, python: dict[str, str], reference: Path = COMMAND_REFERENCE
+) -> None:
+    """The command reference restates the same defaults in prose. Keep it honest too."""
+    if not reference.exists():
+        report.fail(f"{reference} is missing; the documented screenshot row cannot be checked.")
+        return
+    match = SCREENSHOT_ROW.search(reference.read_text(encoding="utf-8"))
+    if match is None:
+        report.fail(
+            f"{reference.name} has no `worldbox_screenshot` row, so its copy of the screenshot "
+            f"defaults cannot be checked. Restore the row or drop SCREENSHOT_ROW_TOKENS."
+        )
+        return
+    row = match.group(0)
+    for py_name, token, pattern in SCREENSHOT_ROW_TOKENS:
+        found = re.search(pattern, row)
+        if found is None:
+            report.fail(
+                f"{reference.name}: the worldbox_screenshot row no longer states "
+                f"'{token}<value>', so {py_name} is documented somewhere this check cannot see."
+            )
+        elif found.group(1) != python.get(py_name):
+            report.fail(
+                f"{reference.name}: the worldbox_screenshot row says "
+                f"{found.group(0)!r} but {py_name} is {python.get(py_name)!r}."
+            )
+
+
 def run(surface: Surface, root: Path, *, write: bool) -> Report:
     report = Report()
     sync_regions(surface, root, write=write, report=report)
     check_inventories(surface, root, report)
     check_mentions(surface, root, report)
     check_parity(surface, report)
+    # The screenshot defaults are repo-global rather than root-relative, so they are only
+    # checked when run() is pointed at this repository. The unit tests drive run() against a
+    # throwaway tree, which would otherwise inherit a failure about files it never created.
+    if root.resolve() == REPO_ROOT:
+        check_screenshot_defaults(report)
     return report
 
 

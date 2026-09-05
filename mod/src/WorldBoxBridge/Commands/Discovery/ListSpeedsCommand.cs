@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -27,14 +26,12 @@ internal sealed class ListSpeedsCommand : ICommand
     };
 
     private readonly AssetCatalog _catalog;
-    private readonly GameRefs _refs;
-    private FieldInfo? _timeScaleAsset;
-    private FieldInfo? _assetId;
+    private readonly GameSpeedAccess _speed;
 
-    public ListSpeedsCommand(AssetCatalog catalog, GameRefs refs)
+    public ListSpeedsCommand(AssetCatalog catalog, GameSpeedAccess speed)
     {
         _catalog = catalog;
-        _refs = refs;
+        _speed = speed;
     }
 
     public string Name => "list_speeds";
@@ -64,32 +61,8 @@ internal sealed class ListSpeedsCommand : ICommand
             {
                 items,
                 count = items.Count,
-                current = CurrentSpeedId(),
+                current = _speed.CurrentSpeedId(),
             }
         );
-    }
-
-    /// <summary><c>Config.time_scale_asset.id</c>, or null if unavailable.</summary>
-    private string? CurrentSpeedId()
-    {
-        var configType = _refs.Type("Config");
-        if (configType == null)
-        {
-            return null;
-        }
-        _timeScaleAsset ??= _refs.Field(
-            configType,
-            "time_scale_asset",
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
-        );
-        var asset = _timeScaleAsset?.GetValue(null);
-        if (asset == null)
-        {
-            return null;
-        }
-        _assetId ??= asset
-            .GetType()
-            .GetField("id", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-        return _assetId?.GetValue(asset) as string;
     }
 }
