@@ -28,6 +28,13 @@ def _free_port() -> int:
         return s.getsockname()[1]
 
 
+# A valid 1x1 transparent PNG; what the mod would hand back after encoding.
+_ONE_PIXEL_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+    "AAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+)
+
+
 class FakeBridge:
     def __init__(self, *, token: str = "fake-token") -> None:
         self.token = token
@@ -89,6 +96,22 @@ class FakeBridge:
                     },
                 },
                 status=400,
+            )
+        if body.get("name") == "screenshot":
+            return web.json_response(
+                {
+                    "ok": True,
+                    "result": {
+                        "format": "png",
+                        "width": 1,
+                        "height": 1,
+                        "source_width": 2,
+                        "source_height": 2,
+                        "base64": _ONE_PIXEL_PNG_B64,
+                        "bytes": 67,
+                    },
+                    "tick": 125,
+                }
             )
         return web.json_response({"ok": True, "result": {"echo": body}, "tick": 124})
 
@@ -193,3 +216,56 @@ async def test_transport_error_reaches_mcp_client(
         await client.aclose()
     assert not isinstance(info.value, UnexpectedToolError)
     assert "unreachable" in str(info.value).lower()
+
+
+async def test_screenshot_returns_image_block_and_metadata(
+    fake_bridge: tuple[FakeBridge, BridgeAddress],
+) -> None:
+    """The model should receive the picture as an MCP image block (so vision-capable clients
+    render it) plus a small JSON block with the dimensions -- never base64 inside JSON text."""
+    import json
+
+    from mcp.types import ImageContent, TextContent
+
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    bridge, address = fake_bridge
+    server, client = build_server(Settings(bridge=address, worldbox_dir=None))
+    try:
+        result = await server.call_tool("worldbox_screenshot", {"max_dimension": 64})
+    finally:
+        await client.aclose()
+
+    assert not result.is_error
+    images = [c for c in result.content if isinstance(c, ImageContent)]
+    texts = [c for c in result.content if isinstance(c, TextContent)]
+    assert len(images) == 1
+    assert images[0].mime_type == "image/png"
+    assert images[0].data == _ONE_PIXEL_PNG_B64
+    assert len(texts) == 1
+    meta = json.loads(texts[0].text)
+    assert meta["width"] == 1
+    assert meta["source_width"] == 2
+    assert "base64" not in meta
+
+    _method, _path, body = bridge.calls[-1]
+    assert body["name"] == "screenshot"
+    assert body["args"] == {"max_dimension": 64, "format": "jpg", "quality": 80}
+
+
+async def test_list_speeds_forwards_to_bridge_command(
+    fake_bridge: tuple[FakeBridge, BridgeAddress],
+) -> None:
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    bridge, address = fake_bridge
+    server, client = build_server(Settings(bridge=address, worldbox_dir=None))
+    try:
+        result = await server.call_tool("worldbox_list_speeds", {})
+    finally:
+        await client.aclose()
+    assert not result.is_error
+    _method, _path, body = bridge.calls[-1]
+    assert body == {"name": "list_speeds", "args": {}}

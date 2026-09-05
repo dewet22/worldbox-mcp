@@ -15,7 +15,7 @@ Two components, shipped from this monorepo:
 
 End user runs `claude mcp add worldbox -- uvx worldbox-mcp` (or equivalent for their client). The server spawns on demand via `uvx`, talks HTTP to the bridge, no manual install or Python virtualenv needed.
 
-**26 MCP tools** across meta / discovery / action / read / control / bus — see `docs/command-reference.md` for the live list. Multi-agent layer (v0.3+) is documented in `docs/multi-agent.md`: same architecture supports four scenarios (PvP / coop / hierarchical / sandbox) configured via `BepInEx/config/WorldBoxBridge.agents.json`. If that file is absent, the bridge runs in legacy single-tenant mode.
+**27 MCP tools** across meta / discovery / action / read / control / bus — see `docs/command-reference.md` for the live list. Multi-agent layer (v0.3+) is documented in `docs/multi-agent.md`: same architecture supports four scenarios (PvP / coop / hierarchical / sandbox) configured via `BepInEx/config/WorldBoxBridge.agents.json`. If that file is absent, the bridge runs in legacy single-tenant mode.
 
 ---
 
@@ -72,7 +72,7 @@ mod/                                   BepInEx C# plugin
 │   │   ├── CommandRegistry.cs         name → ICommand registry
 │   │   ├── HealthCommand.cs           Meta — also reports multi_agent / scenario / agent_count
 │   │   ├── Meta/                      whoami, session_info, turn_advance, objective_status (v0.3+)
-│   │   ├── Discovery/                 list_tiles, list_actors, list_powers
+│   │   ├── Discovery/                 list_tiles, list_actors, list_powers, list_speeds
 │   │   ├── Action/                    invoke_power, spawn, paint_tile (+ BridgeRejectionException
 │   │   │                                in its own file, linkable from tests)
 │   │   ├── Read/                      get_world_state, get_tile, list_kingdoms, list_cities,
@@ -111,7 +111,7 @@ docs/                                  MkDocs Material — published at fullya99
 ├── architecture.md                    Component layout, thread model, session layer
 ├── multi-agent.md                     (v0.3) Multi-agent walkthrough: roles, perms, fog, bus, presets
 ├── protocol.md                        HTTP/JSON spec, both Authorization: Bearer + legacy X-WB-Token
-├── command-reference.md               26 tools + error codes
+├── command-reference.md               27 tools + error codes
 ├── game-api-notes.md                  ★ verified reflection paths into WorldBox internals
 ├── compatibility.md                   WorldBox × mod version matrix
 ├── development.md                     local dev + testing

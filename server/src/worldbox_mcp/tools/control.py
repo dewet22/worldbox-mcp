@@ -30,7 +30,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         name="worldbox_resume",
         description=(
             "Resumes the simulation. Pair with worldbox_set_speed if you want the world "
-            "to run faster than real-time (x2/x3/x5)."
+            "to run faster than real-time (x2 ... x20)."
         ),
     )
     async def worldbox_resume() -> dict[str, Any]:
@@ -39,10 +39,12 @@ def register(server: MCPServer, client: BridgeClient) -> None:
     @server.tool(
         name="worldbox_set_speed",
         description=(
-            "Sets the simulation tick rate by WorldTimeScaleAsset id. Typical values: "
-            "'slow_mo', 'x1', 'x2', 'x3', 'x5'. Higher values run the simulation faster "
-            "so longer experiments take less wall-clock time. Wrong ids return "
-            "UNKNOWN_ASSET with did_you_mean suggestions."
+            "Sets the simulation tick rate by WorldTimeScaleAsset id. Stock WorldBox 0.51.x "
+            "ids: 'slow_mo', 'x1', 'x2', 'x3', 'x4', 'x5', 'x10', 'x15', 'x20', 'x40'; call "
+            "worldbox_list_speeds for the live list and the current speed. Higher values run "
+            "the simulation faster so longer experiments take less wall-clock time. Returns "
+            "`{speed_id, multiplier, previous}`. Unknown ids return UNKNOWN_ASSET listing "
+            "every valid id."
         ),
     )
     async def worldbox_set_speed(speed_id: str) -> dict[str, Any]:
