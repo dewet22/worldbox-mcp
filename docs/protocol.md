@@ -117,7 +117,7 @@ Content-Type: application/json
 | `OUT_OF_BOUNDS` | 400 | Coordinates are outside the current map. |
 | `GAME_REJECTED` | 422 | The game accepted the dispatch but the action was logically refused. |
 | `GAME_CRASH` | 500 | An exception bubbled up from `Assembly-CSharp` or from the bridge itself. Full type + message + stack top in response. Argument validation never lands here, so a 500 means something actually broke. |
-| `MAIN_THREAD_TIMEOUT` | 504 | Command exceeded 30s on the main thread; it was abandoned. |
+| `MAIN_THREAD_TIMEOUT` | 504 | Command waited more than 30s for a Unity frame and was dropped before it ran. The deadline is checked before the action starts, so it never abandons work already in progress. |
 | `UNAUTHORIZED` | 401 | Missing or wrong bearer credential. |
 | `DISABLED` | 503 | `enabled = false` in `WorldBoxBridge.cfg`. The kill-switch is active. |
 | `PERMISSION_DENIED` _(v0.3+)_ | 403 | The agent's role lacks the permission this command needs. |

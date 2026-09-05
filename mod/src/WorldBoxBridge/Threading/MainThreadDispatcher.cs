@@ -27,8 +27,12 @@ namespace WorldBoxBridge.Threading;
 /// <a href="https://github.com/BepInEx/RuntimeUnityEditor">RuntimeUnityEditor</a> and most
 /// long-running BepInEx plugins for the same reason.</para>
 ///
-/// <para><b>Per-action timeout:</b> if a reflection call wedges, the HTTP handler still gets
-/// <c>MAIN_THREAD_TIMEOUT</c> back instead of hanging indefinitely.</para>
+/// <para><b>Per-action deadline, and what it is not:</b> the deadline is a queueing deadline.
+/// <c>Tick</c> compares it against the clock just before it calls an action, so an action that
+/// waited too long for a frame comes back as <c>MAIN_THREAD_TIMEOUT</c>, and an action that has
+/// started runs to completion whatever it does. Nothing here can interrupt the main thread, so
+/// blocking I/O must never be queued: gotcha 11 in <c>docs/game-api-notes.md</c> has the case
+/// that taught us, and <c>LoadWorldCommand</c> the shape that avoids it.</para>
 /// </remarks>
 public static class MainThreadDispatcher
 {
