@@ -101,6 +101,18 @@ VERSION_SOURCES: list[tuple[str, str]] = [
     ),
 ]
 
+# Two install pages print a sample response, one for /health and one for capabilities(), and
+# the reader compares their own output against it. That sample said 0.3.0 through the 0.4.0,
+# 0.5.0 and 0.6.0 releases, which is exactly the version family whose DLLs never load, so a
+# reader with a dead mod saw the number they expected. Checked rather than rewritten: the
+# JSON around it is illustrative, and a generated region would render as a visible comment
+# inside a fenced block.
+HEALTH_SAMPLE_SOURCES: list[str] = [
+    "docs/install/index.md",
+    "docs/install/manual.md",
+]
+HEALTH_SAMPLE = re.compile(r'"mod_version":\s*"([^"]+)"')
+
 # The command reference states the same three values a third time, in the worldbox_screenshot
 # row. Matched by token so a reworded row fails loudly rather than passing silently. The
 # format entry needs the "(default)" marker in the row for the same reason: listing
@@ -566,6 +578,34 @@ def check_release_version(report: Report, root: Path = REPO_ROOT) -> None:
             f"Add one with the status the release actually has: 🔵 until the e2e suite has run "
             f"against a real install, ✅ only after."
         )
+    check_health_samples(report, version, root)
+
+
+def check_health_samples(report: Report, version: str, root: Path) -> None:
+    """Every sample response in the install pages must state the version this tree declares.
+
+    A missing page is not a failure, because the unit tests drive this against throwaway
+    trees that never create one. A page that has lost its sample is, otherwise deleting the
+    line would silence the check instead of fixing it.
+    """
+    for relative in HEALTH_SAMPLE_SOURCES:
+        path = root / relative
+        if not path.exists():
+            continue
+        stated = HEALTH_SAMPLE.findall(path.read_text(encoding="utf-8"))
+        if not stated:
+            report.fail(
+                f"{relative} no longer shows a mod_version in a sample response. Restore it, "
+                f"or drop the entry from HEALTH_SAMPLE_SOURCES if the sample is gone for good."
+            )
+            continue
+        stale = sorted({value for value in stated if value != version})
+        if stale:
+            report.fail(
+                f"{relative} shows mod_version {', '.join(stale)} in a sample response "
+                f"while this tree declares {version}. A reader compares their own output "
+                f"against that sample, so a stale one reads as a match."
+            )
 
 
 def run(

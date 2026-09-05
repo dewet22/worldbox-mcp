@@ -62,7 +62,7 @@ You should see:
 ```json
 {
   "ok": true,
-  "mod_version": "0.3.0",
+  "mod_version": "0.6.0",
   "worldbox_version": "0.51.2",
   "unity_version": "2022.3.60f1",
   "assembly_csharp_sha256": "51d275f0…",

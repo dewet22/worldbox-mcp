@@ -549,3 +549,62 @@ def test_run_checks_the_release_version_for_the_real_repository(
     gen_docs.run(surface, gen_docs.REPO_ROOT, write=False)
 
     assert calls == [1]
+
+
+def _install_pages(root: Path, version: str) -> Path:
+    """The two install pages, each printing one sample response stating `version`."""
+    for relative in gen_docs.HEALTH_SAMPLE_SOURCES:
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            '```json\n{\n  "ok": true,\n'
+            f'  "mod_version": "{version}",\n'
+            '  "worldbox_version": "0.51.2",\n'
+            '  "unity_version": "2022.3.60f1"\n}\n```\n',
+            encoding="utf-8",
+        )
+    return root
+
+
+def test_install_samples_that_state_the_declared_version_report_nothing(tmp_path: Path) -> None:
+    report = gen_docs.Report()
+    root = _install_pages(_tree(tmp_path, "0.5.0"), "0.5.0")
+
+    gen_docs.check_release_version(report, root=root)
+
+    assert report.problems == []
+
+
+def test_an_install_sample_a_release_behind_is_reported(tmp_path: Path) -> None:
+    """The drift that went unnoticed across three releases, and why it matters.
+
+    0.3.0 is the one family whose DLLs never load, so a reader with a dead mod comparing their
+    own output against the sample saw the number they expected.
+    """
+    report = gen_docs.Report()
+    root = _install_pages(_tree(tmp_path, "0.5.0"), "0.3.0")
+
+    gen_docs.check_release_version(report, root=root)
+
+    assert len(report.problems) == len(gen_docs.HEALTH_SAMPLE_SOURCES)
+    assert all("0.3.0" in problem and "0.5.0" in problem for problem in report.problems)
+
+
+def test_an_install_page_that_lost_its_sample_is_reported(tmp_path: Path) -> None:
+    root = _install_pages(_tree(tmp_path, "0.5.0"), "0.5.0")
+    (root / gen_docs.HEALTH_SAMPLE_SOURCES[0]).write_text("no sample here\n", encoding="utf-8")
+    report = gen_docs.Report()
+
+    gen_docs.check_release_version(report, root=root)
+
+    assert len(report.problems) == 1
+    assert "no longer shows a mod_version" in report.problems[0]
+
+
+def test_a_tree_without_install_pages_is_not_a_failure(tmp_path: Path) -> None:
+    """run() drives the release check against throwaway trees that never create the pages."""
+    report = gen_docs.Report()
+
+    gen_docs.check_release_version(report, root=_tree(tmp_path, "0.5.0"))
+
+    assert report.problems == []
