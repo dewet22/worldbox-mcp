@@ -156,6 +156,13 @@ It also cross-checks the two sides of the bridge. The mod declares one command f
 server exposes tools, because `/capabilities` is served by the HTTP layer rather than by an
 `ICommand`. Any other gap means a tool was added on one side only.
 
+The same idea covers the screenshot defaults, which are stated twice by necessity: the MCP
+schema has to tell the model what it will get, and `ScreenshotScaler` has to apply it when the
+caller says nothing. The check reads `SCREENSHOT_MAX_DIMENSION`, `SCREENSHOT_QUALITY` and
+`SCREENSHOT_FORMAT` off `tools/read.py` and compares them with `DefaultMaxDimension`,
+`DefaultQuality` and `Jpg`. Renaming a constant on the C# side is reported too, rather than
+letting the comparison quietly find nothing to compare.
+
 The script itself is covered by `server/tests/unit/test_gen_docs.py`, which drives it against
 a throwaway tree. A check that stays quiet when the docs drift would be worse than no check.
 

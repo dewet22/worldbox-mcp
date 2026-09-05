@@ -174,3 +174,75 @@ def test_mismatched_end_marker_is_reported(surface: object, docs: Path) -> None:
     report = gen_docs.run(surface, docs, write=False)
 
     assert any("begin marker(s) but" in p for p in report.problems)
+
+
+# ─── Screenshot defaults ──────────────────────────────────────────────────
+#
+# The defaults are stated on both sides of the bridge: the MCP schema tells the model what it
+# will get, ScreenshotScaler applies it when the caller says nothing. Two statements of one
+# value, so the check compares them. Both entry points take their inputs so these run against
+# a throwaway file rather than the repository.
+
+SCALER_SOURCE = """
+internal static class ScreenshotScaler
+{
+    public const int DefaultMaxDimension = 1280;
+    public const int DefaultQuality = 80;
+    public const string Jpg = "jpg";
+    public const string Png = "png";
+}
+"""
+
+MATCHING_PYTHON = {
+    "SCREENSHOT_MAX_DIMENSION": "1280",
+    "SCREENSHOT_QUALITY": "80",
+    "SCREENSHOT_FORMAT": "jpg",
+}
+
+
+@pytest.fixture
+def scaler(tmp_path: Path) -> Path:
+    path = tmp_path / "ScreenshotScaler.cs"
+    path.write_text(SCALER_SOURCE, encoding="utf-8")
+    return path
+
+
+def test_matching_screenshot_defaults_report_nothing(scaler: Path) -> None:
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(report, scaler=scaler, python_values=MATCHING_PYTHON)
+
+    assert report.problems == []
+
+
+def test_screenshot_default_drift_is_reported(scaler: Path) -> None:
+    report = gen_docs.Report()
+    drifted = {**MATCHING_PYTHON, "SCREENSHOT_QUALITY": "75"}
+    gen_docs.check_screenshot_defaults(report, scaler=scaler, python_values=drifted)
+
+    assert any("DefaultQuality" in p and "75" in p for p in report.problems)
+
+
+def test_screenshot_default_renamed_on_the_csharp_side_is_reported(tmp_path: Path) -> None:
+    path = tmp_path / "ScreenshotScaler.cs"
+    path.write_text(SCALER_SOURCE.replace("DefaultQuality", "DefaultJpegQuality"), encoding="utf-8")
+
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(report, scaler=path, python_values=MATCHING_PYTHON)
+
+    assert any("no longer declares" in p for p in report.problems)
+
+
+def test_missing_scaler_is_reported_rather_than_passing_quietly(tmp_path: Path) -> None:
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(
+        report, scaler=tmp_path / "gone.cs", python_values=MATCHING_PYTHON
+    )
+
+    assert any("is missing" in p for p in report.problems)
+
+
+def test_the_real_tree_states_the_same_screenshot_defaults_on_both_sides() -> None:
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(report)
+
+    assert report.problems == []

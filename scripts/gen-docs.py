@@ -65,6 +65,23 @@ INVENTORY_FILES: list[str] = [
 
 SKIP_DIRS = frozenset({".git", ".venv", "archives", "node_modules", "site"})
 
+# The screenshot defaults are stated on both sides of the bridge: the MCP schema has to tell
+# the model what it will get, and the mod has to apply it when the caller says nothing. Two
+# statements of one value, so they are checked against each other. Maps a `const` in
+# ScreenshotScaler.cs to the module constant in the Python tool.
+SCREENSHOT_SCALER = (
+    REPO_ROOT / "mod" / "src" / "WorldBoxBridge" / "Commands" / "Read" / "ScreenshotScaler.cs"
+)
+SCREENSHOT_DEFAULTS: list[tuple[str, str]] = [
+    ("DefaultMaxDimension", "SCREENSHOT_MAX_DIMENSION"),
+    ("DefaultQuality", "SCREENSHOT_QUALITY"),
+    ("Jpg", "SCREENSHOT_FORMAT"),
+]
+
+CSHARP_CONST = re.compile(
+    r"public\s+const\s+(?:int|string)\s+(?P<name>\w+)\s*=\s*(?P<value>\d+|\"[^\"]*\")\s*;"
+)
+
 # Identifiers that match the tool naming pattern without being tools. Add to this set when a
 # new one appears, the alternative is a check that lets a renamed tool slip through.
 NOT_A_TOOL: frozenset[str] = frozenset(
@@ -267,12 +284,53 @@ def check_parity(surface: Surface, report: Report) -> None:
         )
 
 
+def csharp_screenshot_defaults(scaler: Path) -> dict[str, str]:
+    """The `const` values ScreenshotScaler declares, as strings."""
+    return {
+        m.group("name"): m.group("value").strip('"')
+        for m in CSHARP_CONST.finditer(scaler.read_text(encoding="utf-8"))
+    }
+
+
+def python_screenshot_defaults() -> dict[str, str]:
+    """The defaults the MCP schema advertises, read off the tool module itself."""
+    module = importlib.import_module("worldbox_mcp.tools.read")
+    return {py: str(getattr(module, py, None)) for _, py in SCREENSHOT_DEFAULTS}
+
+
+def check_screenshot_defaults(
+    report: Report,
+    scaler: Path = SCREENSHOT_SCALER,
+    python_values: dict[str, str] | None = None,
+) -> None:
+    """The screenshot defaults the MCP schema promises must be what the bridge applies."""
+    if not scaler.exists():
+        report.fail(f"{scaler} is missing; the screenshot defaults cannot be checked.")
+        return
+    csharp = csharp_screenshot_defaults(scaler)
+    python = python_screenshot_defaults() if python_values is None else python_values
+    for cs_name, py_name in SCREENSHOT_DEFAULTS:
+        if cs_name not in csharp:
+            report.fail(
+                f"ScreenshotScaler no longer declares `const ... {cs_name}`, so the Python "
+                f"default {py_name} in tools/read.py has nothing to be checked against."
+            )
+            continue
+        if csharp[cs_name] != python.get(py_name):
+            report.fail(
+                f"screenshot default drift: ScreenshotScaler.{cs_name} is {csharp[cs_name]!r} "
+                f"but tools/read.py {py_name} is {python.get(py_name)!r}. The schema would "
+                f"promise the model something the bridge does not do."
+            )
+
+
 def run(surface: Surface, root: Path, *, write: bool) -> Report:
     report = Report()
     sync_regions(surface, root, write=write, report=report)
     check_inventories(surface, root, report)
     check_mentions(surface, root, report)
     check_parity(surface, report)
+    check_screenshot_defaults(report)
     return report
 
 
