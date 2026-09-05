@@ -26,7 +26,7 @@ public class RequestContextTests
         return new RequestContext(agent, scenario, partialIntel);
     }
 
-    // ─── Has / HasAny ─────────────────────────────────────────────────────
+    // ─── Has / HasAnyOf ───────────────────────────────────────────────────
 
     [Fact]
     public void God_has_every_permission()
@@ -50,14 +50,23 @@ public class RequestContextTests
     }
 
     [Fact]
-    public void HasAny_returns_true_when_at_least_one_matches()
+    public void HasAnyOf_returns_true_when_at_least_one_flag_matches()
     {
         var ctx = Ctx(AgentRole.FactionPlayer);
-        ctx.HasAny(Permission.ControlWorld, Permission.ActionFaction).Should().BeTrue();
-        ctx.HasAny(Permission.ControlWorld, Permission.ReadAll).Should().BeFalse();
+        ctx.HasAnyOf(Permission.ControlWorld | Permission.ActionFaction).Should().BeTrue();
+        ctx.HasAnyOf(Permission.ControlWorld | Permission.ReadAll).Should().BeFalse();
     }
 
-    // ─── Require / RequireAny ─────────────────────────────────────────────
+    [Fact]
+    public void HasAnyOf_differs_from_Has_which_demands_every_flag()
+    {
+        var ctx = Ctx(AgentRole.FactionPlayer);
+        var mask = Permission.ActionFaction | Permission.ActionGlobal;
+        ctx.HasAnyOf(mask).Should().BeTrue();
+        ctx.Has(mask).Should().BeFalse();
+    }
+
+    // ─── Require / RequireAnyOf ───────────────────────────────────────────
 
     [Fact]
     public void Require_passes_when_permission_present()
@@ -79,24 +88,58 @@ public class RequestContextTests
     }
 
     [Fact]
-    public void RequireAny_passes_when_at_least_one_held()
+    public void RequireAnyOf_passes_when_at_least_one_held()
     {
         var ctx = Ctx(AgentRole.FactionPlayer);
         FluentActions
-            .Invoking(() => ctx.RequireAny(Permission.ActionGlobal, Permission.ActionFaction))
+            .Invoking(() => ctx.RequireAnyOf(Permission.ActionGlobal | Permission.ActionFaction))
             .Should()
             .NotThrow();
     }
 
     [Fact]
-    public void RequireAny_throws_when_none_held()
+    public void RequireAnyOf_throws_when_none_held()
     {
         var ctx = Ctx(AgentRole.Observer);
         FluentActions
-            .Invoking(() => ctx.RequireAny(Permission.ActionGlobal, Permission.ActionFaction))
+            .Invoking(() => ctx.RequireAnyOf(Permission.ActionGlobal | Permission.ActionFaction))
             .Should()
             .Throw<BridgeRejectionException>()
             .Where(ex => ex.Code == ErrorCode.PermissionDenied);
+    }
+
+    // ─── Action gates (ActionPermissions) ─────────────────────────────────
+    //
+    // The three Action commands cannot be linked into this project (Unity types), so these
+    // lock the policy they read instead. A FactionPlayer must not reach invoke_power or
+    // paint_tile, and must keep spawn.
+
+    [Theory]
+    [InlineData(AgentRole.God, true)]
+    [InlineData(AgentRole.FactionPlayer, false)]
+    [InlineData(AgentRole.Observer, false)]
+    [InlineData(AgentRole.Narrator, false)]
+    public void InvokePower_and_PaintTile_are_god_only(AgentRole role, bool allowed)
+    {
+        var ctx = Ctx(role);
+        ctx.Has(ActionPermissions.InvokePower).Should().Be(allowed);
+        ctx.Has(ActionPermissions.PaintTile).Should().Be(allowed);
+    }
+
+    [Theory]
+    [InlineData(AgentRole.God, true)]
+    [InlineData(AgentRole.FactionPlayer, true)]
+    [InlineData(AgentRole.Observer, false)]
+    [InlineData(AgentRole.Narrator, false)]
+    public void Spawn_stays_open_to_faction_players(AgentRole role, bool allowed)
+    {
+        Ctx(role).HasAnyOf(ActionPermissions.Spawn).Should().Be(allowed);
+    }
+
+    [Fact]
+    public void InvokePower_matches_PaintTile_so_the_two_cannot_drift_apart()
+    {
+        ActionPermissions.InvokePower.Should().Be(ActionPermissions.PaintTile);
     }
 
     // ─── CanSeeKingdom (fog-of-war filter for Read commands) ──────────────

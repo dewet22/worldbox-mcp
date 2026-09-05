@@ -121,8 +121,14 @@ naturally: pick the one that fits your agent.
 
 **Permission scope**:
 
-- `ActionGlobal`: terraforming, anything that's truly map-wide (paint_tile, etc.).
-- `ActionFaction`: actions an agent can perform on/from their kingdom (spawn, invoke_power).
+- `ActionGlobal`: anything map-wide, which is both `paint_tile` and `invoke_power`. WorldBox
+  has no per-kingdom semantics for tile types or for god powers, so neither can be scoped to a
+  faction, and a FactionPlayer that could reach them could reshape or nuke an opponent's
+  territory. The two gates live together in `Commands/Action/ActionPermissions.cs` because they
+  drifted apart once, silently.
+- `ActionFaction`: actions an agent performs on its own behalf. `spawn` is the one that matters,
+  and it covers every actor asset in the game (322 on stock 0.51.x), so a FactionPlayer locked
+  out of `invoke_power` keeps every legitimate way to place creatures.
 - `ControlWorld`: **destructive** world-lifecycle ops (generate_world wipes everything, save_world / load_world rewrite state). God-only on purpose.
 - `AdvanceTime`: **non-destructive** simulation-flow controls: pause, resume, set_speed, dismiss_window. Granted to active-player roles so PvP agents can fast-forward through quiet phases (`worldbox_set_speed("x20")`) or pause to think without needing a god agent in the session. Spectator roles (Observer, Narrator) intentionally do NOT have it, they shouldn't be able to skip ahead while the actual players are still deliberating.
 

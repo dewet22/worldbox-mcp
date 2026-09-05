@@ -30,7 +30,10 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "`{power_id, x, y, accepted, via}`; `accepted=false` means the game declined this "
             "time (drop-style powers such as rain or bombs roll a chance, so retry). Powers "
             "that need live mouse/drag state (e.g. 'finger') or a brush are rejected with "
-            "GAME_REJECTED and a reason, use worldbox_paint_tile / worldbox_spawn instead."
+            "GAME_REJECTED and a reason, use worldbox_paint_tile / worldbox_spawn instead. "
+            "In a multi-agent session this needs the global action scope (God role), same as "
+            "worldbox_paint_tile: god powers are map-wide and cannot be scoped to a faction. "
+            "A FactionPlayer places creatures with worldbox_spawn instead."
         ),
     )
     async def worldbox_invoke_power(power_id: str, x: int, y: int) -> dict[str, Any]:

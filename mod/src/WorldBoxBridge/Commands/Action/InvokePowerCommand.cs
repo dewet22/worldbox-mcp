@@ -52,7 +52,8 @@ internal sealed class InvokePowerCommand : ICommand
         + "ignored but must still be inside the map. Returns {power_id, x, y, accepted, via}; "
         + "accepted=false means the game declined this time (some powers roll a chance). "
         + "Powers that need live mouse/drag state (e.g. 'finger') or a brush are rejected "
-        + "with GAME_REJECTED, use paint_tile / spawn instead.";
+        + "with GAME_REJECTED, use paint_tile / spawn instead. Needs the global action scope "
+        + "(God role) in a multi-agent session; a FactionPlayer uses spawn.";
     public bool RequiresMainThread => true;
 
     public JObject ArgsSchema =>
@@ -85,7 +86,9 @@ internal sealed class InvokePowerCommand : ICommand
         CancellationToken cancellationToken
     )
     {
-        ctx.RequireAny(Permission.ActionFaction, Permission.ActionGlobal);
+        // God powers are map-wide, same as paint_tile: see ActionPermissions for why a
+        // FactionPlayer is kept out and what it keeps instead.
+        ctx.Require(ActionPermissions.InvokePower);
         var powerId = (string?)args["power_id"];
         if (string.IsNullOrWhiteSpace(powerId))
         {
