@@ -49,10 +49,19 @@ internal sealed class HttpBridge : IDisposable
     private readonly SessionState _session;
     private readonly TcpListener _listener;
     private readonly CancellationTokenSource _cts = new();
+    private readonly ConcurrencyGate _inFlight;
     private Task? _loop;
 
     /// <summary>Per-connection read timeout. Local agents respond fast, any longer = wedged.</summary>
     private static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(35);
+
+    /// <summary>
+    /// How long a request waits for a free slot before it is told the bridge is busy. Long
+    /// enough that a burst of short commands queues through it unnoticed, short enough that a
+    /// caller stuck behind a wedged <c>load_world</c> gets an answer well inside its own HTTP
+    /// timeout instead of a dead socket.
+    /// </summary>
+    private static readonly TimeSpan AdmissionTimeout = TimeSpan.FromSeconds(5);
     private const int MaxHeaderBytes = 16 * 1024;
     private const int MaxBodyBytes = 4 * 1024 * 1024;
 
@@ -75,6 +84,7 @@ internal sealed class HttpBridge : IDisposable
         _registry = registry;
         _version = version;
         _session = session;
+        _inFlight = new ConcurrencyGate(_config.MaxConcurrentRequests.Value);
         // Mono Unity quirk: IPAddress.Parse("127.0.0.1") does not always behave the same as
         // the IPAddress.Loopback constant. Several Unity dev threads document the listener
         // silently failing to bind with Parse'd addresses where the constant works fine.
@@ -194,6 +204,11 @@ internal sealed class HttpBridge : IDisposable
 
                 var response = await RouteAsync(request, cancellationToken).ConfigureAwait(false);
                 await WriteResponseAsync(stream, response, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // The bridge is shutting down under a request. Expected, and the client is
+                // about to lose the socket anyway, so there is nothing to report.
             }
             catch (Exception ex)
             {
@@ -484,6 +499,35 @@ internal sealed class HttpBridge : IDisposable
             );
         }
 
+        // Admission control. Past this point a single request can read a whole save into memory
+        // or park a per-frame job for 25 seconds, so how many run at once is a number the bridge
+        // chooses rather than one the client does. It sits here rather than around the whole
+        // connection for two reasons: unauthenticated traffic must not be able to spend the
+        // slots, and a client that dribbles its request in or reads its response slowly must not
+        // hold one it is not using. Awaited outside the try below so that a cancellation on
+        // shutdown reaches HandleClientAsync, which knows it is not an error, instead of being
+        // labelled a game crash.
+        var admitted = await _inFlight
+            .TryEnterAsync(AdmissionTimeout, cancellationToken)
+            .ConfigureAwait(false);
+        if (!admitted)
+        {
+            _log.LogWarning(
+                $"refused '{name}': {_inFlight.Capacity} requests already in flight and none "
+                    + $"freed up within {AdmissionTimeout.TotalSeconds:F0}s."
+            );
+            return ErrorResponse(
+                503,
+                "Service Unavailable",
+                ErrorCode.Busy,
+                $"The bridge is already running {_inFlight.Capacity} commands and none finished "
+                    + $"within {AdmissionTimeout.TotalSeconds:F0}s. Retry, or raise "
+                    + "max_concurrent_requests in WorldBoxBridge.cfg.",
+                commandName: name,
+                args: args
+            );
+        }
+
         try
         {
             // Turn-based gate (Phase 4): in turn_based sessions, action + control commands
@@ -577,6 +621,19 @@ internal sealed class HttpBridge : IDisposable
                 exception: ExceptionInfo.From(tex)
             );
         }
+        catch (DispatcherSaturatedException dsex)
+        {
+            // The per-frame job registry is full. Same answer as a full admission gate, and for
+            // the same reason: nothing is broken, the caller just has to come back.
+            return ErrorResponse(
+                503,
+                "Service Unavailable",
+                ErrorCode.Busy,
+                dsex.Message,
+                commandName: name,
+                args: args
+            );
+        }
         catch (WorldBoxBridge.Commands.Action.BridgeRejectionException brex)
         {
             // Structured rejection from a command, map directly to its error code.
@@ -612,6 +669,10 @@ internal sealed class HttpBridge : IDisposable
                 args: args,
                 exception: ExceptionInfo.From(ex)
             );
+        }
+        finally
+        {
+            _inFlight.Exit();
         }
     }
 

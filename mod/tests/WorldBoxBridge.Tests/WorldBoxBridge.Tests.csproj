@@ -48,6 +48,7 @@
     <Compile Include="..\..\src\WorldBoxBridge\Session\TurnOrder.cs" Link="Linked\Session\TurnOrder.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\MessageBus.cs" Link="Linked\Session\MessageBus.cs" />
     <Compile Include="..\..\src\WorldBoxBridge\Session\Objective.cs" Link="Linked\Session\Objective.cs" />
+    <Compile Include="..\..\src\WorldBoxBridge\Threading\ConcurrencyGate.cs" Link="Linked\Threading\ConcurrencyGate.cs" />
   </ItemGroup>
 
 </Project>

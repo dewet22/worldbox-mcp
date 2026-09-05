@@ -19,6 +19,7 @@ internal sealed class BridgeConfig
     public ConfigEntry<string> Host { get; }
     public ConfigEntry<int> Port { get; }
     public ConfigEntry<string> Token { get; }
+    public ConfigEntry<int> MaxConcurrentRequests { get; }
     public ConfigEntry<bool> SuppressStartupWindow { get; }
 
     private BridgeConfig(ConfigFile file)
@@ -44,6 +45,27 @@ internal sealed class BridgeConfig
             "token",
             string.Empty,
             "Shared secret. Sent by clients in the X-WB-Token header. Generated automatically if empty."
+        );
+
+        // The range clamps, it does not reject: BepInEx v5-lts routes a value read from the file
+        // through ConfigEntry<T>.Value, which calls ClampValue, and AcceptableValueRange.Clamp
+        // returns MinValue or MaxValue rather than throwing. A value that will not parse at all
+        // is caught in SetSerializedValue, logged as a warning, and the default stands. So a
+        // hand-edited 0 or 500 here degrades to 1 or 64 and never fails plugin load, which is
+        // the failure mode this repo cannot see in a normal log. BepInEx also writes the range
+        // into the generated .cfg, so the file documents its own bounds.
+        MaxConcurrentRequests = file.Bind(
+            "Bridge",
+            "max_concurrent_requests",
+            8,
+            new ConfigDescription(
+                "How many requests the bridge executes at once. Past this, a request waits a "
+                    + "few seconds for a slot and is then refused with 503 BUSY rather than "
+                    + "queued, because a request in flight can hold a whole save file in "
+                    + "memory. Read once at startup, so a change here needs a game restart, "
+                    + "unlike 'enabled'.",
+                new AcceptableValueRange<int>(1, 64)
+            )
         );
 
         SuppressStartupWindow = file.Bind(
