@@ -15,6 +15,12 @@
          so CI and release builds work on a bare runner. -->
     <PackageVersion Include="UnityEngine.Modules"     Version="2022.3.60" />
 
+    <!-- net462 targeting pack. Referenced explicitly, not left to the SDK's implicit import:
+         the SDK only adds it on machines without the .NET Framework targeting packs (Linux and
+         macOS), so leaving it implicit makes the restore graph differ per OS and packages.lock.json
+         fails with NU1004 on the Windows CI runner. Explicit keeps all three platforms identical. -->
+    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
+
     <!-- JSON: WorldBox ships its own Newtonsoft.Json (Newtonsoft.Json-for-Unity 13.0.2) in
          Managed/, and that is what the plugin binds to at runtime. The nuget version MUST NOT
          exceed the game's: 13.0.4 added JToken.ToString(Formatting), the compiler prefers it
