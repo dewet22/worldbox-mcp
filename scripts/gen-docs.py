@@ -330,7 +330,11 @@ def run(surface: Surface, root: Path, *, write: bool) -> Report:
     check_inventories(surface, root, report)
     check_mentions(surface, root, report)
     check_parity(surface, report)
-    check_screenshot_defaults(report)
+    # The screenshot defaults are repo-global rather than root-relative, so they are only
+    # checked when run() is pointed at this repository. The unit tests drive run() against a
+    # throwaway tree, which would otherwise inherit a failure about files it never created.
+    if root == REPO_ROOT:
+        check_screenshot_defaults(report)
     return report
 
 

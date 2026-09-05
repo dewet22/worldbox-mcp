@@ -246,3 +246,16 @@ def test_the_real_tree_states_the_same_screenshot_defaults_on_both_sides() -> No
     gen_docs.check_screenshot_defaults(report)
 
     assert report.problems == []
+
+
+def test_run_against_a_throwaway_tree_does_not_check_the_real_repo(
+    surface: object, docs: Path
+) -> None:
+    # The screenshot check is repo-global. If run() applied it to every root, a real-repo
+    # drift would fail every test in this file with a problem about files the throwaway tree
+    # never created, which is exactly the coupling this file's fixtures exist to avoid.
+    (docs / "mod").mkdir(parents=True, exist_ok=True)
+
+    report = gen_docs.run(surface, docs, write=False)
+
+    assert not any("screenshot" in p for p in report.problems)
