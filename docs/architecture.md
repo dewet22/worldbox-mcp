@@ -54,7 +54,7 @@ worldbox-mcp/
 │       └── tools/             one module per command category
 ├── docs/           this site
 ├── examples/       client configs, demo prompts, runnable scenarios
-└── scripts/        installers and dev bootstrap
+└── scripts/        installers, dev bootstrap, and the docs generator
 ```
 
 | Entry point | File | Triggered by |
@@ -66,10 +66,14 @@ worldbox-mcp/
 
 ### Counting the tool surface
 
-<!-- gen-docs:begin total -->29<!-- gen-docs:end total --> MCP tools, which is <!-- gen-docs:begin bridge-commands -->28<!-- gen-docs:end bridge-commands --> registered `ICommand` implementations plus the `/capabilities`
-endpoint. File count and command count differ because `PauseCommand.cs` declares two commands,
-`pause` and `resume`. [command-reference.md](command-reference.md) is the reference list, and
-every stated count elsewhere should agree with it.
+<!-- gen-docs:begin total -->29<!-- gen-docs:end total --> MCP tools, which is
+<!-- gen-docs:begin bridge-commands -->28<!-- gen-docs:end bridge-commands --> registered
+`ICommand` implementations plus the `/capabilities` endpoint. File count and command count
+differ because `PauseCommand.cs` declares two commands, `pause` and `resume`.
+
+Both numbers above are generated. `scripts/gen-docs.py` reads them from the registered tools
+and from the C# sources, rewrites them wherever they are stated, and fails CI when a count or
+an inventory table drifts. Never edit one by hand, see [development.md](development.md).
 
 ### Versions that are pinned on purpose
 
