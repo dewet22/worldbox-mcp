@@ -111,11 +111,14 @@ internal sealed class SpawnCommand : ICommand
         var entityId = (string?)args["entity_id"];
         if (string.IsNullOrWhiteSpace(entityId))
         {
-            throw new ArgumentException("entity_id is required and must be a non-empty string.");
+            throw new BridgeRejectionException(
+                ErrorCode.BadArgs,
+                "entity_id is required and must be a non-empty string."
+            );
         }
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
         {
-            throw new ArgumentException("x and y are required integers.");
+            throw new BridgeRejectionException(ErrorCode.BadArgs, "x and y are required integers.");
         }
         var x = (int)xT!;
         var y = (int)yT!;
@@ -125,11 +128,12 @@ internal sealed class SpawnCommand : ICommand
 
         if (count < 1)
         {
-            throw new ArgumentException("count must be >= 1.");
+            throw new BridgeRejectionException(ErrorCode.BadArgs, "count must be >= 1.");
         }
         if (count > 100)
         {
-            throw new ArgumentException(
+            throw new BridgeRejectionException(
+                ErrorCode.BadArgs,
                 "count must be <= 100 (use a loop on the agent side for more)."
             );
         }

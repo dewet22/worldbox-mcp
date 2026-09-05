@@ -100,7 +100,7 @@ internal sealed class PaintTileCommand : ICommand
         ctx.Require(ActionPermissions.PaintTile);
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
         {
-            throw new ArgumentException("x and y are required integers.");
+            throw new BridgeRejectionException(ErrorCode.BadArgs, "x and y are required integers.");
         }
         var cx = (int)xT!;
         var cy = (int)yT!;
@@ -110,7 +110,10 @@ internal sealed class PaintTileCommand : ICommand
 
         if (string.IsNullOrEmpty(tileId) && string.IsNullOrEmpty(topId))
         {
-            throw new ArgumentException("Provide at least one of tile_id, top_id.");
+            throw new BridgeRejectionException(
+                ErrorCode.BadArgs,
+                "Provide at least one of tile_id, top_id."
+            );
         }
 
         // Validate ids against the right libraries (pre-check → did_you_mean on typo).

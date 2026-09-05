@@ -80,7 +80,10 @@ internal sealed class SetSpeedCommand : ICommand
         var speedId = (string?)args["speed_id"];
         if (string.IsNullOrWhiteSpace(speedId))
         {
-            throw new ArgumentException("speed_id is required and must be a non-empty string.");
+            throw new BridgeRejectionException(
+                ErrorCode.BadArgs,
+                "speed_id is required and must be a non-empty string."
+            );
         }
         var asset = _catalog.Resolve("time_scales", speedId!);
         if (asset == null)

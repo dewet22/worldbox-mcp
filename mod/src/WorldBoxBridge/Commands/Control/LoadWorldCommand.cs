@@ -78,7 +78,10 @@ internal sealed class LoadWorldCommand : ICommand
 
         if (string.IsNullOrEmpty(path) && string.IsNullOrEmpty(bytesB64))
         {
-            throw new ArgumentException("Provide either `path` or `bytes_b64`.");
+            throw new BridgeRejectionException(
+                ErrorCode.BadArgs,
+                "Provide either `path` or `bytes_b64`."
+            );
         }
 
         var saveMgrType = _refs.Type("SaveManager");
@@ -111,9 +114,17 @@ internal sealed class LoadWorldCommand : ICommand
         }
         else
         {
-            // ArgumentException reaches HttpBridge as 400 BAD_ARGS with the exception detail
-            // attached, so wrapping it here would only lose that detail.
-            readFrom = SavePathResolver.ResolveMapFile(path, GameSavePaths.SavesRoot);
+            try
+            {
+                readFrom = SavePathResolver.ResolveMapFile(path, GameSavePaths.SavesRoot);
+            }
+            catch (ArgumentException ex)
+            {
+                // SavePathResolver stays a pure helper and signals with ArgumentException;
+                // translating at the boundary is the same shape ScreenshotCommand uses for
+                // ScreenshotScaler, and it keeps this command's error contract its own.
+                throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
+            }
             data = File.ReadAllBytes(readFrom);
         }
 

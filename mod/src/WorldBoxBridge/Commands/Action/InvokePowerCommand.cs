@@ -92,11 +92,14 @@ internal sealed class InvokePowerCommand : ICommand
         var powerId = (string?)args["power_id"];
         if (string.IsNullOrWhiteSpace(powerId))
         {
-            throw new ArgumentException("power_id is required and must be a non-empty string.");
+            throw new BridgeRejectionException(
+                ErrorCode.BadArgs,
+                "power_id is required and must be a non-empty string."
+            );
         }
         if (!args.TryGetValue("x", out var xToken) || !args.TryGetValue("y", out var yToken))
         {
-            throw new ArgumentException("x and y are required integers.");
+            throw new BridgeRejectionException(ErrorCode.BadArgs, "x and y are required integers.");
         }
         var x = (int)xToken!;
         var y = (int)yToken!;

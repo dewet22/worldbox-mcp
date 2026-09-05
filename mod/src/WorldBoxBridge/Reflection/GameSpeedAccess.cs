@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 
 namespace WorldBoxBridge.Reflection;
@@ -22,6 +23,7 @@ internal sealed class GameSpeedAccess
     private readonly GameRefs _refs;
     private FieldInfo? _timeScaleAsset;
     private FieldInfo? _assetId;
+    private Type? _assetIdOwner;
 
     public GameSpeedAccess(GameRefs refs) => _refs = refs;
 
@@ -45,7 +47,17 @@ internal sealed class GameSpeedAccess
         {
             return null;
         }
-        _assetId ??= asset.GetType().GetField("id", Instance);
+        // Keyed to the type it was resolved against. set_speed used to call GetField on every
+        // read, which was slower but immune to a stale cache; sharing one reader between
+        // list_speeds and set_speed would otherwise have pinned whichever asset type happened
+        // to be current on the first call in the process, and a mismatch surfaces as a
+        // reflection failure rather than a null.
+        var assetType = asset.GetType();
+        if (_assetIdOwner != assetType)
+        {
+            _assetId = assetType.GetField("id", Instance);
+            _assetIdOwner = assetType;
+        }
         return _assetId?.GetValue(asset) as string;
     }
 }

@@ -18,9 +18,9 @@ public static class SavePathResolver
     private static readonly string[] MapFileNames = { "map.wbox", "map.wbax", "map.json" };
 
     /// <summary>
-    /// A fully qualified path passes through untouched. Anything else is resolved under
+    /// A fully qualified path passes through, normalised. Anything else is resolved under
     /// <paramref name="savesRoot"/> and then verified to still be inside it, so a relative
-    /// name can never escape the saves directory.
+    /// name can never escape the saves directory lexically.
     /// </summary>
     /// <remarks>
     /// Containment is established by resolving, not by inspecting the string. Two rounds of
@@ -39,13 +39,15 @@ public static class SavePathResolver
     /// fails the containment check rather than needing a rule of its own.
     /// </para>
     /// <para>
-    /// <paramref name="windowsPaths"/> exists so both branches of the fully-qualified test can
-    /// be exercised from a Linux CI runner. Production never passes it.
+    /// What it does <em>not</em> do is follow links. <c>GetFullPath</c> is lexical, so a
+    /// symlink or NTFS junction planted inside the saves directory still leads out of it and
+    /// net462 has no portable <c>realpath</c> to ask. The guarantee is therefore that no
+    /// relative name escapes <em>lexically</em>, which is the whole of the attack this helper
+    /// was written for, and not that the final bytes land inside the directory come what may.
     /// </para>
     /// </remarks>
-    public static string ResolveFolder(string? folder, string savesRoot, bool? windowsPaths = null)
+    public static string ResolveFolder(string? folder, string savesRoot)
     {
-        var windows = windowsPaths ?? Path.DirectorySeparatorChar == '\\';
         var trimmed = (folder ?? string.Empty).Trim();
         if (trimmed.Length == 0)
         {
@@ -53,9 +55,12 @@ public static class SavePathResolver
                 "folder is required: an absolute path, or a name under the game's saves directory."
             );
         }
-        if (IsFullyQualified(trimmed, windows))
+        if (IsFullyQualified(trimmed, WindowsPaths))
         {
-            return trimmed;
+            // Normalised like the relative branch: save_world's schema promises "the resolved
+            // absolute path", and returning '/a/../b' verbatim made that one field mean two
+            // different things depending on which branch produced it.
+            return Path.GetFullPath(trimmed);
         }
         var root = Path.GetFullPath(savesRoot);
         string resolved;
@@ -63,8 +68,18 @@ public static class SavePathResolver
         {
             resolved = Path.GetFullPath(Path.Combine(root, trimmed));
         }
-        catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException)
+        catch (Exception ex)
+            when (ex is ArgumentException
+                || ex is NotSupportedException
+                || ex is PathTooLongException
+            )
         {
+            // PathTooLongException derives from IOException, not ArgumentException, so a long
+            // name used to sail past this filter and come back as 500 GAME_CRASH: a caller
+            // mistake reported as the game breaking, which is what this branch exists to stop.
+            // Not covered by a test: the mod targets net462, where the limit is real, while the
+            // test project is net8.0, where .NET dropped MAX_PATH and GetFullPath accepts an
+            // 8000-character name without complaint.
             throw new ArgumentException($"'{trimmed}' is not a usable save name: {ex.Message}");
         }
         if (!IsInside(resolved, root))
@@ -78,13 +93,23 @@ public static class SavePathResolver
         return resolved;
     }
 
+    internal static readonly bool WindowsPaths = Path.DirectorySeparatorChar == '\\';
+
     /// <summary>
-    /// Absolute on the running platform: a Unix path from the root, or on Windows a drive
-    /// letter plus a separator, or a UNC path. Deliberately <em>not</em>
-    /// <c>Path.IsPathRooted</c>, which also answers true for the drive-relative <c>C:foo</c>
-    /// and for a bare leading separator, neither of which says where the path lands.
+    /// Absolute on the given platform: a Unix path from the root, or on Windows a drive letter
+    /// plus a separator, or a UNC path. Deliberately <em>not</em> <c>Path.IsPathRooted</c>,
+    /// which also answers true for the drive-relative <c>C:foo</c> and for a bare leading
+    /// separator, neither of which says where the path lands.
     /// </summary>
-    private static bool IsFullyQualified(string path, bool windows)
+    /// <remarks>
+    /// <paramref name="windows"/> is a parameter rather than a read of
+    /// <see cref="Path.DirectorySeparatorChar"/> so both branches can be exercised from a Linux
+    /// CI runner. It is <c>internal</c>, not part of the public surface, because only the
+    /// classification is platform-switchable: <c>Path.Combine</c> and <c>Path.GetFullPath</c>
+    /// always follow the running platform, so a caller who passed the wrong value would get
+    /// classification and containment disagreeing with each other.
+    /// </remarks>
+    internal static bool IsFullyQualified(string path, bool windows)
     {
         if (!windows)
         {
@@ -129,13 +154,18 @@ public static class SavePathResolver
     public static string ResolveMapFile(string? path, string savesRoot)
     {
         var resolved = ResolveFolder(path, savesRoot);
-        // FindMapFile does its own Directory.Exists, so ask it first rather than probing the
-        // same directory twice. load_world runs on the Unity main thread, where every syscall
-        // is inside the frame. Only the two error paths pay for a second look.
+        // Ordered so each success path pays the fewest syscalls: load_world runs on the Unity
+        // main thread, where every stat is inside the frame. FindMapFile does its own
+        // Directory.Exists, so asking it first covers the folder case; a direct map file then
+        // costs one File.Exists on top. Only the two error paths look twice.
         var map = FindMapFile(resolved);
         if (map != null)
         {
             return map;
+        }
+        if (File.Exists(resolved))
+        {
+            return resolved;
         }
         if (Directory.Exists(resolved))
         {
@@ -143,14 +173,10 @@ public static class SavePathResolver
                 $"'{resolved}' contains no {string.Join(" / ", MapFileNames)}."
             );
         }
-        if (!File.Exists(resolved))
-        {
-            throw new ArgumentException(
-                $"path '{path}' not found (resolved to '{resolved}'). Pass a save file, a save "
-                    + "folder, or a name under the game's saves directory."
-            );
-        }
-        return resolved;
+        throw new ArgumentException(
+            $"path '{path}' not found (resolved to '{resolved}'). Pass a save file, a save "
+                + "folder, or a name under the game's saves directory."
+        );
     }
 
     /// <summary>

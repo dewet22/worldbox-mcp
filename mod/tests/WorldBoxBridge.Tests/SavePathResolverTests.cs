@@ -119,61 +119,66 @@ public class SavePathResolverTests
 
     // ─── Fully qualified, both platform branches ──────────────────────────
     //
-    // ResolveFolder takes windowsPaths so the Windows branch runs on a Linux CI box.
-    // Production never passes it.
+    // The classification is tested directly rather than through ResolveFolder. Only the
+    // classification is platform-switchable: Path.Combine and Path.GetFullPath always follow
+    // the running platform, so driving ResolveFolder with the other platform's rules would
+    // pin behaviour that platform does not actually have.
 
     [Theory]
     [InlineData("C:\\saves\\world")]
     [InlineData("c:/saves/world")]
     [InlineData("\\\\server\\share\\world")]
-    public void Windows_fully_qualified_paths_pass_through_untouched(string input)
+    [InlineData("//server/share/world")]
+    public void Windows_recognises_drive_and_UNC_paths_as_fully_qualified(string input)
     {
-        SavePathResolver.ResolveFolder(input, Root, windowsPaths: true).Should().Be(input);
+        SavePathResolver.IsFullyQualified(input, windows: true).Should().BeTrue();
     }
 
     [Theory]
     [InlineData("C:foo")] // drive-relative: resolves against drive C's working directory
+    [InlineData("Z:")]
     [InlineData("\\foo")] // root-relative: resolves against the current drive
     [InlineData("/foo")] // the same thing with the other separator
-    public void Windows_forms_that_only_look_absolute_are_not_passed_through(string input)
+    [InlineData("save1")]
+    public void Windows_does_not_mistake_a_rooted_looking_path_for_a_qualified_one(string input)
     {
-        // None of these is handed to the game verbatim. Depending on the platform they either
-        // land contained under the saves root or are refused for landing outside it. Both are
-        // safe answers; being waved through is not, which is what used to happen.
-        try
-        {
-            SavePathResolver
-                .ResolveFolder(input, Root, windowsPaths: true)
-                .Should()
-                .StartWith(Path.GetFullPath(Root) + Path.DirectorySeparatorChar);
-        }
-        catch (ArgumentException ex)
-        {
-            ex.Message.Should().Contain("outside the saves directory");
-        }
+        // Path.IsPathRooted answers true for the first four of these. That is what waved
+        // "C:foo" past the '..' check, and it is why this test does not use it.
+        SavePathResolver.IsFullyQualified(input, windows: true).Should().BeFalse();
     }
 
     [Theory]
-    [InlineData("/tmp/elsewhere/my-world")]
-    [InlineData("/../../etc/passwd")]
-    public void Unix_absolute_paths_pass_through_untouched(string input)
+    [InlineData("/tmp/elsewhere/my-world", true)]
+    [InlineData("/../../etc/passwd", true)]
+    [InlineData("C:\\saves\\world", false)] // just filename characters on Unix
+    [InlineData("\\\\server\\share", false)]
+    [InlineData("save1", false)]
+    public void Unix_counts_only_a_leading_slash(string input, bool expected)
     {
-        // The second case is deliberate. It looks hostile and it is genuinely absolute on
-        // Unix, so it is in contract: save_world and load_world require ControlWorld, which
-        // only a God agent holds, and such an agent can already name any absolute path it
-        // likes. Containment exists to stop a relative name reaching somewhere it should not,
-        // not to sandbox an agent that is trusted with the world's lifecycle.
-        SavePathResolver.ResolveFolder(input, Root, windowsPaths: false).Should().Be(input);
+        SavePathResolver.IsFullyQualified(input, windows: false).Should().Be(expected);
+    }
+
+    [Fact]
+    public void A_fully_qualified_path_comes_back_normalised()
+    {
+        // save_world's schema promises "the resolved absolute path". Returning it verbatim
+        // while the relative branch returned a normalised one made that field mean two
+        // different things depending on which branch produced it.
+        var root = Path.GetFullPath(Root);
+        var messy = Path.Combine(Path.GetTempPath(), "a", "..", "b");
+
+        SavePathResolver.ResolveFolder(messy, root).Should().Be(Path.GetFullPath(messy));
     }
 
     [Fact]
     public void A_sibling_whose_name_merely_starts_with_the_root_is_not_inside_it()
     {
         // "/tmp/wb-saves-root-backup" starts with "/tmp/wb-saves-root" as a string but is not
-        // under it. The containment check compares with a trailing separator for this reason.
+        // under it. The containment check compares with a trailing separator for that reason.
         var root = Path.GetFullPath(Root);
         Action act = () =>
             SavePathResolver.ResolveFolder("../" + Path.GetFileName(root) + "-backup", root);
+
         act.Should().Throw<ArgumentException>().WithMessage("*outside the saves directory*");
     }
 
