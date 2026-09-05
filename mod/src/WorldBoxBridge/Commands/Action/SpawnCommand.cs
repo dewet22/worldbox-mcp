@@ -107,7 +107,7 @@ internal sealed class SpawnCommand : ICommand
         CancellationToken cancellationToken
     )
     {
-        ctx.RequireAny(Permission.ActionFaction, Permission.ActionGlobal);
+        ctx.RequireAnyOf(ActionPermissions.Spawn);
         var entityId = (string?)args["entity_id"];
         if (string.IsNullOrWhiteSpace(entityId))
         {

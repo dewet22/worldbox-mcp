@@ -43,24 +43,25 @@ public readonly struct RequestContext
         }
     }
 
-    /// <summary>Returns true if any of the listed permissions are held. Useful for OR-gates.</summary>
-    public bool HasAny(params Permission[] perms)
-    {
-        foreach (var p in perms)
-        {
-            if (Has(p))
-                return true;
-        }
-        return false;
-    }
+    /// <summary>
+    /// Returns true if <em>any</em> flag in <paramref name="mask"/> is held, where
+    /// <see cref="Has"/> demands all of them. Useful for OR-gates such as
+    /// <see cref="WorldBoxBridge.Commands.Action.ActionPermissions.Spawn"/>.
+    /// </summary>
+    /// <remarks>
+    /// A single flags mask rather than a <c>params Permission[]</c>: the array allocated on
+    /// every action call, and callers had no way to name the alternatives as one value.
+    /// </remarks>
+    public bool HasAnyOf(Permission mask) => (Permissions & mask) != Permission.None;
 
-    public void RequireAny(params Permission[] perms)
+    /// <summary>Throws <c>PERMISSION_DENIED</c> unless <see cref="HasAnyOf"/> holds.</summary>
+    public void RequireAnyOf(Permission mask)
     {
-        if (!HasAny(perms))
+        if (!HasAnyOf(mask))
         {
             throw new BridgeRejectionException(
                 ErrorCode.PermissionDenied,
-                $"Agent '{AgentId}' (role={Role}) lacks any of: {string.Join(", ", perms)}."
+                $"Agent '{AgentId}' (role={Role}) lacks any of: {mask}."
             );
         }
     }
