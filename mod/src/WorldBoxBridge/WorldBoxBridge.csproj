@@ -16,6 +16,9 @@
     <PackageReference Include="BepInEx.Core"/>
     <PackageReference Include="BepInEx.PluginInfoProps"/>
     <PackageReference Include="Newtonsoft.Json"/>
+    <!-- Explicit so the restore graph is identical on Windows, Linux and macOS. See the comment
+         on its PackageVersion in Directory.Packages.props. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
   </ItemGroup>
 
   <!-- UnityEngine reference assemblies from NuGet (version pinned centrally). Compile-time only,

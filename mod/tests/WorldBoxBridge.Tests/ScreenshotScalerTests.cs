@@ -14,6 +14,9 @@ public class ScreenshotScalerTests
     [InlineData(800, 600, 1280, 800, 600)] // smaller than the limit: never upscaled
     [InlineData(800, 600, 0, 800, 600)] // 0 disables scaling
     [InlineData(10000, 10, 100, 100, 1)] // extreme aspect never rounds to zero
+    [InlineData(0, 100, 500, 0, 100)] // non-positive width passes through unscaled
+    [InlineData(100, 0, 500, 100, 0)] // non-positive height passes through unscaled
+    [InlineData(-5, 100, 500, -5, 100)] // negative dimensions are not "scaled" either
     public void Fit_clamps_longest_edge_and_preserves_aspect(
         int width,
         int height,

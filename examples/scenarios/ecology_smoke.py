@@ -36,7 +36,10 @@ def banner(label: str) -> None:
 
 
 async def save_screenshot(client: BridgeClient, name: str) -> Path:
-    r = await client.call("screenshot")
+    # Ask for PNG at full resolution explicitly. The bridge defaults to a 1280px JPEG so the
+    # MCP image block stays small for the model, which is the wrong trade-off for a file we
+    # write to disk under a .png name.
+    r = await client.call("screenshot", {"format": "png", "max_dimension": 0})
     p = OUT_DIR / name
     p.write_bytes(base64.b64decode(r["base64"]))
     print(f"  [shot]{p.name}  {r['width']}x{r['height']}  {r['bytes']:,} bytes")

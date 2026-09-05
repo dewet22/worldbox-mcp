@@ -163,6 +163,13 @@ internal sealed class InvokePowerCommand : ICommand
             // The game's handler dereferenced state only a real pointer interaction sets
             // (e.g. 'finger' copies player_control.first_pressed_type from the mouse press).
             // That is a limitation of driving it from the API, not a crash worth a stack trace.
+            // The rejection message below attributes every NRE to that cause, so log the real
+            // one first: otherwise a genuine bug in an unrelated power's handler is silently
+            // relabelled as a mouse-state limitation with nothing left to diagnose it from.
+            _log.LogWarning(
+                $"[invoke_power] '{powerId}' via {via} threw {tie.InnerException}. Reported as "
+                    + "GAME_REJECTED (assumed pointer-state dependency)."
+            );
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
                 $"Power '{powerId}' threw NullReferenceException inside the game — it depends on "

@@ -22,7 +22,8 @@ public enum Permission
     SendBroadcast = 1 << 7,
 
     /// <summary>
-    /// Non-destructive simulation-flow controls: pause, resume, set_speed. Granted to
+    /// Non-destructive simulation-flow controls: pause, resume, set_speed, dismiss_window.
+    /// Granted to
     /// active-player roles (God + FactionPlayer) so PvP agents can fast-forward through
     /// quiet phases without needing a god agent in the session. Spectator roles
     /// (Observer / Narrator) intentionally do NOT have this — they shouldn't be able to

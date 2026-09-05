@@ -182,9 +182,8 @@ Invoke-WebRequest -Uri 'http://127.0.0.1:8723/health' `
 brew install dotnet
 export DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec DOTNET_ROLL_FORWARD=Major PATH="$HOME/.dotnet/tools:$PATH"
 
-# Build + test. Point the build at the .app bundle's Managed dir (Directory.Build.props only
-# knows the Windows layout).
-export WORLDBOX_MANAGED_DIR="$HOME/Library/Application Support/Steam/steamapps/common/worldbox/worldbox.app/Contents/Resources/Data/Managed"
+# Build + test. No game install needed: Unity refs come from the UnityEngine.Modules NuGet
+# package, and the mod reaches Assembly-CSharp only through reflection.
 dotnet build mod/WorldBoxBridge.sln --configuration Release
 dotnet test mod/tests/WorldBoxBridge.Tests/WorldBoxBridge.Tests.csproj --configuration Release
 dotnet tool install -g csharpier --version 0.30.6 && dotnet csharpier --check mod
@@ -239,7 +238,9 @@ These choices are baked into `.github/workflows/` + `.github/dependabot.yml`. Ea
 
 - **csharpier is pinned to 0.30.6** (`ci.yml#Install csharpier`). csharpier 1.x changed the CLI (`csharpier check .` instead of `dotnet csharpier --check .`) and added new XML formatting defaults that would reformat the whole csproj/props tree. Upgrading is a deliberate decision — track it in a PR by itself.
 - **`mkdocs.yml` lives at the repo root**, not `docs/`. mkdocs 1.x rejects configs where `docs_dir` is the parent of the config file. Layout: `mkdocs.yml` at root with `docs_dir: docs`, `site_dir: site`.
-- **Unity references come from `UnityEngine.Modules` on the BepInEx NuGet feed** (`NuGet.config` maps `UnityEngine.*` there; nuget.org's copy stops at 2021.3). The version must match the game's engine (`/health` → `unity_version`); dependabot ignores it. `Assembly-CSharp.dll` is not referenced at all — everything game-specific is reflection — which is what makes bare-runner builds possible.
+- **Unity references come from `UnityEngine.Modules` on the BepInEx NuGet feed** (`NuGet.config` maps that exact id there, not the `UnityEngine.*` wildcard; nuget.org's copy stops at 2021.3). The version must match the game's engine (`/health` → `unity_version`); dependabot ignores it. `Assembly-CSharp.dll` is not referenced at all — everything game-specific is reflection — which is what makes bare-runner builds possible.
+- **`packages.lock.json` is committed** for both mod projects, via `RestorePackagesWithLockFile` in `Directory.Build.props`. The workflows have always run `dotnet restore --locked-mode`, but with no lock file that flag silently verifies nothing. It matters here because the Unity refs come from a third-party feed and a restore-time `.targets`/`.props` executes during `dotnet build`. After a deliberate version bump, regenerate with `dotnet restore mod/WorldBoxBridge.sln --force-evaluate` and commit the result, otherwise CI fails with NU1004.
+- **`release.yml` scopes `permissions:` per job, not workflow-wide.** `build-and-attach-mod` restores and builds NuGet packages, so it gets `contents: write` and deliberately no `id-token: write` — only `publish-pypi` holds the PyPI trusted-publishing token. Don't hoist those back to the top of the file.
 - **GitHub Pages was bootstrapped via `gh api repos/.../pages -X POST -F build_type=workflow`** (one-time). The default `GITHUB_TOKEN` lacks the admin scope to *create* the Pages site, but `actions/configure-pages@v5 with: enablement: true` is idempotent afterward.
 - **No user-level CNAME**: `fullya99/fullya99.github.io` used to carry a `CNAME` file pointing at `fullya.me`, which silently 301-redirected *every* project site under the user — including this one — to a dead domain. Removed 2026-05-17 (commit `6af015a` in that repo). If a project ever needs a custom domain again, prefer a per-project `docs/CNAME` instead of the user-level one so the blast radius stays bounded.
 - **FluentAssertions is capped at 6.x** in `.github/dependabot.yml`. v7+ ships under a paid Xceed commercial license (~$130/dev/year). v6 is the last MIT/Apache release. Migration alternatives if needed: AwesomeAssertions or Shouldly.
@@ -328,7 +329,6 @@ Don't confuse them.
    # 2. Pre-flight env (same as Day-to-day commands)
    $env:DOTNET_ROOT="$env:USERPROFILE\.dotnet"
    $env:PATH="$env:USERPROFILE\.dotnet;$env:USERPROFILE\.dotnet\tools;"+$env:PATH
-   $env:WORLDBOX_DIR='X:\GAMES\steamapps\common\worldbox'
 
    # 3. Build + stage
    dotnet build C:\worldbox-mcp\mod --configuration Release

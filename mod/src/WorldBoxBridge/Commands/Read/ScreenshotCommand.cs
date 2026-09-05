@@ -160,8 +160,18 @@ internal sealed class ScreenshotCommand : ICommand
             Graphics.Blit(source, rt);
             RenderTexture.active = rt;
             var result = new Texture2D(width, height, TextureFormat.RGB24, mipChain: false);
-            result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
-            result.Apply(updateMipmaps: false);
+            try
+            {
+                result.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                result.Apply(updateMipmaps: false);
+            }
+            catch
+            {
+                // ExecuteAsync's finally only destroys the texture we hand back, so a failed
+                // GPU readback here would leak the native allocation on every attempt.
+                UnityEngine.Object.Destroy(result);
+                throw;
+            }
             return result;
         }
         finally

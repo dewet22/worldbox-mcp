@@ -13,17 +13,18 @@ bearer token, role, optional kingdom claim, and inbox. Every command that modifi
 observes the world receives a `RequestContext` carrying that identity, so the bridge can
 gate actions and scope reads per agent.
 
-## Twenty-six MCP tools, six categories
+## Twenty-nine MCP tools, six categories
 
-v0.3 adds **six new tools** on top of the v0.2 set — the existing twenty stay backwards-
-compatible. Total surface = 26.
+v0.3 added **six new tools** on top of the v0.2 set — the existing twenty stay backwards-
+compatible — and v0.4 adds three more (`list_speeds`, `get_ui_state`, `dismiss_window`).
+Total surface = 29.
 
 | Category | Tools | New in v0.3 |
 |---|---|---|
 | Meta | `worldbox_health`, `worldbox_capabilities`, `worldbox_whoami`, `worldbox_session_info`, `worldbox_turn_advance`, `worldbox_objective_status` | 4 |
 | Discovery | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers`, `worldbox_list_speeds` | — |
 | Action | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` | — |
-| Read | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_screenshot` | — |
+| Read | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_get_ui_state`, `worldbox_screenshot` | — |
 | Control | `worldbox_pause`, `worldbox_resume`, `worldbox_dismiss_window`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` | — |
 | Bus | `worldbox_send_message`, `worldbox_recv_messages` | 2 |
 

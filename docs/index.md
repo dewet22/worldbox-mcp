@@ -22,15 +22,15 @@ It ships as two open-source components:
 - 🧩 **[Compatibility](compatibility.md)** — WorldBox × mod version matrix
 - 🤝 **[Contributing](contributing.md)** — code, docs, issues
 
-## Twenty-six tools across six categories
+## Twenty-nine tools across six categories
 
 | Category | Tools |
 |---|---|
 | Meta | `worldbox_health`, `worldbox_capabilities`, `worldbox_whoami`, `worldbox_session_info`, `worldbox_turn_advance`, `worldbox_objective_status` |
-| Discovery | `worldbox_list_tiles` (20), `worldbox_list_actors` (322), `worldbox_list_powers` (339) |
+| Discovery | `worldbox_list_tiles` (20), `worldbox_list_actors` (322), `worldbox_list_powers` (339), `worldbox_list_speeds` (10) |
 | Action | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` |
-| Read | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_screenshot` |
-| Control | `worldbox_pause`, `worldbox_resume`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` |
+| Read | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_get_ui_state`, `worldbox_screenshot` |
+| Control | `worldbox_pause`, `worldbox_resume`, `worldbox_dismiss_window`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` |
 | Bus | `worldbox_send_message`, `worldbox_recv_messages` |
 
 See [command-reference.md](command-reference.md) for arguments + return shapes and
