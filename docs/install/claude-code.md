@@ -39,33 +39,33 @@ You should see `worldbox` listed with status `connected` (or whatever the equiva
 
 ## Sample god-mode prompt
 
-Copy this into a fresh Claude Code session. It exercises **discovery → action → wait → observation → narration** — the full agentic loop.
+Copy this into a fresh Claude Code session. It exercises **discovery → action → wait → observation → narration**, the full agentic loop.
 
 > Use the worldbox MCP server to run a small ecology experiment on the live game.
 >
 > 1. Call `worldbox_get_world_state` first. If width is 0 (no world loaded), tell me to load a world in-game first and stop.
 > 2. Pause the simulation.
-> 3. Discover available assets — call `worldbox_list_tiles`, `worldbox_list_actors` and `worldbox_list_powers`. From the results, pick ids that look like 'sand', 'soil_high', 'wolf', 'sheep', 'human', 'dragon' and 'lightning' (use Levenshtein-tolerant matching — exact ids may differ between WorldBox versions).
+> 3. Discover available assets: call `worldbox_list_tiles`, `worldbox_list_actors` and `worldbox_list_powers`. From the results, pick ids that look like 'sand', 'soil_high', 'wolf', 'sheep', 'human', 'dragon' and 'lightning' (use Levenshtein-tolerant matching, exact ids may differ between WorldBox versions).
 > 4. Paint a sand plateau of radius 8 at one corner of the map and a soil patch at another. Spawn 10 herbivores on the soil, 4 predators in the middle, 6 humans on the sand. Invoke a lightning strike at the center for drama.
 > 5. Set the simulation to speed `x3` (or `x5` if it exists). Resume.
 > 6. Wait 15 seconds of wall-clock time. During that pause, narrate what you'd expect to happen biologically and why.
 > 7. Once the wait is over, query each race you spawned and tell me who survived, naming the individual actors using the names you get back from `worldbox_query_actors`. Take a `worldbox_screenshot` and tell me whether the resulting image is too big to render inline; if it is, summarise what you'd expect to see instead.
 > 8. Pause the world again at the end so nothing else happens while we discuss the result.
 >
-> Be specific about coordinates — don't say "somewhere on the map", say "(120, 80)". When an id you tried doesn't resolve, read the `did_you_mean` suggestions and self-correct rather than asking me.
+> Be specific about coordinates, don't say "somewhere on the map", say "(120, 80)". When an id you tried doesn't resolve, read the `did_you_mean` suggestions and self-correct rather than asking me.
 
-This prompt is intentionally **dense** — it forces the agent to use every tool category in the right order, handles the no-world-loaded edge case explicitly, and asks for narrative output that proves the agent understood the data it got back.
+This prompt is intentionally **dense**, it forces the agent to use every tool category in the right order, handles the no-world-loaded edge case explicitly, and asks for narrative output that proves the agent understood the data it got back.
 
-A working equivalent is committed at [`examples/scenarios/ecology_smoke.py`](https://github.com/fullya99/worldbox-mcp/blob/main/examples/scenarios/ecology_smoke.py) — same plan in Python so you can diff agent reasoning against a deterministic reference.
+A working equivalent is committed at [`examples/scenarios/ecology_smoke.py`](https://github.com/fullya99/worldbox-mcp/blob/main/examples/scenarios/ecology_smoke.py), same plan in Python so you can diff agent reasoning against a deterministic reference.
 
 ## Multi-agent setups
 
 To put **multiple AI agents on the same world**, drop an `agents.json` into
 `<worldbox>/BepInEx/config/WorldBoxBridge.agents.json` and add one Claude Code MCP entry
 per agent, each with its own bearer token via the `--header` flag (HTTP transport) or
-the `WORLDBOX_MCP_TOKEN` env var (stdio). The full walkthrough — including the four
+the `WORLDBOX_MCP_TOKEN` env var (stdio). The full walkthrough, including the four
 canonical scenarios (PvP / coop / hierarchical / sandbox), the permission matrix, and
-the fog-of-war / turn-based / message-bus semantics — lives in
+the fog-of-war / turn-based / message-bus semantics, lives in
 [`docs/multi-agent.md`](../multi-agent.md).
 
 ## Troubleshooting

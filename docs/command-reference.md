@@ -5,19 +5,19 @@ title: Command reference
 # Command reference
 
 29 MCP tools, grouped by six categories. Asset ids (tile / actor / power / speed) come
-from the running game's registry — call the discovery tools to enumerate them; never
+from the running game's registry, call the discovery tools to enumerate them; never
 hardcode. The v0.3 multi-agent additions (Meta `whoami` / `session_info` /
 `turn_advance` / `objective_status`, plus the Bus category) only carry meaningful payload
 when an `agents.json` is deployed; in legacy single-token mode they return the synthetic
 `"legacy"` god agent.
 
 The agent can also dump this list at runtime by calling **`worldbox_capabilities`**, which
-returns the live JSON-Schema for every registered command. That's the source of truth — this
+returns the live JSON-Schema for every registered command. That's the source of truth, this
 page tracks it but may lag.
 
 ---
 
-## Meta — basics + multi-agent introspection
+## Meta, basics + multi-agent introspection
 
 | Tool | What it returns |
 |---|---|
@@ -26,32 +26,32 @@ page tracks it but may lag.
 | `worldbox_whoami` _(v0.3)_ | The caller's `agent_id`, `role`, `claimed_kingdom_id`, `permissions[]`, `scenario`, `partial_intel`. The third call every multi-agent client should make. |
 | `worldbox_session_info` _(v0.3)_ | The full session: scenario, partial_intel + turn_based flags, agent roster (without tokens), `turn_order`, `current_turn`. |
 | `worldbox_turn_advance` _(v0.3)_ | Ends the caller's turn in turn-based sessions. Returns `{previous, next, forced_by_god}`. 409 `TURN_NOT_YOURS` if it's not your turn. 400 `BAD_ARGS` if the session is not turn-based. |
-| `worldbox_objective_status` _(v0.3)_ | Per-agent declared objectives + live kingdom-population snapshot. The scoreboard primitive — the agent computes its own score. |
+| `worldbox_objective_status` _(v0.3)_ | Per-agent declared objectives + live kingdom-population snapshot. The scoreboard primitive, the agent computes its own score. |
 
 ---
 
-## Discovery — what asset ids does this build accept?
+## Discovery, what asset ids does this build accept?
 
 | Tool | Returns |
 |---|---|
-| `worldbox_list_tiles` | All `TileType` ids (e.g. `sand`, `soil_high`, `lava0`, `deep_ocean`, …). On stock 0.51.x: 20 entries. Inputs for `worldbox_paint_tile`. |
-| `worldbox_list_actors` | All `ActorAsset` ids (`human`, `elf`, `dragon`, `wolf`, …). 322 on stock 0.51.x. Inputs for `worldbox_spawn`. |
+| `worldbox_list_tiles` | All `TileType` ids (e.g. `sand`, `soil_high`, `lava0`, `deep_ocean`, ...). On stock 0.51.x: 20 entries. Inputs for `worldbox_paint_tile`. |
+| `worldbox_list_actors` | All `ActorAsset` ids (`human`, `elf`, `dragon`, `wolf`, ...). 322 on stock 0.51.x. Inputs for `worldbox_spawn`. |
 | `worldbox_list_powers` | All `GodPower` ids (spawn-by-race + disasters + toggles). 339 on stock 0.51.x. Inputs for `worldbox_invoke_power`. |
 | `worldbox_list_speeds` | All `WorldTimeScaleAsset` ids with `multiplier`, plus `current`. 10 on stock 0.51.x (`slow_mo`, `x1`–`x5`, `x10`, `x15`, `x20`, `x40`). Inputs for `worldbox_set_speed`. |
 
 ---
 
-## Action — modify the world
+## Action, modify the world
 
 | Tool | Args | Effect |
 |---|---|---|
-| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal — every spawn-by-race, every disaster, and the drops/bombs families (`rain`, `fire`, `bomb`, `volcano`, …). Returns `{accepted: bool, via}`; `via` is the game delegate used (`click_action` or `click_power_action`), `accepted=false` means the game declined this time (some powers roll a chance). Brush-only/toggle powers and ones needing live mouse state (`finger`) return `GAME_REJECTED` with a reason. |
-| `worldbox_spawn` | `entity_id`, `x`, `y`, `count=1`, `adult=false`, `spawn_height=6` | Spawn actors **not exposed as GodPowers** — `dragon`, `cthulhu`, `kraken`, specific animals. Wild kingdom auto-assigned via `ActorAsset.kingdom_id_wild`. |
+| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal, every spawn-by-race, every disaster, and the drops/bombs families (`rain`, `fire`, `bomb`, `volcano`, ...). Returns `{accepted: bool, via}`; `via` is the game delegate used (`click_action` or `click_power_action`), `accepted=false` means the game declined this time (some powers roll a chance). Brush-only/toggle powers and ones needing live mouse state (`finger`) return `GAME_REJECTED` with a reason. |
+| `worldbox_spawn` | `entity_id`, `x`, `y`, `count=1`, `adult=false`, `spawn_height=6` | Spawn actors **not exposed as GodPowers**, `dragon`, `cthulhu`, `kraken`, specific animals. Wild kingdom auto-assigned via `ActorAsset.kingdom_id_wild`. |
 | `worldbox_paint_tile` | `x`, `y`, `tile_id?`, `top_id?`, `radius=0` | Paints a Euclidean disc. Provide `tile_id` (ground), `top_id` (decoration), or both. Out-of-map cells silently skipped. |
 
 ---
 
-## Read — observe the world
+## Read, observe the world
 
 | Tool | Returns |
 |---|---|
@@ -65,7 +65,7 @@ page tracks it but may lag.
 
 ---
 
-## Control — simulation flow + world lifecycle
+## Control, simulation flow + world lifecycle
 
 | Tool | What for |
 |---|---|
@@ -73,21 +73,21 @@ page tracks it but may lag.
 | `worldbox_resume` | Unpause. |
 | `worldbox_dismiss_window` | Closes any open in-game window (startup `welcome` screen, settings, info panels, confirmations) via the game's own `ScrollWindow.hideAllEvent`. Returns `{dismissed, window}`. Gated on `AdvanceTime` like pause/resume. |
 | `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id from `worldbox_list_speeds` (`slow_mo`, `x1`, `x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`). Higher = simulation runs faster than real time. Returns `{speed_id, multiplier, previous}`; unknown ids get `UNKNOWN_ASSET` listing every valid id. |
-| `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async — poll `get_world_state` until `tick` advances. |
-| `worldbox_save_world` | Required `folder`: absolute path, or a name resolved under the game's `saves/` directory (in-game slots are `save1`, `save2`, …; `..` is rejected). Returns the resolved `path`. Save format compatible with the in-game load UI. Refuses if no world loaded. |
+| `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async, poll `get_world_state` until `tick` advances. |
+| `worldbox_save_world` | Required `folder`: absolute path, or a name resolved under the game's `saves/` directory (in-game slots are `save1`, `save2`, ...; `..` is rejected). Returns the resolved `path`. Save format compatible with the in-game load UI. Refuses if no world loaded. |
 | `worldbox_load_world` | One of `path` (save file, save folder, or a name under `saves/` such as `save1`) or `bytes_b64` (base64 zipped save). Async. |
 
 ---
 
-## Bus — inter-agent messaging (v0.3+)
+## Bus, inter-agent messaging (v0.3+)
 
 | Tool | What for |
 |---|---|
 | `worldbox_send_message` | Send to another agent's inbox, or `to="*"` to broadcast. Args `{to, content, kind?}`. Returns `{seq, recipients, broadcast}`. Broadcast requires `send_broadcast` permission (god / narrator only). Unknown recipient -> 400 with a helpful "Known: [...]" list. |
-| `worldbox_recv_messages` | Poll the caller's inbox. Args `{since_seq=0, max=50}` (hard ceiling 500). Non-destructive — pass the previous response's `next_cursor` as `since_seq` to avoid re-reading. Returns `{items: [{seq, from, to, kind, content, sent_utc}], count, next_cursor}`. |
+| `worldbox_recv_messages` | Poll the caller's inbox. Args `{since_seq=0, max=50}` (hard ceiling 500). Non-destructive, pass the previous response's `next_cursor` as `since_seq` to avoid re-reading. Returns `{items: [{seq, from, to, kind, content, sent_utc}], count, next_cursor}`. |
 
 Inboxes are bounded (default 200 per agent, drop-oldest). Sequence numbers are bus-wide
-and monotonic — one cursor works across recipients and across reconnects. Nothing is
+and monotonic, one cursor works across recipients and across reconnects. Nothing is
 persisted to disk in v0.3.
 
 ---
@@ -131,7 +131,7 @@ Every error response follows this shape:
 
 The fundamental design choice: rather than hardcoding ~200 command variants per asset type,
 three action primitives accept a string id resolved at runtime against the game's own
-registry. **Always call the discovery tools to learn what's valid in this build** — they're
+registry. **Always call the discovery tools to learn what's valid in this build**, they're
 your version-proof contract:
 
 ```text
@@ -141,4 +141,4 @@ list_powers() → [{id, tab_id?, target_type?}, ...]
 ```
 
 Asset ids returned here are valid inputs for the action primitives **in the same session**.
-After a WorldBox update, re-call them — new dragons / tiles / disasters may have arrived.
+After a WorldBox update, re-call them, new dragons / tiles / disasters may have arrived.

@@ -7,7 +7,7 @@ v0.3. Pick one, replace the placeholder tokens with real secrets, drop the file 
 The bridge auto-detects the file. With it present, every request must carry one of the
 declared agent tokens via `Authorization: Bearer <token>`. Without the file the bridge
 falls back to legacy single-token mode (one God agent with the shared `WorldBoxBridge.cfg`
-token) — that's still supported.
+token), which is still supported.
 
 | File | Mode | Agents | Distinguishing |
 |---|---|---|---|
@@ -30,7 +30,7 @@ $alphabet = [char[]]([char]'A'..[char]'Z' + [char]'a'..[char]'z' + [char]'0'..[c
 }
 ```
 
-…where `N` is the number of agents you need. Or grab them from `scripts/install-mod.ps1`
+...where `N` is the number of agents you need. Or grab them from `scripts/install-mod.ps1`
 once the install script grows multi-agent support (tracked for the v0.3 release).
 
 ## Client wiring

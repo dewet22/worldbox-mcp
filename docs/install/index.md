@@ -3,9 +3,9 @@
 Installing `worldbox-mcp` is a two-step process:
 
 1. **Install the in-game mod once.** The mod runs inside WorldBox itself.
-2. **Plug the MCP server into your AI client.** The server is launched on demand by your client via `uvx worldbox-mcp` — no preinstall needed.
+2. **Plug the MCP server into your AI client.** The server is launched on demand by your client via `uvx worldbox-mcp`, no preinstall needed.
 
-## Step 1 — Install the mod
+## Step 1, Install the mod
 
 ### Prerequisites
 
@@ -74,10 +74,10 @@ You should see:
 }
 ```
 
-`multi_agent: true` only appears once you've deployed an `agents.json` — see
+`multi_agent: true` only appears once you've deployed an `agents.json`, see
 [`docs/multi-agent.md`](../multi-agent.md) for the multi-AI session layer.
 
-## Step 2 — Plug into your AI client
+## Step 2, Plug into your AI client
 
 Pick your client:
 

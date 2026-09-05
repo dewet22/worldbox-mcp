@@ -6,7 +6,7 @@ title: Multi-agent sessions
 
 Put **several AI agents in the same WorldBox world**. Two rival kingdoms duking it out? One
 ecology-AI cooperating with a civilization-AI? A DM-driven roleplay with two players and a
-narrator? All four work through the same session layer — only the config differs.
+narrator? All four work through the same session layer, only the config differs.
 
 The bridge keeps a per-process registry of authenticated agents. Each agent has its own
 bearer token, role, optional kingdom claim, and inbox. Every command that modifies or
@@ -15,8 +15,8 @@ gate actions and scope reads per agent.
 
 ## Twenty-nine MCP tools, six categories
 
-v0.3 added **six new tools** on top of the v0.2 set — the existing twenty stay backwards-
-compatible — and v0.4 adds three more (`list_speeds`, `get_ui_state`, `dismiss_window`).
+v0.3 added **six new tools** on top of the v0.2 set, and the existing twenty stay
+backwards-compatible. v0.4 adds three more (`list_speeds`, `get_ui_state`, `dismiss_window`).
 Total surface = 29.
 
 | Category | Tools | New in v0.3 |
@@ -30,17 +30,17 @@ Total surface = 29.
 
 ## Four scenario presets
 
-The same architecture supports four interaction shapes — picking one is a JSON edit, not a
+The same architecture supports four interaction shapes, picking one is a JSON edit, not a
 code change. Side-by-side examples live in `examples/scenarios/multi-agent/`.
 
 | Scenario | What it means | Distinguishing |
 |---|---|---|
 | **PvP** | N rival factions, one per agent | `partial_intel: true` (fog-of-war), agents bound to their own kingdom, mutual "wipe kingdom" objectives |
-| **Coop** | N AIs co-managing the same world | `partial_intel: false`, no claims, message bus is central — "I just triggered a famine, you handle the migration response" |
+| **Coop** | N AIs co-managing the same world | `partial_intel: false`, no claims, message bus is central, "I just triggered a famine, you handle the migration response" |
 | **Hierarchical** | 1 god + N players + (optional) narrator | Mixed roles, partial_intel on, narrator broadcasts colorful summaries |
 | **Sandbox** | N co-gods, no constraints | Closest to legacy v0.2 mode but with per-agent inboxes |
 
-## Quick start — PvP at two agents
+## Quick start, PvP at two agents
 
 1. **Generate two bearer tokens** (48 alphanumeric chars each). PowerShell snippet:
 
@@ -85,7 +85,7 @@ code change. Side-by-side examples live in `examples/scenarios/multi-agent/`.
 
 3. **Wire each agent in their MCP client** with their own bearer. Two options:
 
-    Stdio path — spawn one `worldbox-mcp` process per agent:
+    Stdio path, spawn one `worldbox-mcp` process per agent:
 
     ```powershell
     # Terminal 1 (athena)
@@ -93,7 +93,7 @@ code change. Side-by-side examples live in `examples/scenarios/multi-agent/`.
     uvx worldbox-mcp
     ```
 
-    HTTP path — share one MCP server across many clients:
+    HTTP path, share one MCP server across many clients:
 
     ```powershell
     # Once, anywhere:
@@ -104,13 +104,13 @@ code change. Side-by-side examples live in `examples/scenarios/multi-agent/`.
       --header "Authorization: Bearer <token-1>"
     ```
 
-4. **Verify** with `worldbox_whoami` — each agent sees their own identity, role, and
+4. **Verify** with `worldbox_whoami`, each agent sees their own identity, role, and
    claimed kingdom.
 
 ## Roles and permissions
 
 Four roles, each with a default permission bitmask. The roles map onto the four scenarios
-naturally — pick the one that fits your agent.
+naturally: pick the one that fits your agent.
 
 | Role | Read all | Read own faction | Action global | Action faction | Control world | Advance time | Send msg | Recv msg | Broadcast |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
@@ -121,10 +121,10 @@ naturally — pick the one that fits your agent.
 
 **Permission scope**:
 
-- `ActionGlobal` — terraforming, anything that's truly map-wide (paint_tile, etc.).
-- `ActionFaction` — actions an agent can perform on/from their kingdom (spawn, invoke_power).
-- `ControlWorld` — **destructive** world-lifecycle ops (generate_world wipes everything, save_world / load_world rewrite state). God-only on purpose.
-- `AdvanceTime` — **non-destructive** simulation-flow controls: pause, resume, set_speed, dismiss_window. Granted to active-player roles so PvP agents can fast-forward through quiet phases (`worldbox_set_speed("x20")`) or pause to think without needing a god agent in the session. Spectator roles (Observer, Narrator) intentionally do NOT have it — they shouldn't be able to skip ahead while the actual players are still deliberating.
+- `ActionGlobal`: terraforming, anything that's truly map-wide (paint_tile, etc.).
+- `ActionFaction`: actions an agent can perform on/from their kingdom (spawn, invoke_power).
+- `ControlWorld`: **destructive** world-lifecycle ops (generate_world wipes everything, save_world / load_world rewrite state). God-only on purpose.
+- `AdvanceTime`: **non-destructive** simulation-flow controls: pause, resume, set_speed, dismiss_window. Granted to active-player roles so PvP agents can fast-forward through quiet phases (`worldbox_set_speed("x20")`) or pause to think without needing a god agent in the session. Spectator roles (Observer, Narrator) intentionally do NOT have it, they shouldn't be able to skip ahead while the actual players are still deliberating.
 
 Every command declares the permission it needs via `ctx.Require(...)` at the top of its
 `ExecuteAsync`. Missing permission returns HTTP 403 with `code: PERMISSION_DENIED`. Cross-
@@ -136,9 +136,9 @@ When `partial_intel: true` in the scenario AND the agent doesn't have `ReadAll`:
 
 - `worldbox_list_cities` filters to the agent's claimed kingdom.
 - `worldbox_query_actors` filters to the agent's claimed kingdom.
-- `worldbox_screenshot` is rejected (`PERMISSION_DENIED ReadAll`) — otherwise an agent
+- `worldbox_screenshot` is rejected (`PERMISSION_DENIED ReadAll`), otherwise an agent
   could bypass fog by snapping a picture.
-- `worldbox_list_kingdoms` is **intentionally NOT filtered** — agents need to know the
+- `worldbox_list_kingdoms` is **intentionally NOT filtered**, agents need to know the
   enemy factions exist for diplomacy and threat awareness.
 
 `worldbox_objective_status` is also not faction-filtered: scoreboard metrics need to be
@@ -156,7 +156,7 @@ Behavior:
 - **Read / Discovery / Meta / Bus** commands stay open. You can always check the state and
   message peers, regardless of whose turn it is.
 - `worldbox_turn_advance` ends your turn. The next agent in `turn_order` becomes active.
-- God-role agents (`Permission.ActionGlobal`) **bypass the gate** — useful for the
+- God-role agents (`Permission.ActionGlobal`) **bypass the gate**, useful for the
   hierarchical scenario where a DM watches over a turn-based PvP.
 
 ## Inter-agent messaging
@@ -165,7 +165,7 @@ Behavior:
 agent has a bounded inbox (default 200 messages, drop-oldest on overflow). Sequence
 numbers are bus-wide so a single `since_seq` cursor works across recipients.
 
-Broadcast (`to: "*"`) requires `Permission.SendBroadcast` — God and Narrator roles only.
+Broadcast (`to: "*"`) requires `Permission.SendBroadcast`, God and Narrator roles only.
 FactionPlayers can only send 1-to-1 (no propaganda spam to opponents).
 
 ```python
@@ -176,7 +176,7 @@ inbox = await client.call("recv_messages", {"since_seq": last_seen_seq})
 ## Objectives
 
 Each agent can declare `objectives: [{id, label, kind, target}]`. The bridge stores them
-verbatim but does **not** compute scores — interpretation lives client-side, where the AI
+verbatim but does **not** compute scores, interpretation lives client-side, where the AI
 has the scenario context to know whether "maximize pop of kingdom 3" is competitive (for
 you, against you) or cooperative.
 
@@ -186,7 +186,7 @@ you, against you) or cooperative.
 - A live kingdom-population snapshot: `{id, name, units, cities, wild}` per alive kingdom.
 
 The combination is enough for an agent to evaluate "am I winning?". The bridge stays out
-of the scoring loop, which keeps it robust across WorldBox updates — there's no
+of the scoring loop, which keeps it robust across WorldBox updates, there's no
 game-mechanics evaluator that could break when the game patches.
 
 ## Backwards compatibility
@@ -200,7 +200,7 @@ mode:
 - All v0.1 / v0.2 single-tenant clients continue to work without changes.
 
 The legacy header `X-WB-Token: <token>` is also still accepted, in addition to the v0.3
-`Authorization: Bearer <token>`. Mixing is fine — the bridge tries Bearer first, falls
+`Authorization: Bearer <token>`. Mixing is fine, the bridge tries Bearer first, falls
 back to X-WB-Token.
 
 ## Wire format reference

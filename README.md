@@ -9,9 +9,9 @@
 [![MCP](https://img.shields.io/badge/MCP-compatible-blue)](https://modelcontextprotocol.io)
 [![BepInEx](https://img.shields.io/badge/BepInEx-5.4.23-orange)](https://bepinex.org/)
 
-`worldbox-mcp` is a two-piece bridge that lets any [MCP](https://modelcontextprotocol.io)-compatible AI client — Claude Code, OpenCode, Codex, Cursor, Continue, … — directly control the live game [WorldBox](https://www.superworldbox.com/).
+`worldbox-mcp` is a two-piece bridge that lets any [MCP](https://modelcontextprotocol.io)-compatible AI client (Claude Code, OpenCode, Codex, Cursor, Continue, ...) directly control the live game [WorldBox](https://www.superworldbox.com/).
 
-**29 MCP tools** spanning discovery, action, observation, simulation control, multi-agent identity, and an inter-agent message bus. The agent observes the world, chooses what to do, acts on it, then observes the outcome — a full agentic loop running against an actual running game. Since v0.3, multiple AI agents can share the same world simultaneously with role-based permissions, fog-of-war, turn-taking, and direct messaging — see [`docs/multi-agent.md`](docs/multi-agent.md).
+**29 MCP tools** spanning discovery, action, observation, simulation control, multi-agent identity, and an inter-agent message bus. The agent observes the world, chooses what to do, acts on it, then observes the outcome, a full agentic loop running against an actual running game. Since v0.3, multiple AI agents can share the same world simultaneously with role-based permissions, fog-of-war, turn-taking, and direct messaging. See [`docs/multi-agent.md`](docs/multi-agent.md).
 
 ---
 
@@ -39,7 +39,7 @@
        still stands with 47 citizens."
 ```
 
-The whole exchange is real — `examples/scenarios/ecology_smoke.py` runs a stripped-down version of it as a smoke test.
+The whole exchange is real, `examples/scenarios/ecology_smoke.py` runs a stripped-down version of it as a smoke test.
 
 ## How it works
 
@@ -51,10 +51,10 @@ The whole exchange is real — `examples/scenarios/ecology_smoke.py` runs a stri
                                                                    └──────────────────────┘
 ```
 
-- **`WorldBoxBridge`** — a [BepInEx 5](https://bepinex.org/) plugin (C#) injected into WorldBox that exposes a local, auth-protected HTTP API to the game's internals.
-- **`worldbox-mcp`** — a Python MCP server distributed via PyPI (`uvx worldbox-mcp`) that translates MCP tool calls into HTTP requests against the mod.
+- **`WorldBoxBridge`**: a [BepInEx 5](https://bepinex.org/) plugin (C#) injected into WorldBox that exposes a local, auth-protected HTTP API to the game's internals.
+- **`worldbox-mcp`**: a Python MCP server distributed via PyPI (`uvx worldbox-mcp`) that translates MCP tool calls into HTTP requests against the mod.
 
-The mod uses **only reflection** to access game types — no static binding — so it survives WorldBox updates as long as core class names stay stable. All asset ids (tile types, actor races, powers, world speeds) are discovered at runtime from the running build, so the catalog is always correct.
+The mod uses **only reflection** to access game types (no static binding) so it survives WorldBox updates as long as core class names stay stable. All asset ids (tile types, actor races, powers, world speeds) are discovered at runtime from the running build, so the catalog is always correct.
 
 ## Quickstart
 
@@ -83,7 +83,7 @@ This downloads BepInEx + the latest `WorldBoxBridge.dll`, installs both into you
 The MCP server runs via `uvx` (zero install) thanks to the [uv](https://docs.astral.sh/uv/) tooling.
 
 <details>
-<summary><strong>Claude Code</strong> — one command</summary>
+<summary><strong>Claude Code</strong>, one command</summary>
 
 ```bash
 claude mcp add worldbox -- uvx worldbox-mcp
@@ -161,7 +161,7 @@ Or paste the full god-mode ecology prompt from [`examples/prompts/godmode-ecolog
 | Category | Tools | What for |
 |---|---|---|
 | **Meta** | `worldbox_health`, `worldbox_capabilities`, `worldbox_whoami`, `worldbox_session_info`, `worldbox_turn_advance`, `worldbox_objective_status` | Liveness, introspection, multi-agent identity, turn rotation, scoreboard |
-| **Discovery** | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers`, `worldbox_list_speeds` | Enumerate asset ids the running game exposes — ~20 tiles, ~320 actors, ~340 powers, 10 speeds on stock 0.51.x |
+| **Discovery** | `worldbox_list_tiles`, `worldbox_list_actors`, `worldbox_list_powers`, `worldbox_list_speeds` | Enumerate asset ids the running game exposes, ~20 tiles, ~320 actors, ~340 powers, 10 speeds on stock 0.51.x |
 | **Action** | `worldbox_invoke_power`, `worldbox_spawn`, `worldbox_paint_tile` | Modify the world: trigger powers, spawn creatures, paint terrain |
 | **Read** | `worldbox_get_world_state`, `worldbox_get_tile`, `worldbox_list_kingdoms`, `worldbox_list_cities`, `worldbox_query_actors`, `worldbox_get_ui_state`, `worldbox_screenshot` | Observe before deciding (fog-of-war filtered in multi-agent mode) |
 | **Control** | `worldbox_pause`, `worldbox_resume`, `worldbox_dismiss_window`, `worldbox_set_speed`, `worldbox_generate_world`, `worldbox_save_world`, `worldbox_load_world` | Simulation flow + world lifecycle |
@@ -173,11 +173,11 @@ Full reference: **[docs/command-reference.md](docs/command-reference.md)** (auto
 
 ## Design principles
 
-- **Survives game updates.** Every game type/method is resolved by reflection with caching and explicit warnings if a symbol disappears — a renamed class disables only the affected command, not the whole bridge. The mod also reports the WorldBox version and the SHA256 of `Assembly-CSharp.dll` in every `/health` so bug reports are traceable.
+- **Survives game updates.** Every game type/method is resolved by reflection with caching and explicit warnings if a symbol disappears, a renamed class disables only the affected command, not the whole bridge. The mod also reports the WorldBox version and the SHA256 of `Assembly-CSharp.dll` in every `/health` so bug reports are traceable.
 - **100% coverage through 3 primitives.** `invoke_power` alone covers ~270 actions because the in-game GodPower model unifies spawns, disasters, and toggles. `spawn` reaches the actor catalog directly for non-power creatures. `paint_tile` handles terrain. The discovery tools tell the agent what's valid right now in this build.
-- **Local-only by design.** The HTTP bridge binds **only** to `127.0.0.1` — `0.0.0.0` is refused at startup. Auth is a per-install random token in `BepInEx/config/WorldBoxBridge.cfg`, or one bearer per agent in multi-agent mode via `BepInEx/config/WorldBoxBridge.agents.json`. Constant-time token comparison. No telemetry, no remote endpoints.
+- **Local-only by design.** The HTTP bridge binds **only** to `127.0.0.1`, `0.0.0.0` is refused at startup. Auth is a per-install random token in `BepInEx/config/WorldBoxBridge.cfg`, or one bearer per agent in multi-agent mode via `BepInEx/config/WorldBoxBridge.agents.json`. Constant-time token comparison. No telemetry, no remote endpoints.
 - **Multi-agent ready (v0.3).** N AIs on one world via a session layer: per-agent role (god / faction_player / observer / narrator), permission gates, fog-of-war scoping, turn-based mode, bounded inter-agent message bus, scoreboard primitive. Four ready-to-customize presets (PvP / coop / hierarchical / sandbox) in `examples/scenarios/multi-agent/`.
-- **Production-grade.** Typed (mypy strict + C# nullable enabled), tested (87 unit + integration cases across xUnit and pytest), formatted (ruff + csharpier), signed releases via `release-please`, automated CI/CD across Win/Linux/Mac × Py 3.11–3.13.
+- **Production-grade.** Typed (mypy strict + C# nullable enabled), tested (87 unit + integration cases across xUnit and pytest), formatted (ruff + csharpier), signed releases via `release-please`, automated CI/CD across Win/Linux/Mac × Py 3.11, 3.13.
 
 ## Compatibility
 
@@ -187,17 +187,17 @@ Full reference: **[docs/command-reference.md](docs/command-reference.md)** (auto
 | 0.51.2 | 2022.3.60f1 (Mono) | 0.2.x | ✅ generate/save/load world |
 | 0.51.2 | 2022.3.60f1 (Mono) | 0.1.x | ✅ baseline 20-tool surface |
 
-A daily CI cron monitors WorldBox releases on Steam and opens a tracking issue when a new version ships — so update breakage gets caught the day-of. See [`docs/compatibility.md`](docs/compatibility.md).
+A daily CI cron monitors WorldBox releases on Steam and opens a tracking issue when a new version ships, so update breakage gets caught the day-of. See [`docs/compatibility.md`](docs/compatibility.md).
 
 ## Architecture deep-dive
 
-- [`docs/architecture.md`](docs/architecture.md) — component layout, thread model, lifecycle
-- [`docs/multi-agent.md`](docs/multi-agent.md) — session layer: agents, permissions, fog-of-war, turns, message bus, objectives
-- [`docs/protocol.md`](docs/protocol.md) — exact HTTP/JSON contract between server and mod
-- [`docs/game-api-notes.md`](docs/game-api-notes.md) — reflection paths into WorldBox's internals (lives alongside the code, updated per game version)
-- [`docs/development.md`](docs/development.md) — local dev setup + testing
-- [`examples/scenarios/ecology_smoke.py`](examples/scenarios/ecology_smoke.py) — single-agent end-to-end demo (legacy mode)
-- [`examples/scenarios/multi-agent/pvp_smoke.py`](examples/scenarios/multi-agent/pvp_smoke.py) — multi-agent PvP end-to-end demo
+- [`docs/architecture.md`](docs/architecture.md), component layout, thread model, lifecycle
+- [`docs/multi-agent.md`](docs/multi-agent.md), session layer: agents, permissions, fog-of-war, turns, message bus, objectives
+- [`docs/protocol.md`](docs/protocol.md), exact HTTP/JSON contract between server and mod
+- [`docs/game-api-notes.md`](docs/game-api-notes.md), reflection paths into WorldBox's internals (lives alongside the code, updated per game version)
+- [`docs/development.md`](docs/development.md), local dev setup + testing
+- [`examples/scenarios/ecology_smoke.py`](examples/scenarios/ecology_smoke.py), single-agent end-to-end demo (legacy mode)
+- [`examples/scenarios/multi-agent/pvp_smoke.py`](examples/scenarios/multi-agent/pvp_smoke.py), multi-agent PvP end-to-end demo
 
 ## Contributing
 

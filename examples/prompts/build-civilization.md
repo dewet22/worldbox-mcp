@@ -1,4 +1,4 @@
-# Demo prompt — Build a civilization
+# Demo prompt, Build a civilization
 
 Hand this prompt to an AI agent connected to `worldbox-mcp`. Best run on an empty or freshly generated world.
 
@@ -10,8 +10,8 @@ Hand this prompt to an AI agent connected to `worldbox-mcp`. Best run on an empt
 >
 > Then build:
 >
-> 1. A **central river** running roughly north–south through the map, with banks of sand and pockets of forest on either side. Use `paint_tile` with a small radius for natural-looking edges.
-> 2. Three **starter human kingdoms** spaced 60 tiles apart along the eastern bank — each seeded with ~15 humans clustered around an open patch. Use `spawn` with `count=15`.
+> 1. A **central river** running roughly north, south through the map, with banks of sand and pockets of forest on either side. Use `paint_tile` with a small radius for natural-looking edges.
+> 2. Three **starter human kingdoms** spaced 60 tiles apart along the eastern bank, each seeded with ~15 humans clustered around an open patch. Use `spawn` with `count=15`.
 > 3. A single **rival orc kingdom** on the western bank, with terrain around it pushed slightly more hostile (sparse trees, scattered hills).
 >
 > Now `resume()` and `set_speed(3)`. Every 30 seconds (~30 ticks), call `get_world_state()` and `list_kingdoms()` and **briefly narrate** what's happening: who's growing, who's at war, where the borders are forming.
@@ -24,4 +24,4 @@ Hand this prompt to an AI agent connected to `worldbox-mcp`. Best run on an empt
 
 - Exercises **discovery, action, read, and control** tools in one flow.
 - Forces the agent to reason about asset ids it can't have memorized.
-- Produces a narrated outcome rather than a static screenshot — good for video.
+- Produces a narrated outcome rather than a static screenshot, good for video.

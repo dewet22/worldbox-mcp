@@ -6,7 +6,7 @@ The full text is published and maintained by the Contributor Covenant project at
 
 <https://www.contributor-covenant.org/version/2/1/code_of_conduct/>
 
-By participating in this project — as a contributor, maintainer, issue reporter, or any other capacity — you agree to abide by its terms.
+By participating in this project (as a contributor, maintainer, issue reporter, or any other capacity) you agree to abide by its terms.
 
 ## Reporting
 

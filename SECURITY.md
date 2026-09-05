@@ -43,7 +43,7 @@ In scope:
 Out of scope:
 - Vulnerabilities in WorldBox itself (report to the game's developer).
 - Vulnerabilities in BepInEx (report to <https://github.com/BepInEx/BepInEx>).
-- Vulnerabilities in MCP clients (Claude Code, Cursor, etc.) — report upstream.
+- Vulnerabilities in MCP clients (Claude Code, Cursor, etc.), report upstream.
 
 ## Threat model
 
@@ -51,7 +51,7 @@ Out of scope:
 
 - The mod's HTTP listener binds **only** to `127.0.0.1`. Binding to `0.0.0.0` is refused at startup.
 - Authentication uses a bearer credential, accepted via either `Authorization: Bearer <token>` (the preferred header, v0.3+) or the legacy `X-WB-Token: <token>` (v0.1 / v0.2 single-tenant clients). Constant-time comparison on the wire.
-- In legacy mode, the credential is a per-install random token stored in `BepInEx/config/WorldBoxBridge.cfg`. In multi-agent mode (v0.3+), each agent has its own bearer token defined in `BepInEx/config/WorldBoxBridge.agents.json` — alongside that agent's role, permissions, and optional kingdom claim.
+- In legacy mode, the credential is a per-install random token stored in `BepInEx/config/WorldBoxBridge.cfg`. In multi-agent mode (v0.3+), each agent has its own bearer token defined in `BepInEx/config/WorldBoxBridge.agents.json`, alongside that agent's role, permissions, and optional kingdom claim.
 - Tokens are never logged, transmitted over the network beyond loopback, or committed to git. The Python MCP server reads the same config files to obtain its token.
 
-If your threat model includes a hostile process running as your user on the same machine, treat tokens as shared secrets and protect file ACLs accordingly. In multi-agent mode, a compromised agent token only grants the permissions associated with that agent's role — a stolen FactionPlayer token can't `generate_world` (god-only) or screenshot the whole map under fog-of-war.
+If your threat model includes a hostile process running as your user on the same machine, treat tokens as shared secrets and protect file ACLs accordingly. In multi-agent mode, a compromised agent token only grants the permissions associated with that agent's role, a stolen FactionPlayer token can't `generate_world` (god-only) or screenshot the whole map under fog-of-war.

@@ -89,7 +89,7 @@ does pin content hashes. See [development.md](development.md) for how to regener
 | Boundary | Why a separate process |
 |---|---|
 | AI client ↔ MCP server | The MCP spec dictates this; lets any client reuse the same server. |
-| MCP server ↔ Mod | The mod must live inside `worldbox.exe` to access game internals. The MCP server stays a normal Python process — easy to ship via PyPI, runs on any OS, no Unity baggage. |
+| MCP server ↔ Mod | The mod must live inside `worldbox.exe` to access game internals. The MCP server stays a normal Python process, easy to ship via PyPI, runs on any OS, no Unity baggage. |
 
 ## Component responsibilities
 
@@ -112,8 +112,8 @@ does pin content hashes. See [development.md](development.md) for how to regener
   / faction / permissions), in-memory message bus with per-agent inboxes, optional
   turn-order. Loaded from `BepInEx/config/WorldBoxBridge.agents.json` at startup; falls
   back to legacy single-token mode if the file is absent. See [multi-agent.md](multi-agent.md).
-- Dispatches incoming JSON commands onto Unity's main thread via a `ConcurrentQueue<Action>` drained from a delegate injected into Unity's `PlayerLoop` (not a `MonoBehaviour`). On WorldBox 0.51.2, BepInEx-created `MonoBehaviour` GameObjects get destroyed shortly after Awake — the PlayerLoop hook is part of the engine's tick table and survives that.
-- Resolves all WorldBox types via cached reflection — never `using WorldBox.*` directly — so the mod survives game updates as long as core types keep their names.
+- Dispatches incoming JSON commands onto Unity's main thread via a `ConcurrentQueue<Action>` drained from a delegate injected into Unity's `PlayerLoop` (not a `MonoBehaviour`). On WorldBox 0.51.2, BepInEx-created `MonoBehaviour` GameObjects get destroyed shortly after Awake, the PlayerLoop hook is part of the engine's tick table and survives that.
+- Resolves all WorldBox types via cached reflection (never `using WorldBox.*` directly) so the mod survives game updates as long as core types keep their names.
 - Maps every command to game APIs that live inside `Assembly-CSharp.dll`.
 
 ## Critical invariants
@@ -121,20 +121,20 @@ does pin content hashes. See [development.md](development.md) for how to regener
 1. **Unity API calls happen on the main thread.** Period. The dispatcher is the only legal way for HTTP handlers to touch the game.
 2. **Auth is checked before any work.** The HTTP middleware short-circuits on a bad token before queueing anything onto the main thread.
 3. **Loopback only.** `HttpListener` bound to `127.0.0.1`. Refused at startup if config tries `0.0.0.0`.
-4. **No static binding to game types.** A reflection lookup that fails logs a warning and disables only the affected command — the rest of the bridge keeps working.
+4. **No static binding to game types.** A reflection lookup that fails logs a warning and disables only the affected command, the rest of the bridge keeps working.
 
 ## Data flow for a tool call
 
 1. AI client emits `tools/call` over MCP.
 2. Python server validates args with Pydantic, builds a JSON command envelope, sends `POST /cmd` with `Authorization: Bearer <token>` (the legacy `X-WB-Token` header is still accepted).
 3. Mod's HTTP handler verifies the bearer against the `AgentRegistry`, resolves it into a `RequestContext` (agent id, role, kingdom claim, permissions, scenario flags), then parses the JSON body.
-4. The bridge runs the per-command permission gate (`ctx.Require(Permission.X)`) and — in turn-based sessions — checks that the caller holds the current turn. Both fail fast before any game-state work.
+4. The bridge runs the per-command permission gate (`ctx.Require(Permission.X)`) and (in turn-based sessions) checks that the caller holds the current turn. Both fail fast before any game-state work.
 5. Bridge enqueues an `Action` on the main-thread dispatcher with a `TaskCompletionSource`.
 6. Next Unity frame: dispatcher pops the action, the command runs with `RequestContext` in scope (so it can fog-of-war-filter reads or scope writes to the caller's kingdom), sets the TCS result.
 7. HTTP handler awaits the TCS, serializes the result, returns `200 OK`.
 8. Python server returns the result to the MCP client.
 
-For long-running commands the dispatcher enforces a 30-second timeout to keep the game from freezing if a reflection call goes pathological — see [protocol.md](protocol.md).
+For long-running commands the dispatcher enforces a 30-second timeout to keep the game from freezing if a reflection call goes pathological, see [protocol.md](protocol.md).
 
 ## Threading model summary
 

@@ -1,14 +1,14 @@
-# Demo prompt — Apocalypse simulation
+# Demo prompt, Apocalypse simulation
 
 For demoing the `invoke_power` primitive across the full disaster catalog.
 
 ---
 
-> The world is currently inhabited — let's stress-test civilization.
+> The world is currently inhabited, let's stress-test civilization.
 >
 > First, `pause()` and `screenshot()` so we have a "before" image. Call `get_world_state()` and remember the population count.
 >
-> Then `list_powers()` and identify every power whose `target_type` is `"point"` or `"area"` and that maps to a natural disaster (meteor, volcano, tsunami, earthquake, lightning storm, …).
+> Then `list_powers()` and identify every power whose `target_type` is `"point"` or `"area"` and that maps to a natural disaster (meteor, volcano, tsunami, earthquake, lightning storm, ...).
 >
 > Now `resume()` and run the apocalypse in escalating waves, one minute apart:
 >

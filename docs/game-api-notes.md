@@ -1,6 +1,6 @@
 # Game API notes
 
-Working notes on WorldBox internals discovered while building the mod. These are **not authoritative documentation** — they reflect what we observed in `Assembly-CSharp.dll` at a specific SHA256.
+Working notes on WorldBox internals discovered while building the mod. These are **not authoritative documentation**, they reflect what we observed in `Assembly-CSharp.dll` at a specific SHA256.
 
 | Field | Value |
 |---|---|
@@ -40,7 +40,7 @@ public static class World
 
 ---
 
-## AssetManager — central registry
+## AssetManager, central registry
 
 `AssetManager` is a static class with ~150 public static fields, each pointing to a typed library. All libraries inherit from `AssetLibrary<T>` and follow the same iteration contract (see below).
 
@@ -54,7 +54,7 @@ The fields we actually use in commands:
 | `powers` | `PowerLibrary` | `list_powers`, `invoke_power` |
 | `spells` | `SpellLibrary` | possible future: `cast_spell` |
 | `disasters` | `DisasterLibrary` | included in `list_powers` (disasters are a power category) |
-| `kingdoms` | `KingdomLibrary` | kingdom *templates* (not live kingdoms — those live on `MapBox.instance.kingdoms`, see below) |
+| `kingdoms` | `KingdomLibrary` | kingdom *templates* (not live kingdoms, those live on `MapBox.instance.kingdoms`, see below) |
 | `biome_library` | `BiomeLibrary` | informational |
 | `terraform` | `TerraformLibrary` | terrain reshaping commands |
 | `buildings` | `BuildingLibrary` | future: spawn buildings |
@@ -148,7 +148,7 @@ public class TileTypeBase : Asset
 
 ---
 
-## Live entity iteration — `CoreSystemManager<T>`
+## Live entity iteration, `CoreSystemManager<T>`
 
 This is **separate** from the asset library system above. Actor/Kingdom/City instances
 that currently exist in the world live in manager objects on `MapBox.instance`:
@@ -158,7 +158,7 @@ that currently exist in the world live in manager objects on `MapBox.instance`:
 | `MapBox.instance.units` | `ActorManager : SimSystemManager<Actor, ActorData>` | `query_actors`, `get_world_state` |
 | `MapBox.instance.kingdoms` | `KingdomManager : MetaSystemManager<Kingdom, KingdomData>` | `list_kingdoms`, `get_world_state` |
 | `MapBox.instance.cities` | `CityManager : MetaSystemManager<City, CityData>` | `list_cities`, `get_world_state` |
-| `MapBox.instance.map_stats` | `MapStats` | `get_world_state` (lifetime counters: population, kingdomsCreated, citiesCreated, …) |
+| `MapBox.instance.map_stats` | `MapStats` | `get_world_state` (lifetime counters: population, kingdomsCreated, citiesCreated, ...) |
 
 Both `SimSystemManager<T, TData>` and `MetaSystemManager<T, TData>` derive from a common base:
 
@@ -175,7 +175,7 @@ public abstract class CoreSystemManager<TObject, TData>
 
 **Both manager families implement `IEnumerable<T>`** with the storage being a private
 `HashSet<TObject>`. The naive approach of looking for a `getSimpleList()` method only worked
-for the `SimSystemManager` half — `MetaSystemManager` doesn't define it. The correct,
+for the `SimSystemManager` half, `MetaSystemManager` doesn't define it. The correct,
 universal approach is to cast the manager to `IEnumerable` and use `foreach` (or read the
 `Count` property for size).
 
@@ -184,19 +184,19 @@ v0.1.1.
 
 ---
 
-## Action recipes — confirmed in production
+## Action recipes, confirmed in production
 
 | Action | Entry point |
 |---|---|
-| Paint a tile | `WorldTile.setTileType(string id)` — string overload that does the asset lookup internally. Optional `WorldTile.setTopTileType(TopTileType asset, bool updateStats=true)` for decoration overlay. The game handles dirty-flagging + stats updates. |
+| Paint a tile | `WorldTile.setTileType(string id)`, string overload that does the asset lookup internally. Optional `WorldTile.setTopTileType(TopTileType asset, bool updateStats=true)` for decoration overlay. The game handles dirty-flagging + stats updates. |
 | Spawn an actor | `MapBox.instance.units.spawnNewUnit(string id, WorldTile tile, bool spawnSound=false, bool miracle=false, float spawnHeight=6f, Subspecies sub=null, bool giveOwnerlessItems=false, bool adult=false)`. Returns the new `Actor` (null on unknown id). Auto-assigns wild kingdom via `ActorAsset.kingdom_id_wild`. |
-| Invoke a power | A `GodPower` carries one of several click delegates. Most set `PowerActionWithID click_action` (`bool (WorldTile, string powerId)`); the drops / bombs / drop-building templates (`rain`, `fire`, `bomb`, `volcano`, …) set `PowerAction click_power_action` (`bool (WorldTile, GodPower)`) instead. Resolve `AssetManager.powers.get(id)`, try `click_action` then `click_power_action`, invoke with the matching args. Returns `bool` = accepted (drops roll `falling_chance`). Still uncovered: `click_brush_action` (needs brush state), `toggle_action`, `click_special_action`. `finger` NREs because `drawFinger` reads `player_control.first_pressed_type`, set only by a real mouse press. |
+| Invoke a power | A `GodPower` carries one of several click delegates. Most set `PowerActionWithID click_action` (`bool (WorldTile, string powerId)`); the drops / bombs / drop-building templates (`rain`, `fire`, `bomb`, `volcano`, ...) set `PowerAction click_power_action` (`bool (WorldTile, GodPower)`) instead. Resolve `AssetManager.powers.get(id)`, try `click_action` then `click_power_action`, invoke with the matching args. Returns `bool` = accepted (drops roll `falling_chance`). Still uncovered: `click_brush_action` (needs brush state), `toggle_action`, `click_special_action`. `finger` NREs because `drawFinger` reads `player_control.first_pressed_type`, set only by a real mouse press. |
 | Pause | `Config.paused` static bool property. Setter toggles. |
-| Set speed | `Config.setWorldSpeed(string speed_id, bool updateDebug=true)` — resolves via `AssetManager.time_scales.get(id)` internally. |
+| Set speed | `Config.setWorldSpeed(string speed_id, bool updateDebug=true)`, resolves via `AssetManager.time_scales.get(id)` internally. |
 | Generate world | `MapBox.instance.setMapSize(int zone_x, int zone_y)` then `MapBox.instance.generateNewMap()`. Map size = zone × 64. Generation runs asynchronously over many frames via `SmoothLoader`. |
-| Save world | `SaveManager.saveWorldToDirectory(string folder, bool compress=true, bool checkFolder=true)` — static, writes a folder of files. |
-| Load world | `SaveManager.loadMapFromBytes(byte[] zippedBytes)` — static, async via `SmoothLoader`. |
-| Screenshot | `ScreenCapture.CaptureScreenshotAsTexture()` then `texture.EncodeToPNG()`. Main-thread only — runs in our `PlayerLoop` Update phase. Destroy the texture immediately after to avoid VRAM/GC pressure. |
+| Save world | `SaveManager.saveWorldToDirectory(string folder, bool compress=true, bool checkFolder=true)`, static, writes a folder of files. |
+| Load world | `SaveManager.loadMapFromBytes(byte[] zippedBytes)`, static, async via `SmoothLoader`. |
+| Screenshot | `ScreenCapture.CaptureScreenshotAsTexture()` then `texture.EncodeToPNG()`. Main-thread only, runs in our `PlayerLoop` Update phase. Destroy the texture immediately after to avoid VRAM/GC pressure. |
 
 ---
 

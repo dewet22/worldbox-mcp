@@ -6,21 +6,21 @@ title: worldbox-mcp
 
 > **Give your AI agent god-mode in [WorldBox](https://www.superworldbox.com/).** Spawn dragons. Burn continents. Run civilization speedruns. From a conversation.
 
-`worldbox-mcp` is an open-source bridge that lets any MCP-compatible AI client — **Claude Code, OpenCode, Codex, Cursor, Continue, and more** — directly control the live game.
+`worldbox-mcp` is an open-source bridge that lets any MCP-compatible AI client (**Claude Code, OpenCode, Codex, Cursor, Continue, and more**) directly control the live game.
 
 It ships as two open-source components:
 
-1. **`WorldBoxBridge`** — a [BepInEx](https://bepinex.org/) plugin (C#) injected into the running game that exposes an authenticated HTTP API to the game's internals.
-2. **`worldbox-mcp`** — a Python MCP server distributed via PyPI (`uvx worldbox-mcp`) that translates MCP tool calls into HTTP requests.
+1. **`WorldBoxBridge`**, a [BepInEx](https://bepinex.org/) plugin (C#) injected into the running game that exposes an authenticated HTTP API to the game's internals.
+2. **`worldbox-mcp`**, a Python MCP server distributed via PyPI (`uvx worldbox-mcp`) that translates MCP tool calls into HTTP requests.
 
 ## Quick links
 
-- 🚀 **[Install](install/index.md)** — pick your AI client
-- 🏗 **[Architecture](architecture.md)** — how the two halves talk to each other
-- 📚 **[Command reference](command-reference.md)** — every tool, auto-generated
-- 👥 **[Multi-agent sessions](multi-agent.md)** — N AIs on one world (v0.3+)
-- 🧩 **[Compatibility](compatibility.md)** — WorldBox × mod version matrix
-- 🤝 **[Contributing](contributing.md)** — code, docs, issues
+- 🚀 **[Install](install/index.md)**, pick your AI client
+- 🏗 **[Architecture](architecture.md)**, how the two halves talk to each other
+- 📚 **[Command reference](command-reference.md)**, every tool, auto-generated
+- 👥 **[Multi-agent sessions](multi-agent.md)**, N AIs on one world (v0.3+)
+- 🧩 **[Compatibility](compatibility.md)**, WorldBox × mod version matrix
+- 🤝 **[Contributing](contributing.md)**, code, docs, issues
 
 ## Twenty-nine tools across six categories
 
@@ -38,7 +38,7 @@ See [command-reference.md](command-reference.md) for arguments + return shapes a
 
 ## Design principles
 
-- **100% game coverage** through three generic action primitives (`paint_tile`, `spawn`, `invoke_power`) backed by the game's own asset registry — see [protocol.md](protocol.md).
+- **100% game coverage** through three generic action primitives (`paint_tile`, `spawn`, `invoke_power`) backed by the game's own asset registry, see [protocol.md](protocol.md).
 - **Survives game updates**: zero static binding to WorldBox internals; everything resolves through cached reflection with explicit logging when a symbol disappears.
 - **Local-only by design**: HTTP bound to `127.0.0.1`, per-install random auth token, no telemetry.
 - **Production-grade**: typed, tested, signed releases, automated CI/CD.

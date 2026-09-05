@@ -20,15 +20,15 @@ Title format: Conventional Commits, e.g.
 
 ## Type of change
 
-- [ ] feat — new feature (bumps minor)
-- [ ] fix — bug fix (bumps patch)
-- [ ] perf — performance improvement
-- [ ] refactor — no behavior change
-- [ ] docs — documentation only
-- [ ] test — tests only
-- [ ] ci — pipeline / tooling
-- [ ] deps — dependency bumps
-- [ ] chore — other
+- [ ] feat: new feature (bumps minor)
+- [ ] fix: bug fix (bumps patch)
+- [ ] perf: performance improvement
+- [ ] refactor: no behavior change
+- [ ] docs: documentation only
+- [ ] test: tests only
+- [ ] ci: pipeline / tooling
+- [ ] deps: dependency bumps
+- [ ] chore: other
 
 ## Touches
 

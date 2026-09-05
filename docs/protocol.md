@@ -20,7 +20,7 @@ X-WB-Token: <token>                 (legacy single-tenant, v0.1 / v0.2)
 ```
 
 The bridge tries `Authorization: Bearer` first and falls back to `X-WB-Token`. Mixing the
-two in different requests is fine — the C# server treats them as equivalent.
+two in different requests is fine, the C# server treats them as equivalent.
 
 ### Legacy single-token mode (default)
 
@@ -149,7 +149,7 @@ Returns the list of registered commands with their JSON Schemas. The Python serv
 
 ## Kill-switch
 
-Edit `<worldbox>/BepInEx/config/WorldBoxBridge.cfg` and set `enabled = false`. The mod hot-reloads the file every 2 seconds and stops accepting commands. New requests get `503 DISABLED`. Set back to `true` to resume — no restart required.
+Edit `<worldbox>/BepInEx/config/WorldBoxBridge.cfg` and set `enabled = false`. The mod hot-reloads the file every 2 seconds and stops accepting commands. New requests get `503 DISABLED`. Set back to `true` to resume, no restart required.
 
 ## Startup window
 

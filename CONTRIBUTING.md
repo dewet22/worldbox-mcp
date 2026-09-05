@@ -12,11 +12,11 @@ This project follows the [Contributor Covenant](https://github.com/fullya99/worl
 
 See [docs/architecture.md](docs/architecture.md). Top level:
 
-- `mod/` — BepInEx plugin (C#, .NET Framework 4.6.2)
-- `server/` — MCP server (Python 3.11+)
-- `docs/` — MkDocs Material site
-- `scripts/` — installers and dev helpers
-- `examples/` — client configs and demo prompts
+- `mod/`: BepInEx plugin (C#, .NET Framework 4.6.2)
+- `server/`: MCP server (Python 3.11+)
+- `docs/`: MkDocs Material site
+- `scripts/`: installers and dev helpers
+- `examples/`: client configs and demo prompts
 
 ## Local setup
 
@@ -64,8 +64,8 @@ Runs `ruff`, `mypy`, `csharpier`, and Conventional Commits check on every commit
 
 - C# 10, `<Nullable>enable</Nullable>`, warnings as errors
 - Formatted by `csharpier` (no debate)
-- All Unity API calls go through `MainThreadDispatcher.Enqueue` — see [docs/architecture.md](docs/architecture.md)
-- Never reference game types by `using` — always resolve via `GameRefs` reflection cache
+- All Unity API calls go through `MainThreadDispatcher.Enqueue`, see [docs/architecture.md](docs/architecture.md)
+- Never reference game types by `using`, always resolve via `GameRefs` reflection cache
 
 ### Python (server)
 
@@ -89,10 +89,10 @@ Runs `ruff`, `mypy`, `csharpier`, and Conventional Commits check on every commit
 
 A command is implemented in **two places**: the mod (C#) executes it; the server (Python) exposes it as an MCP tool.
 
-1. **Mod side** — pick a folder under `mod/src/WorldBoxBridge/Commands/{Meta,Discovery,Action,Read,Control,Bus}/`. Implement `ICommand` (signature takes `RequestContext` — call `ctx.Require(Permission.X)` at the top to gate it). Register in `Plugin.RegisterCommands`. Add unit test in `mod/tests/`.
-2. **Server side** — add a `@server.tool` function in `server/src/worldbox_mcp/tools/{meta,discovery,action,read,control,bus}.py`. Add unit test under `server/tests/unit/`.
-3. **Test e2e manually** — launch WorldBox with the new mod build, call the tool via MCP Inspector or the `pvp_smoke.py` pattern.
-4. **Document** — `capabilities()` will auto-include it; update `docs/command-reference.md` in your PR. If the new tool is multi-agent-related, also update `docs/multi-agent.md`.
+1. **Mod side**: pick a folder under `mod/src/WorldBoxBridge/Commands/{Meta,Discovery,Action,Read,Control,Bus}/`. Implement `ICommand` (the signature takes `RequestContext`, and you call `ctx.Require(Permission.X)` at the top to gate it). Register in `Plugin.RegisterCommands`. Add unit test in `mod/tests/`.
+2. **Server side**, add a `@server.tool` function in `server/src/worldbox_mcp/tools/{meta,discovery,action,read,control,bus}.py`. Add unit test under `server/tests/unit/`.
+3. **Test e2e manually**, launch WorldBox with the new mod build, call the tool via MCP Inspector or the `pvp_smoke.py` pattern.
+4. **Document**, `capabilities()` will auto-include it; update `docs/command-reference.md` in your PR. If the new tool is multi-agent-related, also update `docs/multi-agent.md`.
 
 ## Testing
 

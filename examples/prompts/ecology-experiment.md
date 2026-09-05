@@ -1,6 +1,6 @@
-# Demo prompt — Predator-prey ecology experiment
+# Demo prompt, Predator-prey ecology experiment
 
-Highlights the read/query side of the API — agent as scientist, not god.
+Highlights the read/query side of the API, agent as scientist, not god.
 
 ---
 
@@ -21,7 +21,7 @@ Highlights the read/query side of the API — agent as scientist, not god.
 >
 > Conclude with:
 > - A plain-text ASCII chart of the two populations over time.
-> - A short Lotka–Volterra-style interpretation.
+> - A short Lotka, Volterra-style interpretation.
 > - One follow-up experiment to propose (e.g., introducing a third species).
 
 ---

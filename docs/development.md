@@ -83,11 +83,11 @@ cd mod
 dotnet test
 ```
 
-The mod test suite (xUnit, ~70 cases) covers the suggester, the agent registry, the request-context permission/fog-of-war helpers, the turn-order rotation (incl. concurrency), and the message bus (delivery, broadcast fan-out, cursoring, bounded-inbox drop-oldest) — **without the game**. The pattern is "linked sources": pure-logic files from the mod project are referenced as `<Compile Include="..\..\src\..." Link="..." />` in the test csproj so they compile under net8 without Unity. Anything that genuinely needs WorldBox to be running lives in the server-side e2e suite instead.
+The mod test suite (xUnit, ~70 cases) covers the suggester, the agent registry, the request-context permission/fog-of-war helpers, the turn-order rotation (incl. concurrency), and the message bus (delivery, broadcast fan-out, cursoring, bounded-inbox drop-oldest), **without the game**. The pattern is "linked sources": pure-logic files from the mod project are referenced as `<Compile Include="..\..\src\..." Link="..." />` in the test csproj so they compile under net8 without Unity. Anything that genuinely needs WorldBox to be running lives in the server-side e2e suite instead.
 
 ### Decompiling the game
 
-Open `<worldbox>/worldbox_Data/Managed/Assembly-CSharp.dll` (macOS: `worldbox.app/Contents/Resources/Data/Managed/`) in ILSpy. The mod itself never references this assembly — everything game-specific goes through reflection (`GameRefs`), which is what lets it build on a bare CI runner from the `UnityEngine.Modules` NuGet package alone. Record findings in [game-api-notes.md](game-api-notes.md).
+Open `<worldbox>/worldbox_Data/Managed/Assembly-CSharp.dll` (macOS: `worldbox.app/Contents/Resources/Data/Managed/`) in ILSpy. The mod itself never references this assembly, everything game-specific goes through reflection (`GameRefs`), which is what lets it build on a bare CI runner from the `UnityEngine.Modules` NuGet package alone. Record findings in [game-api-notes.md](game-api-notes.md).
 
 ## Working on the server
 
@@ -106,7 +106,7 @@ cd server
 uv run pytest tests/unit tests/integration
 ```
 
-The integration suite spins up a fake bridge in pure Python (`aiohttp`) that mimics the mod's HTTP contract — no game required.
+The integration suite spins up a fake bridge in pure Python (`aiohttp`) that mimics the mod's HTTP contract, no game required.
 
 ### End-to-end smoke tests
 
