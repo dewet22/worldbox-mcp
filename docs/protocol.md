@@ -121,7 +121,7 @@ Content-Type: application/json
 | `UNAUTHORIZED` | 401 | Missing or wrong bearer credential. |
 | `DISABLED` | 503 | `enabled = false` in `WorldBoxBridge.cfg`. The kill-switch is active. |
 | `PERMISSION_DENIED` _(v0.3+)_ | 403 | The agent's role lacks the permission this command needs. |
-| `FACTION_SCOPE_VIOLATION` _(v0.3+)_ | 403 | A FactionPlayer tried to act on a kingdom it doesn't claim. |
+| `FACTION_SCOPE_VIOLATION` _(v0.3+)_ | 403 | Reserved, currently never raised. A kingdom claim scopes reads, not writes, see [multi-agent.md](multi-agent.md#a-kingdom-claim-scopes-reads-not-writes). |
 | `TURN_NOT_YOURS` _(v0.3+)_ | 409 | Turn-based mode is active and another agent holds the current slot. |
 
 ## `GET /capabilities`

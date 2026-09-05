@@ -83,7 +83,7 @@ cd mod
 dotnet test
 ```
 
-The mod test suite (xUnit, 104 cases) covers the suggester, the agent registry, the request-context permission/fog-of-war helpers, the turn-order rotation (incl. concurrency), and the message bus (delivery, broadcast fan-out, cursoring, bounded-inbox drop-oldest), **without the game**. The pattern is "linked sources": pure-logic files from the mod project are referenced as `<Compile Include="..\..\src\..." Link="..." />` in the test csproj so they compile under net8 without Unity. Anything that genuinely needs WorldBox to be running lives in the server-side e2e suite instead.
+The mod test suite (xUnit) covers the suggester, the agent registry, the request-context permission/fog-of-war helpers, the turn-order rotation (incl. concurrency), and the message bus (delivery, broadcast fan-out, cursoring, bounded-inbox drop-oldest), **without the game**. The pattern is "linked sources": pure-logic files from the mod project are referenced as `<Compile Include="..\..\src\..." Link="..." />` in the test csproj so they compile under net8 without Unity. Anything that genuinely needs WorldBox to be running lives in the server-side e2e suite instead.
 
 ### Decompiling the game
 

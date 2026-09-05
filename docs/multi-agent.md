@@ -11,7 +11,7 @@ narrator? All four work through the same session layer, only the config differs.
 The bridge keeps a per-process registry of authenticated agents. Each agent has its own
 bearer token, role, optional kingdom claim, and inbox. Every command that modifies or
 observes the world receives a `RequestContext` carrying that identity, so the bridge can
-gate actions and scope reads per agent.
+gate actions by role and scope reads per agent.
 
 ## <!-- gen-docs:begin total-words -->Twenty-nine<!-- gen-docs:end total-words --> MCP tools, six categories
 
@@ -133,8 +133,28 @@ naturally: pick the one that fits your agent.
 - `AdvanceTime`: **non-destructive** simulation-flow controls: pause, resume, set_speed, dismiss_window. Granted to active-player roles so PvP agents can fast-forward through quiet phases (`worldbox_set_speed("x20")`) or pause to think without needing a god agent in the session. Spectator roles (Observer, Narrator) intentionally do NOT have it, they shouldn't be able to skip ahead while the actual players are still deliberating.
 
 Every command declares the permission it needs via `ctx.Require(...)` at the top of its
-`ExecuteAsync`. Missing permission returns HTTP 403 with `code: PERMISSION_DENIED`. Cross-
-faction action attempts return HTTP 403 with `code: FACTION_SCOPE_VIOLATION`.
+`ExecuteAsync`. Missing permission returns HTTP 403 with `code: PERMISSION_DENIED`.
+
+### A kingdom claim scopes reads, not writes
+
+Say it plainly, because the shape of the config suggests otherwise: `kingdom_claim` narrows
+what an agent **sees**. Nothing in the bridge stops a FactionPlayer from acting outside the
+kingdom it claims, and no release ever has.
+
+That is not an oversight left to fix, it is what the commands allow. `spawn`, the only Action
+command a FactionPlayer can reach since 0.5.0, takes no kingdom argument: the game assigns the
+actor's kingdom itself from `ActorAsset.kingdom_id_wild`, so there is no kingdom for a guard to
+check. `paint_tile` and `invoke_power` are map-wide, which is exactly why they are gated behind
+`ActionGlobal` and out of a FactionPlayer's reach entirely. Between the two there is nothing
+left for a per-kingdom write scope to hold.
+
+A `RequestContext.RequireKingdomAccess` shipped with the session layer in 0.3.0 and never had
+a call site anywhere in the mod, which read as an enforced boundary while enforcing nothing. It was removed rather
+than wired. Should `kingdom_claim: "auto:N"` ever resolve to a real kingdom id and a command start
+naming a kingdom, writing it back is a ten-line job.
+
+The practical consequence for a PvP session: territorial discipline is an agreement between the
+agents, backed by fog of war and by the prompt, not a wall the bridge puts up.
 
 ## Fog-of-war (partial_intel)
 
@@ -226,7 +246,7 @@ New error codes (HTTP status + JSON `code`):
 | Code | Status | Meaning |
 |---|---|---|
 | `PERMISSION_DENIED` | 403 | The agent's role lacks the permission this command requires. |
-| `FACTION_SCOPE_VIOLATION` | 403 | The agent tried to act on a kingdom it doesn't claim. |
+| `FACTION_SCOPE_VIOLATION` | 403 | Reserved. Nothing raises it: see [A kingdom claim scopes reads, not writes](#a-kingdom-claim-scopes-reads-not-writes). Kept in the vocabulary so a client's handling does not need rewriting when a per-kingdom write scope becomes possible. |
 | `TURN_NOT_YOURS` | 409 | Turn-based mode is active and another agent holds the current slot. |
 
 ## End-to-end smoke

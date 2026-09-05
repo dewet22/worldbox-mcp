@@ -169,56 +169,6 @@ public class RequestContextTests
         ctx.CanSeeKingdom(target).Should().Be(expected);
     }
 
-    // ─── RequireKingdomAccess (faction binding for Action commands) ───────
-
-    [Fact]
-    public void RequireKingdomAccess_god_can_touch_anything()
-    {
-        var ctx = Ctx(AgentRole.God);
-        FluentActions.Invoking(() => ctx.RequireKingdomAccess(42)).Should().NotThrow();
-    }
-
-    [Fact]
-    public void RequireKingdomAccess_unbound_factionplayer_can_touch_anything()
-    {
-        // "auto:N" not yet resolved → unbound → permissive (will be tightened in Phase 6 once resolution is wired)
-        var ctx = Ctx(AgentRole.FactionPlayer, kingdomClaim: null);
-        FluentActions.Invoking(() => ctx.RequireKingdomAccess(42)).Should().NotThrow();
-    }
-
-    [Fact]
-    public void RequireKingdomAccess_factionplayer_can_touch_own_kingdom()
-    {
-        var ctx = Ctx(AgentRole.FactionPlayer, kingdomClaim: 7);
-        FluentActions.Invoking(() => ctx.RequireKingdomAccess(7)).Should().NotThrow();
-    }
-
-    [Fact]
-    public void RequireKingdomAccess_factionplayer_cannot_touch_foreign_kingdom()
-    {
-        var ctx = Ctx(AgentRole.FactionPlayer, kingdomClaim: 7);
-        FluentActions
-            .Invoking(() => ctx.RequireKingdomAccess(3))
-            .Should()
-            .Throw<BridgeRejectionException>()
-            .Where(ex => ex.Code == ErrorCode.FactionScopeViolation)
-            .WithMessage("*kingdom=7*kingdom 3*");
-    }
-
-    [Fact]
-    public void RequireKingdomAccess_observer_without_ActionGlobal_cannot_act_on_foreign_kingdom()
-    {
-        // Observer has no claim and no ActionGlobal, the throwsite hits.
-        // (Observer can't act at all due to a separate Require(Permission.ActionFaction) gate
-        // in the command itself, but this test isolates RequireKingdomAccess's own logic.)
-        var ctx = Ctx(AgentRole.Observer, kingdomClaim: 7);
-        FluentActions
-            .Invoking(() => ctx.RequireKingdomAccess(3))
-            .Should()
-            .Throw<BridgeRejectionException>()
-            .Where(ex => ex.Code == ErrorCode.FactionScopeViolation);
-    }
-
     // ─── Legacy() factory ────────────────────────────────────────────────
 
     [Fact]
