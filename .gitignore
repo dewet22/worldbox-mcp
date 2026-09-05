@@ -71,16 +71,12 @@ WorldBoxBridge-v*.zip
 scratch/
 sandbox/
 
-# Docs build (mkdocs.yml moved to repo root in 0.3 -- legacy docs/site/ kept for back-compat)
+# Docs build
 site/
-docs/site/
 .cache/
 
 # Pre-commit
 .pre-commit-cache/
-
-# Scenario output (regenerated on each run)
-scratch/scenario_out/
 
 # Scenario output (regenerated on each run)
 examples/scenarios/output/
@@ -89,6 +85,26 @@ examples/scenarios/output/
 actionlint.exe
 actionlint
 
-
 # Build staging area for release artifacts
 release-stage/
+
+# ───────── AI agent scratch ─────────
+# Plans, notes and session state are personal working material. They name local paths and
+# throwaway ideas, they go stale immediately, and they are noise for anyone reading the repo.
+# The durable equivalents are tracked on purpose: CLAUDE.md, TODOS.md and docs/.
+plans/
+.plans/
+*.plan.md
+PLAN.md
+NOTES.md
+SCRATCHPAD.md
+
+# Per-machine agent config. A project-scoped .claude/settings.json can be committed
+# deliberately by force-adding it; local overrides and session state never are.
+.claude/
+.codex/
+.aider*
+.cursor/
+.cursorrules
+.windsurfrules
+.continue/

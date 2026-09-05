@@ -211,9 +211,93 @@ v0.1.1.
 | `x1` | 1× | default |
 | `x2` | 2× | UI button |
 | `x3` | 3× | UI button |
+| `x4` | 4× | UI button |
 | `x5` | 5× | UI button (5+ requires premium in vanilla, but no enforcement at the API layer) |
 | `x10` | 10× | hidden via UI but accepted by API |
 | `x15` | 15× | hidden via UI but accepted by API |
 | `x20` | 20× | hidden via UI but accepted by API |
+| `x40` | 20× | hidden via UI. The multiplier really is 20, same as `x20`, so these ids are labels rather than factors |
 
-`set_speed("x99")` returns `UNKNOWN_ASSET` with `did_you_mean: ["x1", "x10", "x15", "x2", "x20"]` — that's how this list was discovered.
+Ten entries in total. Call `list_speeds` for the live list from the running build, including which
+one is currently active. `set_speed("x99")` returns `UNKNOWN_ASSET` and lists every valid id.
+
+---
+
+## Gotchas, the ones that cost us a day each
+
+These are real bugs and mismatches we hit and fixed. **If something in the reflection layer
+breaks, read this list before debugging anything else.**
+
+1. **`System.Net.HttpListener` silently refuses to bind** under Unity 2022.3 Mono. `IsListening`
+   returns true while `netstat` shows no port at all. That is why `HttpBridge.cs` is a
+   `TcpListener` plus a hand-rolled HTTP/1.1 parser instead of the obvious thing. See
+   [Unity Discussions #755558](https://discussions.unity.com/t/httplistener-ignores-port-on-some-windows-platform-s/755558).
+
+2. **`new TcpListener(IPAddress.Parse("127.0.0.1"), port)` also silently fails to bind.** The
+   `Parse` path produces an instance Mono treats differently from the static constant. Always use
+   `IPAddress.Loopback`, or `IPAddress.IPv6Loopback` / `IPAddress.Any` if you really mean those.
+   `BridgeConfig.AssertLoopbackOnly` and the host switch in `HttpBridge` enforce it.
+
+3. **BepInEx `MonoBehaviour` GameObjects get destroyed shortly after `Awake`** in this game, so
+   `MainThreadDispatcher` does not live on one. It injects a delegate straight into Unity's
+   `PlayerLoop` Update phase through `PlayerLoop.SetPlayerLoop`. That entry is part of the
+   engine's tick table and survives the lifecycle quirk.
+
+4. **`SimSystemManager<,>` has `getSimpleList()`, `MetaSystemManager<,>` does not.** Both inherit
+   from `CoreSystemManager<,>`, which implements `IEnumerable<T>`. Iterate any manager through
+   `IEnumerable`, never through `getSimpleList` reflection. Same for `Count`, which is a property
+   on `CoreSystemManager`. Getting this wrong makes `list_kingdoms` return zero while kingdoms
+   are plainly alive.
+
+5. **`System.ValueTuple` is not always loadable under Unity Mono** on net462, since it ships
+   out of band. Tuple syntax in a signature, a field type or a dictionary key can throw
+   `TypeLoadException` at first JIT. Use a plain `readonly struct`. `WorldAccess.MapDimensions`,
+   `AssetCatalog.TypeFieldKey` and `HttpBridge.HeaderReadResult` all exist for this reason.
+
+6. **`Type.GetMethod(name, flags)` without explicit argument types throws
+   `AmbiguousMatchException`** as soon as the name has overloads, and `Actor.getName` and
+   `WorldTile.setTileType` both do. `WorldAccess.CachedMethod` and `GameRefs.Method` enumerate
+   `GetMethods()` and filter by hand rather than using the convenience overload. Pass explicit
+   argument types anyway when you know the method is overloaded.
+
+7. **Powers use different click delegates.** Most `GodPower`s set `click_action`, typed
+   `(WorldTile, string)`. The drops, bombs and drop-building families (`rain`, `fire`, `bomb`,
+   `volcano`, `plague`, `acid`) set `click_power_action`, typed `(WorldTile, GodPower)` instead.
+   `invoke_power` tries both and reports which one fired in `via`. Still not drivable:
+   brush-only powers (`click_brush_action`), `toggle_action` toggles, and anything reading live
+   pointer state. `finger` reads `player_control.first_pressed_type`, which only a real mouse
+   press sets, so it throws inside the game and is reported as `GAME_REJECTED`.
+
+8. **`SaveManager.saveWorldToDirectory` throws a `NullReferenceException` when no world is
+   loaded**, deep inside `World.world.items.diagnostic()`. `SaveWorldCommand` pre-flights on map
+   dimensions and refuses with a clear message. It also refuses while `Config.worldLoading` is
+   true, because `MapBox` reports its dimensions before loading has actually finished.
+
+9. **`Application.unityVersion` reports `"2022.3.60f1"` while the real build is
+   `2022.3.60.6251517`** according to the BepInEx log. `/health` reports the public-facing string.
+
+10. **A dependency bump can break the plugin at load time without touching a line of game code.**
+    The plugin binds at runtime to whatever BepInEx and the game bundle, not to what NuGet
+    restored. Two real cases, both from one automated dependency sweep. HarmonyX 2.16 pulled in
+    `MonoMod.Backports`, which BepInEx 5.4.23 does not ship, so `Chainloader.Start` threw
+    `FileNotFoundException` and `Awake` never ran. Newtonsoft.Json 13.0.4 added
+    `JToken.ToString(Formatting)`, the compiler preferred that overload, and the game's bundled
+    Newtonsoft.Json-for-Unity 13.0.2 threw `MissingMethodException` on `/capabilities`. Both were
+    invisible in `LogOutput.log` and only showed up in Unity's `Player.log`. The rules that came
+    out of it: keep Newtonsoft.Json pinned to the game's version, never reference a package you
+    do not use, and after any mod dependency change check the built DLL's references
+    (`strings WorldBoxBridge.dll | grep -i monomod`) and make one live `/capabilities` call.
+
+---
+
+## Two registry families, do not confuse them
+
+| Asset library, the templates | Live entity manager, the instances |
+|---|---|
+| `AssetManager.tiles`, TileType templates | `MapBox.instance.tiles_map[x,y]`, actual WorldTile instances |
+| `AssetManager.actor_library`, ActorAsset templates | `MapBox.instance.units`, ActorManager of live Actors |
+| `AssetManager.kingdoms`, KingdomAsset templates, meaning race definitions | `MapBox.instance.kingdoms`, KingdomManager of live Kingdoms |
+| Iterated through the `AssetLibrary<T>.list` field | Iterated through `IEnumerable<T>` on `CoreSystemManager` |
+
+`list_tiles`, `list_actors`, `list_powers` and `list_speeds` read the asset side.
+`list_kingdoms`, `list_cities`, `query_actors` and `get_world_state` read the live side.
