@@ -45,7 +45,7 @@ page tracks it but may lag.
 
 | Tool | Args | Effect |
 |---|---|---|
-| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal, every spawn-by-race, every disaster, and the drops/bombs families (`rain`, `fire`, `bomb`, `volcano`, ...). Returns `{accepted: bool, via}`; `via` is the game delegate used (`click_action` or `click_power_action`), `accepted=false` means the game declined this time (some powers roll a chance). Brush-only/toggle powers and ones needing live mouse state (`finger`) return `GAME_REJECTED` with a reason. |
+| `worldbox_invoke_power` | `power_id`, `x`, `y` | Universal, every spawn-by-race, every disaster, and the drops/bombs families (`rain`, `fire`, `bomb`, `volcano`, ...). Returns `{accepted: bool, via}`; `via` is the game delegate used (`click_action` or `click_power_action`), `accepted=false` means the game declined this time (some powers roll a chance). Brush-only/toggle powers and ones needing live mouse state (`finger`) return `GAME_REJECTED` with a reason. Requires the global action scope (God role) in a multi-agent session, same as `worldbox_paint_tile`; a FactionPlayer uses `worldbox_spawn`. |
 | `worldbox_spawn` | `entity_id`, `x`, `y`, `count=1`, `adult=false`, `spawn_height=6` | Spawn actors **not exposed as GodPowers**, `dragon`, `cthulhu`, `kraken`, specific animals. Wild kingdom auto-assigned via `ActorAsset.kingdom_id_wild`. |
 | `worldbox_paint_tile` | `x`, `y`, `tile_id?`, `top_id?`, `radius=0` | Paints a Euclidean disc. Provide `tile_id` (ground), `top_id` (decoration), or both. Out-of-map cells silently skipped. |
 
@@ -75,7 +75,7 @@ page tracks it but may lag.
 | `worldbox_set_speed` | Pass a `WorldTimeScaleAsset` id from `worldbox_list_speeds` (`slow_mo`, `x1`, `x2`, `x3`, `x4`, `x5`, `x10`, `x15`, `x20`, `x40`). Higher = simulation runs faster than real time. Returns `{speed_id, multiplier, previous}`; unknown ids get `UNKNOWN_ASSET` listing every valid id. |
 | `worldbox_generate_world` | Wipes the world and regenerates a map. Optional `zone_x`/`zone_y` (each zone = 64 tiles). Async, poll `get_world_state` until `tick` advances. |
 | `worldbox_save_world` | Required `folder`: absolute path, or a name resolved under the game's `saves/` directory (in-game slots are `save1`, `save2`, ...; `..` is rejected). Returns the resolved `path`. Save format compatible with the in-game load UI. Refuses if no world loaded. |
-| `worldbox_load_world` | One of `path` (save file, save folder, or a name under `saves/` such as `save1`) or `bytes_b64` (base64 zipped save). Async. |
+| `worldbox_load_world` | One of `path` (save file, save folder, or a name under `saves/` such as `save1`) or `bytes_b64` (base64 zipped save). `bytes_b64` wins if both are given. Async. The response reports what was actually read: `source` is `path` or `bytes_b64`, and `path` carries the resolved file when one was read, `null` otherwise. |
 
 ---
 

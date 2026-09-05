@@ -55,7 +55,9 @@ internal sealed class LoadWorldCommand : ICommand
                             new JProperty(
                                 "description",
                                 "Base64-encoded zipped save bytes. Use when sending the save "
-                                    + "directly without writing to disk."
+                                    + "directly without writing to disk. Wins over `path` if "
+                                    + "both are supplied; the response's `source` says which "
+                                    + "was read."
                             )
                         )
                     )
@@ -88,7 +90,11 @@ internal sealed class LoadWorldCommand : ICommand
             );
         }
 
+        // bytes_b64 wins when both are supplied. `readFrom` records which branch actually ran
+        // so the response can say so: it used to be derived from `path` being non-empty, which
+        // reported source "path" for a load that read nothing but the base64 payload.
         byte[] data;
+        string? readFrom = null;
         if (!string.IsNullOrEmpty(bytesB64))
         {
             try
@@ -105,8 +111,8 @@ internal sealed class LoadWorldCommand : ICommand
         }
         else
         {
-            path = ResolveMapFile(path!);
-            data = File.ReadAllBytes(path);
+            readFrom = ResolveMapFile(path!);
+            data = File.ReadAllBytes(readFrom);
         }
 
         _loadMapFromBytes ??= saveMgrType.GetMethod(
@@ -137,8 +143,8 @@ internal sealed class LoadWorldCommand : ICommand
             {
                 scheduled = true,
                 bytes = data.Length,
-                source = !string.IsNullOrEmpty(path) ? "path" : "bytes_b64",
-                path = path,
+                source = readFrom != null ? "path" : "bytes_b64",
+                path = readFrom,
                 note = "Load runs asynchronously. Poll get_world_state until tick advances.",
             }
         );
