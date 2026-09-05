@@ -261,6 +261,8 @@ These are bugs / mismatches we hit and fixed. **If something in the reflection l
 
 9. **`Application.unityVersion` reports `"2022.3.60f1"` but the build is `2022.3.60.6251517` (per BepInEx log)**. The mod uses `Application.unityVersion` (the public-facing string) in `/health`.
 
+10. **Dependency bumps can break the plugin at load or call time without touching game code.** The plugin binds at runtime to whatever BepInEx and the game bundle, not to what NuGet restored. Two real cases from the v0.3.0 dependabot sweep: HarmonyX 2.16 pulled in `MonoMod.Backports`, which BepInEx 5.4.23 doesn't ship, so `Chainloader.Start` threw `FileNotFoundException` and `Awake` never ran (only visible in Unity's `Player.log`, not `LogOutput.log`). Newtonsoft.Json 13.0.4 added `JToken.ToString(Formatting)`, the compiler preferred it over the `params` overload, and the game's bundled Newtonsoft.Json-for-Unity 13.0.2 threw `MissingMethodException` on `/capabilities`. Rule: keep Newtonsoft.Json pinned to the game's version (`Directory.Packages.props`), don't reference Harmony unless you use it, and after any mod dependency change verify with `strings WorldBoxBridge.dll | grep -i monomod` plus a live `/capabilities` call.
+
 ---
 
 ## Live entity vs asset library — two registry families
