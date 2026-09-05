@@ -68,8 +68,14 @@ construction and only kept for history.
 
 ## Rules that are easy to break
 
-- **Every Unity API call goes through `MainThreadDispatcher.RunOnMainThreadAsync`.** Anything else
-  corrupts game state without an error.
+- **Every Unity API call is marshalled onto the main thread**, through
+  `MainThreadDispatcher.RunOnMainThreadAsync` for a single call or
+  `RunPerFrameOnMainThreadAsync` for one that repeats per frame. Anything else corrupts game
+  state without an error. A command may legitimately report `RequiresMainThread => false` and
+  marshal only the game call, which is what keeps blocking I/O out of a frame, see
+  `LoadWorldCommand`. And `true` marshals the command's first thread, not its whole body: an
+  `await` inside one escapes the dispatcher's deadline and per-frame cap. The remarks on
+  `ICommand.RequiresMainThread` carry the detail.
 - **No `System.ValueTuple`** in a signature, a field type or a dictionary key. It is not always
   loadable under Unity Mono on net462. Use a `readonly struct`.
 - **Never add a package reference you do not use.** A dependency bump can break the plugin at load

@@ -227,6 +227,13 @@ All verified against the 0.51.2 decompile.
   `Config.current_brush` around each brush-delegate invocation and restores the previous
   brush in a `finally`, so the player's own brush selection never visibly changes, even
   during multi-frame pulse runs.
+- **What `Brush.get(int, string)` returns is not recorded here, and the bridge does not
+  assume it.** The clone behaviour above is decompiled, the return type is not, and the
+  `Config.current_brush` setter reaches a `Brush.get(id)` that answers with brush data rather
+  than with the library asset. So `BrushAccess` selects the name it built, `circ_<radius>`,
+  which is correct on a stock build, and only logs when the returned asset's `id` disagrees.
+  One live `invoke_power` with a radius settles it: no warning means the constructed name is
+  the asset id, and the reader can then be trusted and the guess dropped.
 - There is no intensity parameter anywhere in the game's power model. The interactive
   "storm" is repetition: holding the mouse (or the shift modifier,
   `HotkeyLibrary.many_mod`) re-fires the click delegate once per frame in
