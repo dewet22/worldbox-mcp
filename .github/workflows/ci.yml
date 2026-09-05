@@ -184,10 +184,19 @@ jobs:
         working-directory: server
         run: uv run worldbox-mcp --self-check --no-bridge-required
       - name: Docs match the registered tool surface
-        # Fails when a count, an inventory table or the C#/Python command parity drifts.
-        # `--write` refreshes the generated regions locally.
+        # Fails when a count, an inventory table, the C#/Python command parity, the screenshot
+        # defaults or the compatibility matrix row drifts. `--write` refreshes the generated
+        # regions locally.
+        #
+        # On release-please's branch one check is dropped rather than all of them: that PR bumps
+        # the four version files, and the matrix row for the new version is written by hand once
+        # the release is actually out, so `--skip-release-version` turns off that check alone and
+        # everything else keeps running. The next ordinary PR fails on it until the row is
+        # written, which is how the matrix stops drifting a release behind.
         working-directory: server
-        run: uv run --frozen python ../scripts/gen-docs.py --check
+        run: >-
+          uv run --frozen python ../scripts/gen-docs.py --check
+          ${{ startsWith(github.head_ref, 'release-please--') && '--skip-release-version' || '' }}
 
   pre-commit:
     name: Pre-commit

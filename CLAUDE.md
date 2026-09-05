@@ -52,7 +52,8 @@ construction and only kept for history.
 ## Conventions
 
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/), in English.
-  release-please reads them to bump SemVer and write the changelog.
+  release-please reads them to bump SemVer and write the changelog. CI-only work is `ci:`, not
+  `fix(ci):`, which bumps the patch and lands under "Bug Fixes" for a change that ships nothing.
 - **Merge PRs with a merge commit, never a squash.** The repo takes the PR title as the squash
   subject, so squashing a PR titled `deps: ...` hides the `feat:` commits inside it and the minor
   bump is silently skipped. The one exception is release-please's own PR, which is squashed.
@@ -95,8 +96,12 @@ Each of these fixed a real failure. Read the reason before tidying one away.
   `id-token: write`. Only `publish-pypi` gets the PyPI token. Do not hoist these back to the top.
 - **FluentAssertions is capped at 6.x** in dependabot config. v7 moved to a paid commercial
   licence. v6 is the last MIT release.
-- **The lockfile check skips release-please's branch.** That PR bumps `pyproject.toml` and cannot
-  run `uv`, so `uv.lock` is legitimately one version behind until the release lands.
+- **Two checks stand down on release-please's branch.** That PR bumps `pyproject.toml` and
+  cannot run `uv`, so `uv.lock` is legitimately one version behind until the release lands, and
+  the compatibility matrix has no row for a version that is not out yet. The lockfile step is
+  skipped whole; gen-docs keeps running and drops only its version check, via
+  `--skip-release-version`. Both fail on the next ordinary PR until someone runs `uv lock` and
+  writes the row.
 - **The Pre-commit job does not run csharpier**, because that runner has no .NET SDK. The
   dedicated `lint-mod` job covers it.
 - **The MCP conformance check calls `worldbox-mcp --self-check` directly**, not the MCP Inspector

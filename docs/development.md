@@ -171,6 +171,20 @@ a check that goes quiet because it can no longer find what it was comparing is w
 check. The one thing still hand-maintained in that row is the "~150-250 KB" size estimate,
 which is prose about a value rather than the value.
 
+The last thing it checks is the release version, which four files state and release-please
+bumps through the `extra-files` entries in `release-please-config.json`. They are compared with
+each other, because a broken updater entry is silent and the release then ships with one of the
+four a version behind. The agreed version must then have a row in
+[compatibility.md](compatibility.md), which is the one document recording whether a release
+actually works and the only one still written by hand. Nothing used to check that the row
+existed, so the failure mode was a matrix quietly a release behind, which reads exactly like a
+release nobody has reported a problem with.
+
+That one check stands down on release-please's own branch, passed `--skip-release-version`:
+that PR bumps the four files and the row is written once the release is out. Only that check is
+dropped, the counts, the inventories and the screenshot defaults all keep running there. The
+next ordinary PR fails until the row is written.
+
 The script itself is covered by `server/tests/unit/test_gen_docs.py`, which drives it against
 a throwaway tree. A check that stays quiet when the docs drift would be worse than no check.
 
@@ -246,6 +260,14 @@ gh pr merge <n> --merge --body "Reviewed: 134 tests green, csharpier and ruff cl
 
 The release-please PR is the one exception to all of this and is squashed.
 
+**Use `ci:` for CI-only work, not `fix(ci):`.** `fix` is a `fix` whatever its scope, so a
+workflow tweak lands under "Bug Fixes" beside real user-facing fixes and bumps the patch
+version of a package whose shipped code did not change. Several `fix(ci):` commits are in the
+changelog for that reason. `ci:` is mapped to a hidden section and bumps nothing, which is
+what a runner-only change deserves. The exception is a CI change that alters what ships or
+whether it ships at all, a broken release workflow for instance: that is a real fix and the
+bump is earned.
+
 Merging the release PR tags the version, creates the GitHub Release, and triggers two jobs:
 
 - `publish-pypi` publishes the wheel and sdist through [PyPI trusted publishing](https://docs.pypi.org/trusted-publishers/).
@@ -273,4 +295,9 @@ either, which is how `uv.lock` sat at 0.3.3 against a 0.4.0 `pyproject.toml` wit
 `Lockfile matches pyproject` step in `ci.yml` is the backstop: it skips release-please's own
 branch, so if this step is forgotten the next ordinary PR fails until someone runs `uv lock`.
 
-`docs/compatibility.md` is still updated by hand after a release.
+Then add the row to `docs/compatibility.md`, status 🔵, saying what the release contains and
+that nobody has run it against a game yet. It becomes ✅ only once the
+[e2e smoke suite](#end-to-end-smoke-tests) passes against a real install. The row is still
+written by hand, on purpose, since no script can know whether a release works. What is checked
+is that the row exists: `gen-docs.py --check` fails while the matrix has no row for the version
+the tree declares, so a forgotten row blocks the next ordinary PR rather than going unnoticed.

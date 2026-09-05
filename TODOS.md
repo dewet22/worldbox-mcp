@@ -87,9 +87,6 @@ Nothing queued. The Debt section is the natural queue.
       `MainThreadDispatcher.RunOnMainThreadAsync`. Nothing before that line touches a Unity
       API. That path cannot be exercised without the game, so it wants its own PR and a manual
       check against a running WorldBox.
-- [ ] Roadmap item 9: `fix(ci):` commits land under "Dependencies" in the generated changelog.
-      Cosmetic, but easier to fix before the next minor than after.
-- [ ] `docs/compatibility.md` is still updated by hand after a release, and nothing checks it.
 
 ## 💡 Not committed to
 
