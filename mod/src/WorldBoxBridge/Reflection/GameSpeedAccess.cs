@@ -1,0 +1,51 @@
+using System.Reflection;
+
+namespace WorldBoxBridge.Reflection;
+
+/// <summary>
+/// Reflection access to the game's simulation speed: <c>Config.time_scale_asset</c>, the
+/// <c>WorldTimeScaleAsset</c> currently applied.
+/// </summary>
+/// <remarks>
+/// <c>list_speeds</c> and <c>set_speed</c> both report the active speed, and each carried its own
+/// copy of this reader. The copies had already diverged: <c>SetSpeedCommand</c>'s went straight to
+/// <c>Type.GetField</c> on every read, bypassing the <see cref="GameRefs"/> cache that the other
+/// one used. Fail-soft like the rest of the reflection layer: a missing symbol reads as null.
+/// </remarks>
+internal sealed class GameSpeedAccess
+{
+    private const BindingFlags Static =
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+    private const BindingFlags Instance =
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+
+    private readonly GameRefs _refs;
+    private FieldInfo? _timeScaleAsset;
+    private FieldInfo? _assetId;
+
+    public GameSpeedAccess(GameRefs refs) => _refs = refs;
+
+    /// <summary>The active <c>WorldTimeScaleAsset</c>, or null if unavailable.</summary>
+    public object? CurrentSpeedAsset()
+    {
+        var configType = _refs.Type("Config");
+        if (configType == null)
+        {
+            return null;
+        }
+        _timeScaleAsset ??= _refs.Field(configType, "time_scale_asset", Static);
+        return _timeScaleAsset?.GetValue(null);
+    }
+
+    /// <summary><c>Config.time_scale_asset.id</c>, or null if unavailable.</summary>
+    public string? CurrentSpeedId()
+    {
+        var asset = CurrentSpeedAsset();
+        if (asset == null)
+        {
+            return null;
+        }
+        _assetId ??= asset.GetType().GetField("id", Instance);
+        return _assetId?.GetValue(asset) as string;
+    }
+}

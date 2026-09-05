@@ -54,6 +54,7 @@ public sealed class Plugin : BaseUnityPlugin
             var assetCatalog = new AssetCatalog(gameRefs, Logger);
             var worldAccess = new WorldAccess(gameRefs, Logger);
             var gameUi = new GameUiAccess(gameRefs, Logger);
+            var gameSpeed = new GameSpeedAccess(gameRefs);
             if (config.SuppressStartupWindow.Value && gameUi.SetDisableStartupWindow(true))
             {
                 Logger.LogInfo(
@@ -75,6 +76,7 @@ public sealed class Plugin : BaseUnityPlugin
                 gameRefs,
                 worldAccess,
                 gameUi,
+                gameSpeed,
                 session
             );
             Logger.LogInfo($"{registry.Count} commands registered.");
@@ -132,6 +134,7 @@ public sealed class Plugin : BaseUnityPlugin
         GameRefs gameRefs,
         WorldAccess worldAccess,
         GameUiAccess gameUi,
+        GameSpeedAccess gameSpeed,
         SessionState session
     )
     {
@@ -151,7 +154,7 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ListTilesCommand(assetCatalog));
         registry.Register(new ListActorsCommand(assetCatalog));
         registry.Register(new ListPowersCommand(assetCatalog));
-        registry.Register(new ListSpeedsCommand(assetCatalog, gameRefs));
+        registry.Register(new ListSpeedsCommand(assetCatalog, gameSpeed));
 
         // Actions, modify the world.
         registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, Logger));
@@ -170,7 +173,7 @@ public sealed class Plugin : BaseUnityPlugin
         // Control, simulation flow + world lifecycle.
         registry.Register(new PauseCommand(gameRefs));
         registry.Register(new ResumeCommand(gameRefs));
-        registry.Register(new SetSpeedCommand(assetCatalog, gameRefs));
+        registry.Register(new SetSpeedCommand(assetCatalog, gameRefs, gameSpeed));
         registry.Register(new DismissWindowCommand(gameUi));
         registry.Register(new GenerateWorldCommand(worldAccess, Logger));
         registry.Register(new SaveWorldCommand(gameRefs, worldAccess));

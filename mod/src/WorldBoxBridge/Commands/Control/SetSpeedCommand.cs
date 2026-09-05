@@ -25,12 +25,14 @@ internal sealed class SetSpeedCommand : ICommand
 {
     private readonly AssetCatalog _catalog;
     private readonly GameRefs _refs;
+    private readonly GameSpeedAccess _speed;
     private MethodInfo? _setWorldSpeedString;
 
-    public SetSpeedCommand(AssetCatalog catalog, GameRefs refs)
+    public SetSpeedCommand(AssetCatalog catalog, GameRefs refs, GameSpeedAccess speed)
     {
         _catalog = catalog;
         _refs = refs;
+        _speed = speed;
     }
 
     public string Name => "set_speed";
@@ -112,7 +114,7 @@ internal sealed class SetSpeedCommand : ICommand
                 "Config.setWorldSpeed(string, bool) not found in this WorldBox build."
             );
         }
-        var previous = CurrentSpeedId(configType);
+        var previous = _speed.CurrentSpeedId();
         _setWorldSpeedString.Invoke(null, new object?[] { speedId, true });
         return Task.FromResult<object?>(
             new
@@ -122,18 +124,6 @@ internal sealed class SetSpeedCommand : ICommand
                 previous,
             }
         );
-    }
-
-    private FieldInfo? _timeScaleAsset;
-
-    private string? CurrentSpeedId(Type configType)
-    {
-        _timeScaleAsset ??= configType.GetField(
-            "time_scale_asset",
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
-        );
-        var current = _timeScaleAsset?.GetValue(null);
-        return current == null ? null : ReadField(current, "id") as string;
     }
 
     private static object? ReadField(object target, string name) =>
