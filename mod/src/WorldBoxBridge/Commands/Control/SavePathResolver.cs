@@ -154,8 +154,9 @@ public static class SavePathResolver
     public static string ResolveMapFile(string? path, string savesRoot)
     {
         var resolved = ResolveFolder(path, savesRoot);
-        // Ordered so each success path pays the fewest syscalls: load_world runs on the Unity
-        // main thread, where every stat is inside the frame. FindMapFile does its own
+        // Ordered so each success path pays the fewest syscalls. Not for frame time any more:
+        // load_world resolves on the HTTP thread now, so no stat here sits inside a frame, and
+        // the order stays because it is free to. FindMapFile does its own
         // Directory.Exists, so asking it first covers the folder case; a direct map file then
         // costs one File.Exists on top. Only the two error paths look twice.
         var map = FindMapFile(resolved);
