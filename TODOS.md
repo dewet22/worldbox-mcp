@@ -5,23 +5,27 @@
 
 ## 🔄 Pick up here, 2026-09-05, fourth session of the day
 
-**Where things stand**: `main` is at `8006d5d`, clean, and **`v0.6.0` is out**. PyPI serves it
-and the GitHub release carries `WorldBoxBridge-v0.6.0.zip` with its `.sha256`. One PR is open on
-top of that, #68, which bounds in-flight commands and per-frame jobs. 223 xUnit and 84 pytest are
-green here, `gen-docs.py --check` is clean, and the tool count is still 29.
+**Where things stand**: `main` is at `8712397`, clean, and **`v0.6.0` is the released version**.
+PyPI serves it and the GitHub release carries `WorldBoxBridge-v0.6.0.zip` with its `.sha256`.
+#68 landed on top of it and 0.7.0 is now sitting in release-please's PR, unreleased. 223 xUnit
+and 84 pytest are green here, `gen-docs.py --check` is clean, and the tool count is still 29.
 
-**#68 is the work of this session**, and it closes the last Debt item that needed no running
+**#68 was the work of this session**, and it closed the last Debt item that needed no running
 game. Two counted bounds over one `ConcurrencyGate`: an admission gate in
 `HttpBridge.ExecuteCommandAsync` capped by `max_concurrent_requests` (default 8), and a cap of 32
 registered per-frame jobs in `MainThreadDispatcher`, the same number of queued actions it already
 drained per frame. Both refuse with the new `503 BUSY`. Its description carries the two placement
-arguments in full, and the section below repeats the short form.
+arguments in full, and the section below repeats the short form. Only half the in-flight Debt
+item closed, see the entry, which now states the residual instead of ticking the box.
 
-**Read this before merging #66.** It is release-please's own PR. It proposed 0.6.1 only because a
-commit in #65 was typed `fix(docs)` while shipping no code, and merging it in that state would
-have published a release whose only content was a corrected sample response. #68 is a real
-`feat:`, so once it lands #66 becomes 0.7.0 and an honest release. Merge #68 first, let
-release-please refresh #66, then cut the release with its three chores.
+**#66 is now an honest release, and cutting it is the next release decision.** It is
+release-please's own PR, the one exception that gets squashed. It proposed 0.6.1 only because a
+commit in #65 was typed `fix(docs)` while shipping no code, and merging it in that
+state would have published a release whose only content was a corrected sample response. #68 is
+a real `feat:`, so the PR now proposes **0.7.0**, and its changelog reads one Features line and
+one Bug Fixes line with nothing duplicated, which is the merge-body convention working. Cutting
+it owes the three chores below. Nothing forces the release today: another `feat:` would simply
+roll into the same PR.
 
 **The one thing owed to a running game, and it now costs more**: two releases in a row, 0.5.0 and
 0.6.0, ship on static evidence alone, and 0.7.0 will make three unless someone runs the live
@@ -81,12 +85,12 @@ straight off the 0.6.0 release instead of needing a rebuild.
   `docs/` pages, a PowerShell snippet in `multi-agent.md` read as dead links, and two test
   tokens one of which is literally named `test-token-do-not-use`. All expected, none real.
 
-**Next step**: merge #68, then the live pass, and after that nothing else is close in value.
-Install the 0.6.0 ZIP from the GitHub release on a machine that has WorldBox and run the four
-checks the Blocked section names. One session there closes three Debt items and turns both 🔵
-rows into ✅ or into bug reports. If the live pass has to wait for hardware, the two items left
-that need no game are the `GameRefs` cache key and the cancelled request reported as a
-main-thread timeout. Neither is large.
+**Next step**: the live pass, and nothing else is close in value. Install the 0.6.0 ZIP from the
+GitHub release on a machine that has WorldBox and run the four checks the Blocked section names.
+One session there closes three Debt items and turns both 🔵 rows into ✅ or into bug reports, and
+it would stop 0.7.0 from becoming the third release in a row cut on static evidence. If the live
+pass has to wait for hardware, the two items left that need no game are the `GameRefs` cache key
+and the cancelled request reported as a main-thread timeout. Neither is large.
 
 ---
 
