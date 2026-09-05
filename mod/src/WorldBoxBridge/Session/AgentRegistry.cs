@@ -11,7 +11,7 @@ namespace WorldBoxBridge.Session;
 /// </summary>
 /// <remarks>
 /// Lookups are constant-time-equal (timing-oracle safe) to match the legacy
-/// auth behavior. The registry itself is small (typically 1, 8 entries) so the
+/// auth behavior. The registry itself is small (typically 1 to 8 entries) so the
 /// linear scan dominated by FixedTimeEquals is fine.
 /// </remarks>
 public sealed class AgentRegistry

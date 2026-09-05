@@ -153,8 +153,6 @@ In your agent client:
 
 Or paste the full god-mode ecology prompt from [`examples/prompts/godmode-ecology.md`](examples/prompts/godmode-ecology.md) to exercise every tool category in one go.
 
-```text
-```
 
 ## The 29 tools
 
@@ -169,7 +167,7 @@ Or paste the full god-mode ecology prompt from [`examples/prompts/godmode-ecolog
 
 Each tool has rich docstrings the agent reads at startup to decide when to call what. Asset ids that don't exist trigger `UNKNOWN_ASSET` errors with **Levenshtein `did_you_mean` suggestions** drawn from the live catalog.
 
-Full reference: **[docs/command-reference.md](docs/command-reference.md)** (auto-generated from `capabilities()`).
+Full reference: **[docs/command-reference.md](docs/command-reference.md)**.
 
 ## Design principles
 
@@ -177,7 +175,7 @@ Full reference: **[docs/command-reference.md](docs/command-reference.md)** (auto
 - **100% coverage through 3 primitives.** `invoke_power` alone covers ~270 actions because the in-game GodPower model unifies spawns, disasters, and toggles. `spawn` reaches the actor catalog directly for non-power creatures. `paint_tile` handles terrain. The discovery tools tell the agent what's valid right now in this build.
 - **Local-only by design.** The HTTP bridge binds **only** to `127.0.0.1`, `0.0.0.0` is refused at startup. Auth is a per-install random token in `BepInEx/config/WorldBoxBridge.cfg`, or one bearer per agent in multi-agent mode via `BepInEx/config/WorldBoxBridge.agents.json`. Constant-time token comparison. No telemetry, no remote endpoints.
 - **Multi-agent ready (v0.3).** N AIs on one world via a session layer: per-agent role (god / faction_player / observer / narrator), permission gates, fog-of-war scoping, turn-based mode, bounded inter-agent message bus, scoreboard primitive. Four ready-to-customize presets (PvP / coop / hierarchical / sandbox) in `examples/scenarios/multi-agent/`.
-- **Production-grade.** Typed (mypy strict + C# nullable enabled), tested (87 unit + integration cases across xUnit and pytest), formatted (ruff + csharpier), signed releases via `release-please`, automated CI/CD across Win/Linux/Mac × Py 3.11, 3.13.
+- **Production-grade.** Typed (mypy strict + C# nullable enabled), tested (129 unit + integration cases across xUnit and pytest), formatted (ruff + csharpier), signed releases via `release-please`, automated CI/CD across Win/Linux/Mac × Py 3.11 to 3.13.
 
 ## Compatibility
 

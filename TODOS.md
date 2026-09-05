@@ -3,29 +3,40 @@
 > What to do next. This file keeps only the future. Anything done leaves here and lives in the
 > CHANGELOG, which release-please generates from the commits.
 
-<!-- bloc "Etat a la reprise", marqueur pour ctx-audit.sh. La prose du depot est en anglais. -->
-
 ## 🔄 Pick up here, 2026-09-05
 
-**Where things stand**: v0.4.0 shipped today. PyPI has `worldbox-mcp 0.4.0`, the GitHub release
-carries `WorldBoxBridge-v0.4.0.zip` plus its `.sha256`, and CI attached them on its own for the
-first time. All 15 CI jobs are green on `main`, including `Build mod` and `Test mod`, which used
-to be `continue-on-error: true` because the runner had no Unity DLLs. That hack is gone. The mod
-now builds from a bare checkout with no game installed, on Windows, Linux and macOS.
+**Where things stand**: v0.4.0 shipped. PyPI has `worldbox-mcp 0.4.0`, the GitHub release carries
+`WorldBoxBridge-v0.4.0.zip` plus its `.sha256`, and CI attached them on its own for the first
+time. All 15 CI jobs are green on `main`, including `Build mod` and `Test mod`, which used to be
+`continue-on-error: true` because the runner had no Unity DLLs. That hack is gone. The mod builds
+from a bare checkout with no game installed, on Windows, Linux and macOS.
 
-Anyone still running the 0.3.x mod DLL has a plugin that silently fails to load. Tell them to
-upgrade, because `LogOutput.log` looks normal in that state and the exception only shows up in
-Unity's `Player.log`.
+Anyone still running a 0.3.x mod DLL has a plugin that silently fails to load. Tell them to
+upgrade, because `LogOutput.log` looks perfectly normal in that state and the exception only
+shows up in Unity's own `Player.log`.
 
-**In flight**: nothing. Working tree is clean, `main` is at `8e0b754`.
+The repo was also cleaned up for public reading after the release. Maintainer knowledge that used
+to sit only in `CLAUDE.md` now lives in `docs/`, where contributors actually look: the ten game
+API gotchas in `game-api-notes.md`, the build and release material in `development.md`, the tree
+and the pinned versions in `architecture.md`. `CLAUDE.md` went from 437 lines to 124 and carries
+no machine-specific paths any more. There is no `CODEMAP.md`: it duplicated `architecture.md` and
+was removed rather than kept in sync.
 
-**Next step**: fix `compat-check.yml`, see the blocked section below. It is a one-line repo
-change and it has been silently failing every day since at least 2026-08-31, which means nobody
-is being told when WorldBox ships an update.
+**In flight**: nothing. Working tree is clean, `main` is at `2b690a2`.
 
-**Know before you touch anything**: the mod's `packages.lock.json` files are committed now.
-Change a package version and restore normally and CI will fail with NU1004. Regenerate with
-`dotnet restore mod/WorldBoxBridge.sln --force-evaluate` and commit the result.
+**Next step**: fix `compat-check.yml`, see the blocked section below. One repo-level change, and
+it has failed on every scheduled run since at least 2026-08-31, so nobody is being told when
+WorldBox ships an update.
+
+**Know before you touch anything**
+
+- `packages.lock.json` is committed for both mod projects. Change a package version, restore
+  normally, and CI fails with NU1004. Regenerate with
+  `dotnet restore mod/WorldBoxBridge.sln --force-evaluate` and commit the result.
+- Merge PRs with a merge commit, never a squash. The repo takes the PR title as the squash
+  subject, so squashing hides the `feat:` commits inside and release-please skips the minor bump.
+- Prose, comments and commits are all in English, and the repo is deliberately free of em dashes
+  outside code blocks and table notation. Keep it that way.
 
 ---
 
@@ -48,9 +59,10 @@ Change a package version and restore normally and CI will fail with NU1004. Rege
       it is a real asymmetry: closing a blocking window is a shared unblock, not a competitive
       move. See `HttpBridge` category gating and `Commands/Control/DismissWindowCommand.cs`.
 - [ ] Roadmap item 4, `scripts/gen-docs.py`. Generate `docs/command-reference.md` from
-      `worldbox_capabilities` instead of maintaining it by hand. Tool counts have now drifted
-      three times. The v0.4.0 review found `docs/index.md` still claiming twenty-six and missing
-      three tools outright.
+      `worldbox_capabilities` instead of maintaining it by hand. Every count is correct right now,
+      but they have drifted three separate times: the v0.4.0 review caught `docs/index.md` still
+      claiming twenty-six tools and missing three of them outright. The number is stated in five
+      places, so it will drift again unless it is generated.
 
 ## 🧹 Debt
 
