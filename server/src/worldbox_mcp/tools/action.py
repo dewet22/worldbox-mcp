@@ -13,12 +13,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer
 
     from worldbox_mcp.client import BridgeClient
 
 
-def register(server: FastMCP, client: BridgeClient) -> None:
+def register(server: MCPServer, client: BridgeClient) -> None:
     @server.tool(
         name="worldbox_invoke_power",
         description=(

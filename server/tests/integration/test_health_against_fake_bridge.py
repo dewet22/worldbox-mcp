@@ -75,6 +75,21 @@ class FakeBridge:
             return bad
         body = await request.json()
         self.calls.append(("POST", "/cmd", body))
+        if body.get("name") == "set_speed":
+            # Mirror the real bridge's UNKNOWN_ASSET envelope, including did_you_mean.
+            return web.json_response(
+                {
+                    "ok": False,
+                    "error": {
+                        "code": "UNKNOWN_ASSET",
+                        "message": "speed_id 'bogus' is not a registered WorldTimeScaleAsset.",
+                        "command": "set_speed",
+                        "args": body.get("args"),
+                        "did_you_mean": ["x1", "x10", "x15", "x2", "x20"],
+                    },
+                },
+                status=400,
+            )
         return web.json_response({"ok": True, "result": {"echo": body}, "tick": 124})
 
 
@@ -134,3 +149,47 @@ async def test_concurrent_requests_share_client(
     async with BridgeClient(address) as client:
         results = await asyncio.gather(*[client.health() for _ in range(10)])
     assert all(r["mod_version"] == "0.1.0" for r in results)
+
+
+async def test_bridge_error_reaches_mcp_client_with_hints(
+    fake_bridge: tuple[FakeBridge, BridgeAddress],
+) -> None:
+    """mcp 2.x only forwards ToolError subclasses to the model; anything else is masked as
+    'Error executing tool <name>'. A bridge rejection must therefore surface as a ToolError
+    carrying the code, the message and the did_you_mean hints."""
+    from mcp.server.mcpserver.exceptions import ToolError, UnexpectedToolError
+
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    _bridge, address = fake_bridge
+    server, client = build_server(Settings(bridge=address, worldbox_dir=None))
+    try:
+        with pytest.raises(ToolError) as info:
+            await server.call_tool("worldbox_set_speed", {"speed_id": "bogus"})
+    finally:
+        await client.aclose()
+    assert not isinstance(info.value, UnexpectedToolError)
+    text = str(info.value)
+    assert "UNKNOWN_ASSET" in text
+    assert "not a registered WorldTimeScaleAsset" in text
+    assert "x10" in text  # did_you_mean survives the trip
+
+
+async def test_transport_error_reaches_mcp_client(
+    bridge_address: BridgeAddress,
+) -> None:
+    """Nothing listening on the port: the model should read 'unreachable', not a masked crash."""
+    from mcp.server.mcpserver.exceptions import ToolError, UnexpectedToolError
+
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    server, client = build_server(Settings(bridge=bridge_address, worldbox_dir=None))
+    try:
+        with pytest.raises(ToolError) as info:
+            await server.call_tool("worldbox_health", {})
+    finally:
+        await client.aclose()
+    assert not isinstance(info.value, UnexpectedToolError)
+    assert "unreachable" in str(info.value).lower()

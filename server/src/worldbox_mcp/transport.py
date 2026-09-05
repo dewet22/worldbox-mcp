@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer
 
     from .client import BridgeClient
 
@@ -24,7 +24,7 @@ class TransportConfig:
 
 
 async def run(
-    server: FastMCP,
+    server: MCPServer,
     client: BridgeClient,
     transport: TransportConfig,
 ) -> None:
@@ -33,28 +33,7 @@ async def run(
         if transport.kind == "stdio":
             await server.run_stdio_async()
         elif transport.kind == "http":
-            # FastMCP's HTTP transport is exposed via run_async on a Starlette app under
-            # the hood. The exact entrypoint name has churned between MCP SDK versions;
-            # we feature-detect to stay compatible across them.
-            runner = getattr(server, "run_streamable_http_async", None) or getattr(
-                server, "run_sse_async", None
-            )
-            if runner is None:
-                msg = (
-                    "This version of the mcp Python SDK does not expose a Streamable HTTP "
-                    "transport. Upgrade `mcp` or use the default stdio transport."
-                )
-                raise RuntimeError(msg)
-            # Most SDK variants accept (host, port) kwargs; if the signature is different,
-            # fall back to setting them on the instance.
-            try:
-                await runner(host=transport.host, port=transport.port)
-            except TypeError:
-                # Older SDKs exposed FastMCP.settings.host/.port for transport config.
-                # Newer SDKs may not -- the type: ignore covers both shapes.
-                server.settings.host = transport.host
-                server.settings.port = transport.port
-                await runner()
+            await server.run_streamable_http_async(host=transport.host, port=transport.port)
         else:
             msg = f"Unknown transport kind: {transport.kind!r}"
             raise ValueError(msg)

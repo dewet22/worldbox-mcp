@@ -1,6 +1,6 @@
 """Server factory.
 
-Builds a fully wired :class:`FastMCP` instance: configuration, HTTP client, all registered
+Builds a fully wired :class:`MCPServer` instance: configuration, HTTP client, all registered
 tools. The factory is decoupled from transport selection so tests (and the ``--self-check``
 mode) can instantiate the server without binding any I/O.
 """
@@ -15,14 +15,14 @@ from .client import BridgeClient
 from .tools import action, bus, control, discovery, meta, read
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer
 
     from .config import Settings
 
 logger = structlog.get_logger(__name__)
 
 
-def build_server(settings: Settings) -> tuple[FastMCP, BridgeClient]:
+def build_server(settings: Settings) -> tuple[MCPServer, BridgeClient]:
     """Construct the MCP server and the bridge client it owns.
 
     Returns both so the caller can keep the client lifecycle tied to the server's
@@ -31,9 +31,9 @@ def build_server(settings: Settings) -> tuple[FastMCP, BridgeClient]:
     """
     # Lazy import to keep `--self-check` fast (no MCP framework import unless we actually
     # need to register tools).
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer
 
-    server = FastMCP(
+    server = MCPServer(
         name="worldbox-mcp",
         instructions=(
             "Tools for controlling and inspecting a running WorldBox game. Call "

@@ -1,4 +1,4 @@
-"""Tool modules. Each submodule registers its tools onto a :class:`FastMCP` instance via
+"""Tool modules. Each submodule registers its tools onto a :class:`MCPServer` instance via
 ``register(server, client)``. The top-level :mod:`worldbox_mcp.server` imports them in turn.
 """
 
