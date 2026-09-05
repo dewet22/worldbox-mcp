@@ -20,6 +20,14 @@ cost more than it saves. They are verified instead: a file listed in :data:`INVE
 must name every registered tool. Any ``worldbox_*`` identifier anywhere in the docs must
 also resolve to a real tool.
 
+**Cross-checked values.** Some facts are necessarily stated twice and cannot be generated
+from one side. The screenshot defaults live in the MCP schema, in ``ScreenshotScaler`` and in
+the command-reference row, and the three are compared. The release version lives in the four
+files release-please bumps, which are compared with each other and then against
+``docs/compatibility.md``: its counts are never rewritten, but the matrix must carry a row for
+the version the tree declares. That last check is skipped with ``--skip-release-version`` on
+release-please's own branch, where the bump has landed and the row has not been written yet.
+
 Source of truth is the MCP server itself, imported and queried in-process, so no game and no
 network are involved. The C# side is counted from source and cross-checked against it, which
 catches a command added on one side of the bridge only.
@@ -73,6 +81,25 @@ SCREENSHOT_SCALER = (
     REPO_ROOT / "mod" / "src" / "WorldBoxBridge" / "Commands" / "Read" / "ScreenshotScaler.cs"
 )
 COMMAND_REFERENCE = REPO_ROOT / "docs" / "command-reference.md"
+COMPATIBILITY = REPO_ROOT / "docs" / "compatibility.md"  # used when run() is pointed here
+
+# The release version is stated in four files, all bumped by release-please through the
+# `extra-files` entries in release-please-config.json. They are checked against each other
+# because a broken updater entry is silent: the release ships with one of the four a version
+# behind, and nobody notices until they read the plugin banner in a log.
+#
+# CLAUDE.md's "Latest" line is deliberately not a fifth entry. It names the last version that
+# actually shipped, not the version the tree declares, and the two differ for the whole life of
+# the release PR. Checking it here would make it wrong exactly when it is right.
+VERSION_SOURCES: list[tuple[str, str]] = [
+    ("server/pyproject.toml", r'(?m)^version\s*=\s*"([^"]+)"'),
+    ("server/src/worldbox_mcp/__init__.py", r'(?m)^__version__\s*=\s*"([^"]+)"'),
+    ("mod/src/WorldBoxBridge/WorldBoxBridge.csproj", r"<Version>([^<]+)</Version>"),
+    (
+        "mod/src/WorldBoxBridge/PluginInfo.cs",
+        r'public\s+const\s+string\s+Version\s*=\s*"([^"]+)"',
+    ),
+]
 
 # The command reference states the same three values a third time, in the worldbox_screenshot
 # row. Matched by token so a reworded row fails loudly rather than passing silently. The
@@ -395,7 +422,155 @@ def check_screenshot_row(
             )
 
 
-def run(surface: Surface, root: Path, *, write: bool) -> Report:
+# The header the matrix must carry, verbatim. The check reads it rather than trusting a column
+# index, so inserting a column moves the lookup instead of silently reading the wrong cell.
+MATRIX_HEADER: list[str] = [
+    "WorldBox version",
+    "Unity",
+    "Scripting backend",
+    "Mod version",
+    "Status",
+    "Notes",
+]
+MATRIX_VERSION_COLUMN = "Mod version"
+
+
+def matrix_mod_versions(compatibility: Path) -> list[str]:
+    """The "Mod version" cell of every data row in the compatibility matrix, verbatim.
+
+    Anchored to the header rather than scanning every pipe line in the file. The loose version
+    took the fourth cell of anything that looked like a table row, so a second table added to
+    the page would have contributed its own fourth column, and a value there matching the
+    declared version would have satisfied the check with no matrix row at all. That is the
+    failure this whole check exists to prevent, so it must not be how the check itself breaks.
+
+    Raises ValueError when the header is missing or its columns moved, because returning an
+    empty list would read as "no row for this version" and send the reader hunting the wrong bug.
+    """
+    lines = compatibility.read_text(encoding="utf-8").splitlines()
+    for index, line in enumerate(lines):
+        if _cells(line) == MATRIX_HEADER:
+            column = MATRIX_HEADER.index(MATRIX_VERSION_COLUMN)
+            break
+    else:
+        raise ValueError(
+            f"{compatibility} has no row matching the expected matrix header "
+            f"{' | '.join(MATRIX_HEADER)}. Restore it, or update MATRIX_HEADER if the columns "
+            f"changed on purpose."
+        )
+
+    cells: list[str] = []
+    for line in lines[index + 1 :]:
+        row = _cells(line)
+        if row is None:
+            break  # first line that is not a table row ends the table
+        if len(row) <= column:
+            continue
+        if all(set(cell) <= set("-: ") for cell in row):
+            continue  # the separator row under the header
+        cells.append(row[column])
+    return cells
+
+
+def _cells(line: str) -> list[str] | None:
+    """A markdown table row split into trimmed cells, or None if the line is not one."""
+    stripped = line.strip()
+    if not stripped.startswith("|"):
+        return None
+    return [cell.strip() for cell in stripped.strip("|").split("|")]
+
+
+def version_covers(cell: str, version: str) -> bool:
+    """Whether a matrix cell claims to cover `version`.
+
+    Three forms are in use and all three have to be read: a plain version, possibly bold or
+    trailed by a parenthetical ("0.3.0 (upstream's own validation, Windows)"); a wildcard
+    ("0.2.x"); and a range ("0.3.0 to 0.3.3"). Anything else is treated as not covering, so a
+    new notation fails loudly rather than being silently accepted as a match.
+    """
+    cell = re.sub(r"\(.*?\)", "", cell.replace("**", "")).strip()
+    if cell == version:
+        return True
+    # A wildcard has to fix the major and the minor. Left as a bare suffix test, a cell of
+    # "0.x" expanded to `startswith("0.")` and covered every 0.y.z release ever made, which is
+    # the one way this guard could go permanently quiet.
+    if re.fullmatch(r"\d+\.\d+\.x", cell):
+        return version.startswith(cell[:-1])
+    span = re.fullmatch(r"(\S+)\s+to\s+(\S+)", cell)
+    if span is None:
+        return False
+    try:
+        low = _version_parts(span.group(1))
+        high = _version_parts(span.group(2))
+        here = _version_parts(version)
+    except ValueError:
+        return False
+    return low <= here <= high
+
+
+def _version_parts(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def check_release_version(report: Report, root: Path = REPO_ROOT) -> None:
+    """The four version files must agree, and the matrix must have a row for what they say.
+
+    The matrix is the one document that records whether a released version actually works, and
+    it is written by hand: 0.3.0 to 0.3.3 shipped DLLs that never loaded, and the row saying so
+    was added afterwards. Nothing checked that the row existed at all, so the failure mode is a
+    matrix quietly a release behind, which reads exactly like a release nobody has reported a
+    problem with.
+
+    Deliberately not run on release-please's own branch, see the CI step: that PR bumps the four
+    files and the row is written by hand once the release is out. The next ordinary PR fails
+    here until it is, which is the point.
+    """
+    found: dict[str, str] = {}
+    for relative, pattern in VERSION_SOURCES:
+        path = root / relative
+        if not path.exists():
+            report.fail(f"{relative} is missing; the release version cannot be checked.")
+            return
+        match = re.search(pattern, path.read_text(encoding="utf-8"))
+        if match is None:
+            report.fail(
+                f"{relative} no longer states a version this check can find, while "
+                f"release-please still bumps it. Fix the pattern in VERSION_SOURCES or restore "
+                f"the declaration, otherwise the four files can drift unnoticed."
+            )
+            return
+        found[relative] = match.group(1)
+
+    distinct = sorted(set(found.values()))
+    if len(distinct) > 1:
+        detail = ", ".join(f"{rel} says {value}" for rel, value in sorted(found.items()))
+        report.fail(
+            f"the four files release-please bumps disagree on the version ({detail}). One of "
+            f"the `extra-files` entries in release-please-config.json has stopped matching."
+        )
+        return
+
+    version = distinct[0]
+    path = COMPATIBILITY if root.resolve() == REPO_ROOT else root / "docs" / "compatibility.md"
+    if not path.exists():
+        report.fail(f"{path} is missing; the compatibility matrix cannot be checked.")
+        return
+    try:
+        cells = matrix_mod_versions(path)
+    except ValueError as exc:
+        report.fail(str(exc))
+        return
+    if not any(version_covers(cell, version) for cell in cells):
+        report.fail(
+            f"docs/compatibility.md has no row for {version}, the version this tree declares. "
+            f"Add one with the status the release actually has: 🔵 until the e2e suite has run "
+            f"against a real install, ✅ only after."
+        )
+
+
+def run(
+    surface: Surface, root: Path, *, write: bool, skip_release_version: bool = False
+) -> Report:
     report = Report()
     sync_regions(surface, root, write=write, report=report)
     check_inventories(surface, root, report)
@@ -406,6 +581,8 @@ def run(surface: Surface, root: Path, *, write: bool) -> Report:
     # throwaway tree, which would otherwise inherit a failure about files it never created.
     if root.resolve() == REPO_ROOT:
         check_screenshot_defaults(report)
+        if not skip_release_version:
+            check_release_version(report)
     return report
 
 
@@ -419,10 +596,24 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--root", type=Path, default=REPO_ROOT, help="repository root (defaults to this one)"
     )
+    parser.add_argument(
+        "--skip-release-version",
+        action="store_true",
+        help=(
+            "skip the release-version and compatibility-matrix check. For release-please's own "
+            "branch, where the version bump has landed and the matrix row is written by hand "
+            "once the release is out. Every other check still runs."
+        ),
+    )
     args = parser.parse_args(argv)
 
     surface = read_surface()
-    report = run(surface, args.root, write=args.write)
+    report = run(
+        surface,
+        args.root,
+        write=args.write,
+        skip_release_version=args.skip_release_version,
+    )
 
     for line in report.rewrites:
         print(f"updated {line}")

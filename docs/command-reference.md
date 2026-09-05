@@ -119,7 +119,7 @@ Every error response follows this shape:
 | `GAME_REJECTED` | Game logic refused the action (e.g. spawning a land animal on water, a brush-only power, `save_world` while the world is still loading). |
 | `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. Argument validation does not land here: commands raise `BAD_ARGS` directly rather than throwing, so a 500 means the bridge or the game actually broke. |
 | `PERMISSION_DENIED` _(v0.3)_ | The agent's role lacks the permission this command requires. HTTP 403. |
-| `FACTION_SCOPE_VIOLATION` _(v0.3)_ | The agent tried to act on a kingdom it doesn't claim. HTTP 403. |
+| `FACTION_SCOPE_VIOLATION` _(v0.3)_ | Reserved, currently never raised. A kingdom claim scopes reads, not writes, see [multi-agent.md](multi-agent.md#a-kingdom-claim-scopes-reads-not-writes). HTTP 403. |
 | `TURN_NOT_YOURS` _(v0.3)_ | Turn-based mode is active and another agent currently holds the slot. HTTP 409. |
 | `MAIN_THREAD_TIMEOUT` | A command waited more than 30s for a Unity frame and was dropped before it ran. The deadline is checked before the action starts, so it never abandons work already under way. |
 | `UNAUTHORIZED` | Missing or wrong bearer credential (either `Authorization: Bearer <token>` or the legacy `X-WB-Token: <token>`). Should never happen if `worldbox-mcp` auto-discovered your config. |

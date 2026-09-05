@@ -43,11 +43,20 @@ What landed today, across #54, #55 and #56:
   nowhere and `load_world` could hang the game. Both have since been dealt with, but expect the
   same proposal on the next breaking change.
 
-**In flight**: this PR. `load_world` no longer reads the save from the Unity main thread, so one
-call naming a FIFO or a huge file can no longer freeze the game. Read the Debt section for what
-is still owed on it, which is a manual check against a running WorldBox.
+**In flight**: this PR plus two others, and none of them is yours to forget.
 
-**Next step**: run that live check. Nothing else in the Debt section can hurt a user today.
+- **This one, #58.** `load_world` no longer reads the save from the Unity main thread, and a path
+  that is not a regular file is refused before it is opened. One thing is still owed on it, a
+  check against a running WorldBox. The Debt item below says exactly what to run.
+- **#60, release-please proposing 0.5.1.** Cut from the single `refactor:` commit in #59, which
+  is the useful discovery: `refactor:` bumps the patch here, while the `ci:` commits in #61
+  contributed nothing to it, which is what the new convention is for. Its branch name starts with
+  `release-please--`, so the compatibility-matrix check stands down on it as designed.
+- **#57, from dewet22**, `feat:` adding radius, pulses and drag to `invoke_power` by driving the
+  brush and toggle delegates. Green, unreviewed. Read the note at the end of "Not committed to"
+  before reviewing it.
+
+**Next step**: run the live check below. Then review #57.
 
 **Know before you touch anything**
 
@@ -107,22 +116,22 @@ Nothing queued. The Debt section is the natural queue.
       destination, where `load_world` only needed a bad `path` argument. Fixing it properly
       means bounding the game's call, which nothing in net462 can do, or reimplementing the
       save format. Recorded rather than attempted.
-- [ ] Roadmap item 9: `fix(ci):` commits land under "Dependencies" in the generated changelog.
-      Cosmetic, but easier to fix before the next minor than after.
-- [ ] `RequestContext.RequireKingdomAccess` has no call site anywhere in the mod. The method is
-      documented as the guard for "who may act on which kingdom" and nothing invokes it, so the
-      per-kingdom action scope is not enforced at all. Either wire it into `spawn` (the one
-      Action command a FactionPlayer can still reach) or delete it and say plainly in
-      [multi-agent.md](docs/multi-agent.md) that claims scope reads, not writes.
-- [ ] `docs/compatibility.md` is still updated by hand after a release, and nothing checks it.
+
 
 ## 💡 Not committed to
 
-Carried over from the CLAUDE.md roadmap. Read that section for the reasoning behind each.
+Ideas nobody has signed up for. The pointer that used to sit here, to a roadmap section in
+CLAUDE.md, was dead: no such section exists, so the reasoning lives in each line below and in
+the docs each one names.
 
 - Single multi-tenant MCP server, so N agents no longer means N server processes.
-- Auto-resolve `kingdom_claim: "auto:N"` on first world load, which would make PvP scoping real
-  rather than best-effort.
-- The remaining power delegates: `click_brush_action`, `toggle_action`, `click_special_action`.
+- Auto-resolve `kingdom_claim: "auto:N"` on first world load. On its own this buys nothing: #59
+  established that a kingdom claim scopes reads and not writes, and that no Action command a
+  FactionPlayer can reach even names a kingdom. Real PvP write scoping needs both this and a
+  command that takes a kingdom. See the section in [multi-agent.md](docs/multi-agent.md).
 - `get_actor(name_or_id)`, and `terraform(action_id, x, y, radius)`.
 - Opt-in JSONL message log for replay and post-mortem.
+
+The remaining power delegates (`click_brush_action`, `toggle_action`, `click_special_action`)
+have left this list: PR #57 implements the brush and toggle ones. Review it against gotcha 7 in
+[game-api-notes.md](docs/game-api-notes.md), which is where the delegate families are written up.
