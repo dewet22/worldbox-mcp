@@ -186,6 +186,12 @@ jobs:
       - name: Docs match the registered tool surface
         # Fails when a count, an inventory table or the C#/Python command parity drifts.
         # `--write` refreshes the generated regions locally.
+        #
+        # Skipped on release-please's branch for the same reason the lockfile check is: that PR
+        # bumps the four version files, and the compatibility matrix row for the new version is
+        # written by hand once the release is actually out. The next ordinary PR fails here
+        # until it is, which is how the matrix stops drifting a release behind.
+        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
         working-directory: server
         run: uv run --frozen python ../scripts/gen-docs.py --check
 

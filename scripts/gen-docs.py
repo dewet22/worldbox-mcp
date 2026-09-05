@@ -73,6 +73,21 @@ SCREENSHOT_SCALER = (
     REPO_ROOT / "mod" / "src" / "WorldBoxBridge" / "Commands" / "Read" / "ScreenshotScaler.cs"
 )
 COMMAND_REFERENCE = REPO_ROOT / "docs" / "command-reference.md"
+COMPATIBILITY = REPO_ROOT / "docs" / "compatibility.md"
+
+# The release version is stated in four files, all bumped by release-please through the
+# `extra-files` entries in release-please-config.json. They are checked against each other
+# because a broken updater entry is silent: the release ships with one of the four a version
+# behind, and nobody notices until they read the plugin banner in a log.
+VERSION_SOURCES: list[tuple[str, str]] = [
+    ("server/pyproject.toml", r'(?m)^version\s*=\s*"([^"]+)"'),
+    ("server/src/worldbox_mcp/__init__.py", r'(?m)^__version__\s*=\s*"([^"]+)"'),
+    ("mod/src/WorldBoxBridge/WorldBoxBridge.csproj", r"<Version>([^<]+)</Version>"),
+    (
+        "mod/src/WorldBoxBridge/PluginInfo.cs",
+        r'public\s+const\s+string\s+Version\s*=\s*"([^"]+)"',
+    ),
+]
 
 # The command reference states the same three values a third time, in the worldbox_screenshot
 # row. Matched by token so a reworded row fails loudly rather than passing silently. The
@@ -395,6 +410,104 @@ def check_screenshot_row(
             )
 
 
+def matrix_mod_versions(compatibility: Path) -> list[str]:
+    """The "Mod version" cell of every data row in the compatibility matrix, verbatim."""
+    cells: list[str] = []
+    for line in compatibility.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        parts = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(parts) < 5:
+            continue
+        if parts[0] == "WorldBox version" or set(parts[0]) <= set("-: "):
+            continue  # header, or the separator row under it
+        cells.append(parts[3])
+    return cells
+
+
+def version_covers(cell: str, version: str) -> bool:
+    """Whether a matrix cell claims to cover `version`.
+
+    Three forms are in use and all three have to be read: a plain version, possibly bold or
+    trailed by a parenthetical ("0.3.0 (upstream's own validation, Windows)"); a wildcard
+    ("0.2.x"); and a range ("0.3.0 to 0.3.3"). Anything else is treated as not covering, so a
+    new notation fails loudly rather than being silently accepted as a match.
+    """
+    cell = re.sub(r"\(.*?\)", "", cell.replace("**", "")).strip()
+    if cell == version:
+        return True
+    if cell.endswith(".x"):
+        return version.startswith(cell[:-1])
+    span = re.fullmatch(r"(\S+)\s+to\s+(\S+)", cell)
+    if span is None:
+        return False
+    try:
+        low = _version_parts(span.group(1))
+        high = _version_parts(span.group(2))
+        here = _version_parts(version)
+    except ValueError:
+        return False
+    return low <= here <= high
+
+
+def _version_parts(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def check_release_version(
+    report: Report, root: Path = REPO_ROOT, compatibility: Path | None = None
+) -> None:
+    """The four version files must agree, and the matrix must have a row for what they say.
+
+    The matrix is the one document that records whether a released version actually works, and
+    it is written by hand: 0.3.0 to 0.3.3 shipped DLLs that never loaded, and the row saying so
+    was added afterwards. Nothing checked that the row existed at all, so the failure mode is a
+    matrix quietly a release behind, which reads exactly like a release nobody has reported a
+    problem with.
+
+    Deliberately not run on release-please's own branch, see the CI step: that PR bumps the four
+    files and the row is written by hand once the release is out. The next ordinary PR fails
+    here until it is, which is the point.
+    """
+    found: dict[str, str] = {}
+    for relative, pattern in VERSION_SOURCES:
+        path = root / relative
+        if not path.exists():
+            report.fail(f"{relative} is missing; the release version cannot be checked.")
+            return
+        match = re.search(pattern, path.read_text(encoding="utf-8"))
+        if match is None:
+            report.fail(
+                f"{relative} no longer states a version this check can find, while "
+                f"release-please still bumps it. Fix the pattern in VERSION_SOURCES or restore "
+                f"the declaration, otherwise the four files can drift unnoticed."
+            )
+            return
+        found[relative] = match.group(1)
+
+    distinct = sorted(set(found.values()))
+    if len(distinct) > 1:
+        detail = ", ".join(f"{rel} says {value}" for rel, value in sorted(found.items()))
+        report.fail(
+            f"the four files release-please bumps disagree on the version ({detail}). One of "
+            f"the `extra-files` entries in release-please-config.json has stopped matching."
+        )
+        return
+
+    version = distinct[0]
+    path = compatibility if compatibility is not None else root / "docs" / "compatibility.md"
+    if not path.exists():
+        report.fail(f"{path} is missing; the compatibility matrix cannot be checked.")
+        return
+    if not any(version_covers(cell, version) for cell in matrix_mod_versions(path)):
+        report.fail(
+            f"docs/compatibility.md has no row for {version}, the version this tree declares. "
+            f"Add one with the status the release actually has: 🔵 until the e2e suite has run "
+            f"against a real install, ✅ only after."
+        )
+
+
 def run(surface: Surface, root: Path, *, write: bool) -> Report:
     report = Report()
     sync_regions(surface, root, write=write, report=report)
@@ -406,6 +519,7 @@ def run(surface: Surface, root: Path, *, write: bool) -> Report:
     # throwaway tree, which would otherwise inherit a failure about files it never created.
     if root.resolve() == REPO_ROOT:
         check_screenshot_defaults(report)
+        check_release_version(report)
     return report
 
 

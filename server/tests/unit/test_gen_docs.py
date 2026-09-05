@@ -367,3 +367,126 @@ def test_command_reference_row_without_a_default_format_is_reported(
     )
 
     assert any("SCREENSHOT_FORMAT" in p for p in report.problems)
+
+
+# ─── Release version and the compatibility matrix ─────────────────────────
+#
+# Four files state the release version and release-please bumps all four, so they are checked
+# against each other. The matrix is then checked for a row covering that version: it is the one
+# document that records whether a release actually works, it is written by hand, and a matrix a
+# release behind reads exactly like a release nobody has reported a problem with.
+
+MATRIX = """# Compatibility matrix
+
+| WorldBox version | Unity | Scripting backend | Mod version | Status | Notes |
+|---|---|---|---|---|---|
+| **0.51.2** | 2022.3.60f1 | Mono | **0.5.0** | 🔵 | Shipped, unverified. |
+| 0.51.2 | 2022.3.60f1 | Mono | 0.3.0 to 0.3.3 | ❌ | DLLs never loaded. |
+| 0.51.2 | 2022.3.60f1 | Mono | 0.2.x | ✅ | Baseline. |
+"""
+
+
+def _tree(root: Path, version: str, matrix: str = MATRIX) -> Path:
+    """A throwaway tree stating `version` in all four places release-please bumps."""
+    for relative, body in [
+        ("server/pyproject.toml", f'[project]\nversion = "{version}"\n'),
+        ("server/src/worldbox_mcp/__init__.py", f'__version__ = "{version}"\n'),
+        (
+            "mod/src/WorldBoxBridge/WorldBoxBridge.csproj",
+            f"<Project><PropertyGroup><Version>{version}</Version></PropertyGroup></Project>\n",
+        ),
+        (
+            "mod/src/WorldBoxBridge/PluginInfo.cs",
+            f'    public const string Version = "{version}";\n',
+        ),
+    ]:
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+    compatibility = root / "docs" / "compatibility.md"
+    compatibility.parent.mkdir(parents=True, exist_ok=True)
+    compatibility.write_text(matrix, encoding="utf-8")
+    return root
+
+
+def test_a_version_with_a_matrix_row_reports_nothing(tmp_path: Path) -> None:
+    report = gen_docs.Report()
+    gen_docs.check_release_version(report, root=_tree(tmp_path, "0.5.0"))
+
+    assert report.problems == []
+
+
+def test_a_version_the_matrix_never_mentions_is_reported(tmp_path: Path) -> None:
+    report = gen_docs.Report()
+    gen_docs.check_release_version(report, root=_tree(tmp_path, "0.6.0"))
+
+    assert any("no row for 0.6.0" in p for p in report.problems)
+
+
+def test_version_files_that_disagree_are_reported(tmp_path: Path) -> None:
+    root = _tree(tmp_path, "0.5.0")
+    (root / "server" / "pyproject.toml").write_text('[project]\nversion = "0.4.0"\n')
+
+    report = gen_docs.Report()
+    gen_docs.check_release_version(report, root=root)
+
+    assert any("disagree on the version" in p for p in report.problems)
+
+
+def test_a_version_declaration_that_moved_is_reported_rather_than_skipped(
+    tmp_path: Path,
+) -> None:
+    # The dangerous failure is a pattern that stops matching: the file is still bumped, the
+    # check just stops seeing it, and everything goes green.
+    root = _tree(tmp_path, "0.5.0")
+    (root / "mod/src/WorldBoxBridge/PluginInfo.cs").write_text("// nothing here\n")
+
+    report = gen_docs.Report()
+    gen_docs.check_release_version(report, root=root)
+
+    assert any("no longer states a version" in p for p in report.problems)
+
+
+def test_a_missing_matrix_is_reported(tmp_path: Path) -> None:
+    root = _tree(tmp_path, "0.5.0")
+    (root / "docs" / "compatibility.md").unlink()
+
+    report = gen_docs.Report()
+    gen_docs.check_release_version(report, root=root)
+
+    assert any("compatibility.md is missing" in p for p in report.problems)
+
+
+@pytest.mark.parametrize(
+    ("cell", "version", "covered"),
+    [
+        ("**0.5.0**", "0.5.0", True),
+        ("0.5.0", "0.5.1", False),
+        ("0.3.0 to 0.3.3", "0.3.2", True),
+        ("0.3.0 to 0.3.3", "0.3.4", False),
+        ("0.2.x", "0.2.7", True),
+        ("0.2.x", "0.3.0", False),
+        ("0.3.0 (upstream's own validation, Windows)", "0.3.0", True),
+        ("see the notes", "0.5.0", False),
+    ],
+)
+def test_matrix_cell_notations(cell: str, version: str, covered: bool) -> None:
+    assert gen_docs.version_covers(cell, version) is covered
+
+
+def test_the_real_tree_has_a_matrix_row_for_the_version_it_declares() -> None:
+    report = gen_docs.Report()
+    gen_docs.check_release_version(report)
+
+    assert report.problems == []
+
+
+def test_run_checks_the_release_version_for_the_real_repository(
+    surface: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[int] = []
+    monkeypatch.setattr(gen_docs, "check_release_version", lambda report: calls.append(1))
+
+    gen_docs.run(surface, gen_docs.REPO_ROOT, write=False)
+
+    assert calls == [1]
