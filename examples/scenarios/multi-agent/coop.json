@@ -1,5 +1,5 @@
 {
-  "_comment": "Cooperative scenario — 2-3 AIs each focused on a different system of the same shared world. No fog-of-war, no factions, no turn-taking. Each agent is a co-god of the simulation. Use the message bus for handoffs ('I just triggered a famine, you handle the migration response').",
+  "_comment": "Cooperative scenario, 2-3 AIs each focused on a different system of the same shared world. No fog-of-war, no factions, no turn-taking. Each agent is a co-god of the simulation. Use the message bus for handoffs ('I just triggered a famine, you handle the migration response').",
   "scenario": "coop",
   "partial_intel": false,
   "turn_based": false,

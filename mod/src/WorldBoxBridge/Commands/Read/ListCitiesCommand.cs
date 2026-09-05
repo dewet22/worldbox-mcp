@@ -8,7 +8,7 @@ using WorldBoxBridge.Session;
 
 namespace WorldBoxBridge.Commands.Read;
 
-/// <summary>Lists every city alive — optionally filtered by kingdom id.</summary>
+/// <summary>Lists every city alive, optionally filtered by kingdom id.</summary>
 internal sealed class ListCitiesCommand : ICommand
 {
     private readonly WorldAccess _world;

@@ -1,4 +1,4 @@
-"""Read tools — observe the world.
+"""Read tools, observe the world.
 
 The agent needs to look before it acts. These tools cover dimensions, snapshots,
 queries, and screenshots so the agent can plan actions based on real state instead of
@@ -46,7 +46,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         description=(
             "Returns every kingdom currently alive: id, name, race, king name, capital "
             "city id, cities_count, units_count. By default wild kingdoms (animal packs, "
-            "sea monsters) are filtered out — pass include_wild=true to see them."
+            "sea monsters) are filtered out, pass include_wild=true to see them."
         ),
     )
     async def worldbox_list_kingdoms(include_wild: bool = False) -> dict[str, Any]:

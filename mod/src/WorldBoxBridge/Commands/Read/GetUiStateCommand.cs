@@ -11,7 +11,7 @@ namespace WorldBoxBridge.Commands.Read;
 /// </summary>
 /// <remarks>
 /// <c>get_world_state.paused</c> is the game's <i>effective</i> pause, which is true whenever any
-/// window is open — including the startup "welcome" screen. <c>pause</c>/<c>resume</c> only flip
+/// window is open, including the startup "welcome" screen. <c>pause</c>/<c>resume</c> only flip
 /// <c>Config.paused</c>. Exposing both side by side lets an agent tell "I paused it" from
 /// "a window is blocking the simulation" and react with <c>dismiss_window</c>.
 /// </remarks>
@@ -29,7 +29,7 @@ internal sealed class GetUiStateCommand : ICommand
     public string Name => "get_ui_state";
     public CommandCategory Category => CommandCategory.Read;
     public string Description =>
-        "Returns the game's UI state: window_active (any in-game window open — this freezes the "
+        "Returns the game's UI state: window_active (any in-game window open, this freezes the "
         + "simulation), current_window (its id, e.g. 'welcome' for the startup screen, "
         + "'settings', 'kingdom'), config_paused (the pause toggle set by pause/resume) and "
         + "effective_paused (what the simulation actually does: config_paused OR a window is "

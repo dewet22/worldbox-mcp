@@ -1,4 +1,4 @@
-"""Inter-agent message bus tools — ``worldbox_send_message`` and ``worldbox_recv_messages``.
+"""Inter-agent message bus tools, ``worldbox_send_message`` and ``worldbox_recv_messages``.
 
 These let one AI agent talk to another (or to the whole table) through the bridge's
 in-memory bus. Messages live until they age out under the bounded-inbox policy (default
@@ -8,7 +8,7 @@ Typical usage in a PvP scenario:
 - Agents periodically poll ``worldbox_recv_messages`` (e.g. every loop iteration) with the
   ``since_seq`` cursor from the previous response.
 - Diplomatic moves: ``worldbox_send_message(to="other_agent", kind="diplomacy", content="...")``.
-- Narrator broadcasts: ``worldbox_send_message(to="*", ...)`` — requires the send_broadcast
+- Narrator broadcasts: ``worldbox_send_message(to="*", ...)``, requires the send_broadcast
   permission (god / narrator roles only).
 """
 
@@ -46,10 +46,10 @@ def register(server: MCPServer, client: BridgeClient) -> None:
     @server.tool(
         name="worldbox_recv_messages",
         description=(
-            "Polls this agent's inbox in the active WorldBox session. Non-destructive — "
+            "Polls this agent's inbox in the active WorldBox session. Non-destructive, "
             "messages remain until they age out of the bounded queue (default 200 per agent, "
             "drop-oldest). Pass `since_seq` (the highest `seq` from the previous response) "
-            "to skip already-seen messages — that's the canonical cursor. `max` caps the "
+            "to skip already-seen messages, that's the canonical cursor. `max` caps the "
             "batch size (default 50, hard ceiling 500). Returns {items, count, next_cursor} "
             "where each item has seq, from, to, kind, content, sent_utc."
         ),

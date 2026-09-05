@@ -8,7 +8,7 @@ using WorldBoxBridge.Threading;
 namespace WorldBoxBridge.Commands.Discovery;
 
 /// <summary>
-/// Lists every "power" the player can invoke — meteor, nuke, plague, toggle peace, kill race,
+/// Lists every "power" the player can invoke, meteor, nuke, plague, toggle peace, kill race,
 /// and so on. Powers cover what the in-game UI groups under the god-mode toolbar.
 /// </summary>
 internal sealed class ListPowersCommand : ICommand

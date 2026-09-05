@@ -11,7 +11,7 @@ namespace WorldBoxBridge.Commands.Meta;
 
 /// <summary>
 /// Returns each agent's declared objectives alongside live kingdom-population metrics. The
-/// agent client computes its own score from this — see <see cref="Objective"/> for the
+/// agent client computes its own score from this, see <see cref="Objective"/> for the
 /// design rationale (objectives are intentionally not evaluated server-side).
 /// </summary>
 internal sealed class ObjectiveStatusCommand : ICommand
@@ -67,7 +67,7 @@ internal sealed class ObjectiveStatusCommand : ICommand
             })
             .ToArray();
 
-        // Live kingdom-population snapshot — same units count the game's UI shows in
+        // Live kingdom-population snapshot, same units count the game's UI shows in
         // the kingdoms panel. Fog-of-war is intentionally NOT applied here: the metrics
         // surface is opt-in (only declared objectives + their related kingdoms) so PvP
         // scoreboards work even with partial_intel on (otherwise FactionPlayers couldn't

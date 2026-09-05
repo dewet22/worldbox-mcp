@@ -1,5 +1,5 @@
 {
-  "_comment": "PvP scenario — 2 rival AI factions on the same world with fog-of-war. Replace the placeholder tokens with output from `scripts/install-mod.ps1 --generate-tokens 2` before going live. Drop this file at <worldbox>/BepInEx/config/WorldBoxBridge.agents.json and restart the game.",
+  "_comment": "PvP scenario, 2 rival AI factions on the same world with fog-of-war. Replace the placeholder tokens with output from `scripts/install-mod.ps1 --generate-tokens 2` before going live. Drop this file at <worldbox>/BepInEx/config/WorldBoxBridge.agents.json and restart the game.",
   "scenario": "pvp",
   "partial_intel": true,
   "turn_based": false,

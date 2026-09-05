@@ -7,7 +7,7 @@ namespace WorldBoxBridge.Commands.Meta;
 
 /// <summary>Returns this agent's identity, role, faction claim, and permission bits.</summary>
 /// <remarks>
-/// The first thing every multi-agent client should call after <c>health</c> — it surfaces
+/// The first thing every multi-agent client should call after <c>health</c>, it surfaces
 /// "who am I in this session" so the agent can adapt its behavior (e.g., a FactionPlayer
 /// learning it controls kingdom #3).
 /// </remarks>

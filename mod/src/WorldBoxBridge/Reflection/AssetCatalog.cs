@@ -15,7 +15,7 @@ namespace WorldBoxBridge.Reflection;
 /// and exposes a uniform iteration contract: a <c>List&lt;T&gt;</c> field named <c>list</c>
 /// plus a <c>Dictionary&lt;string, T&gt;</c> field named <c>dict</c>. Every individual asset
 /// derives from <c>Asset</c> and carries a <c>string id</c>. That uniformity means one piece
-/// of reflection code can enumerate or resolve any asset id in the game — see
+/// of reflection code can enumerate or resolve any asset id in the game, see
 /// <c>docs/game-api-notes.md</c>.</para>
 ///
 /// <para>All reflection lookups are cached on first use; misses are logged once.</para>
@@ -36,13 +36,13 @@ internal sealed class AssetCatalog
 
     /// <summary>
     /// Enumerates all assets in the named library, projecting each to an id (and optionally
-    /// extra fields). Asset ids prefixed with <c>$</c> or <c>_</c> are filtered out — they're
+    /// extra fields). Asset ids prefixed with <c>$</c> or <c>_</c> are filtered out, they're
     /// in-game templates / internal placeholders, never useful to an agent.
     /// </summary>
     /// <param name="libraryFieldName">Name of the static field on <c>AssetManager</c>
     /// (e.g. <c>"tiles"</c>, <c>"actor_library"</c>, <c>"powers"</c>).</param>
     /// <param name="extraFields">Optional list of extra fields to pull off each asset
-    /// (best-effort — missing or null fields are silently skipped).</param>
+    /// (best-effort, missing or null fields are silently skipped).</param>
     public List<Dictionary<string, object?>> ListAssets(
         string libraryFieldName,
         IReadOnlyList<string>? extraFields = null
@@ -225,7 +225,7 @@ internal sealed class AssetCatalog
         private readonly Dictionary<TypeFieldKey, FieldInfo?> _arbitraryFields = new();
 
         /// <summary>
-        /// Composite cache key. Avoids <c>System.ValueTuple</c> — that assembly isn't always
+        /// Composite cache key. Avoids <c>System.ValueTuple</c>, that assembly isn't always
         /// loadable in the Mono runtime Unity ships with.
         /// </summary>
         private readonly struct TypeFieldKey : IEquatable<TypeFieldKey>

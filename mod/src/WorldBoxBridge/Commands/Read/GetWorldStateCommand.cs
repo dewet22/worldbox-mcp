@@ -8,7 +8,7 @@ using WorldBoxBridge.Threading;
 namespace WorldBoxBridge.Commands.Read;
 
 /// <summary>
-/// Snapshot of the world's overall state — dimensions, current seed, tick, paused flag,
+/// Snapshot of the world's overall state, dimensions, current seed, tick, paused flag,
 /// population, kingdom + city counts. The first read tool an agent should call after
 /// <c>worldbox_health</c>.
 /// </summary>

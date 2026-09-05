@@ -23,7 +23,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "Lists every TileType currently registered in the running WorldBox build. "
             "Returns `{items: [{id, color_hex?, has_biome_tags?, ...}], count}`. "
             "Tile ids are the valid inputs for `worldbox_paint_tile` (Phase 3). "
-            "Call this once per session to learn what's available — the catalog can "
+            "Call this once per session to learn what's available, the catalog can "
             "change with WorldBox updates and modder-added tiles."
         ),
     )
@@ -61,8 +61,8 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         description=(
             "Lists every PowerAsset (god-mode action) registered in the running game. "
             "Returns `{items: [{id, tab_id?, target_type?, ...}], count}`. Powers cover "
-            "spawn buttons, disasters (meteor, nuke, plague, …), toggles "
-            "(toggle_peace, toggle_civ, …), and modifiers. Power ids are the valid "
+            "spawn buttons, disasters (meteor, nuke, plague, ...), toggles "
+            "(toggle_peace, toggle_civ, ...), and modifiers. Power ids are the valid "
             "inputs for `worldbox_invoke_power` (Phase 3)."
         ),
     )

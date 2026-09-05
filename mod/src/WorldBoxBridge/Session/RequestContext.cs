@@ -91,7 +91,7 @@ public readonly struct RequestContext
         if (Has(Permission.ActionGlobal))
             return;
         if (!ClaimedKingdomId.HasValue)
-            return; // unbound (auto:N not yet resolved) — allow
+            return; // unbound (auto:N not yet resolved), allow
         if (ClaimedKingdomId.Value == kingdomId)
             return;
         throw new BridgeRejectionException(

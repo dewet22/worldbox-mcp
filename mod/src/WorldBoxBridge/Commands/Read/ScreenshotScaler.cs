@@ -16,7 +16,7 @@ public static class ScreenshotScaler
     public const string Jpg = "jpg";
     public const string Png = "png";
 
-    /// <summary>Plain struct rather than a tuple — System.ValueTuple isn't always loadable under Unity Mono.</summary>
+    /// <summary>Plain struct rather than a tuple, System.ValueTuple isn't always loadable under Unity Mono.</summary>
     public readonly struct ScaledSize
     {
         public ScaledSize(int width, int height, bool isScaled)

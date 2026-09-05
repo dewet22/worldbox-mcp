@@ -18,7 +18,7 @@ namespace WorldBoxBridge.Commands.Control;
 /// Mechanism: <c>Config.setWorldSpeed(string)</c> resolves the asset via
 /// <c>AssetManager.time_scales.get(id)</c> and applies it. We just call that static
 /// method by reflection. Stock WorldBox 0.51.x ids: <c>slow_mo</c>, <c>x1</c>, <c>x2</c>,
-/// <c>x3</c>, <c>x4</c>, <c>x5</c>, <c>x10</c>, <c>x15</c>, <c>x20</c>, <c>x40</c> — see
+/// <c>x3</c>, <c>x4</c>, <c>x5</c>, <c>x10</c>, <c>x15</c>, <c>x20</c>, <c>x40</c>, see
 /// <c>list_speeds</c> for the live list.
 /// </remarks>
 internal sealed class SetSpeedCommand : ICommand
@@ -37,7 +37,7 @@ internal sealed class SetSpeedCommand : ICommand
     public CommandCategory Category => CommandCategory.Control;
     public string Description =>
         "Sets the simulation tick rate by WorldTimeScaleAsset id. Stock WorldBox 0.51.x: "
-        + "'slow_mo', 'x1', 'x2', 'x3', 'x4', 'x5', 'x10', 'x15', 'x20', 'x40' — call "
+        + "'slow_mo', 'x1', 'x2', 'x3', 'x4', 'x5', 'x10', 'x15', 'x20', 'x40', call "
         + "`list_speeds` for the live list and the current speed. Higher values run the "
         + "simulation faster so longer experiments take less wall-clock time. Returns "
         + "{speed_id, multiplier, previous}.";

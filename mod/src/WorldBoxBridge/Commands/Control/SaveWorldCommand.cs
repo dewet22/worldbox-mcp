@@ -32,7 +32,7 @@ internal sealed class SaveWorldCommand : ICommand
     public string Description =>
         "Saves the current world to disk. `folder` is either an absolute path or a name "
         + "resolved under the game's saves directory (the in-game slots are `save1`, `save2`, "
-        + "…). The directory is created if missing. The save format is compatible with the "
+        + "...). The directory is created if missing. The save format is compatible with the "
         + "in-game load UI. Returns the resolved absolute `path`.";
     public bool RequiresMainThread => true;
 
@@ -87,7 +87,7 @@ internal sealed class SaveWorldCommand : ICommand
         }
 
         // Pre-flight: a save only makes sense when a world is actually loaded. Width alone
-        // isn't enough — MapBox reports dimensions while generation/loading is still running
+        // isn't enough, MapBox reports dimensions while generation/loading is still running
         // and SaveManager NREs deep inside if invoked then.
         if ((_world.Width ?? 0) == 0)
         {

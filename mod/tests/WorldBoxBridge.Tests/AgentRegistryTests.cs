@@ -48,7 +48,7 @@ public class AgentRegistryTests
     [Fact]
     public void TryAuthenticate_returns_null_on_token_of_different_length()
     {
-        // Same prefix but different length — FixedTimeEquals must short-circuit on length.
+        // Same prefix but different length, FixedTimeEquals must short-circuit on length.
         var registry = AgentRegistry.Legacy("abc123");
         registry.TryAuthenticate("abc123extra").Should().BeNull();
     }

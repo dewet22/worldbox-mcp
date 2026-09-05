@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.self_check:
         # Surface a brief summary so the CI step has something to grep for.
-        # MCPServer doesn't expose its tool list directly in every SDK version — instead, we
+        # MCPServer doesn't expose its tool list directly in every SDK version, instead, we
         # rely on its internal registration count.
         sys.stdout.write(f"worldbox-mcp {__version__} OK\n")
         asyncio.run(client.aclose())

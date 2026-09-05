@@ -13,7 +13,7 @@ namespace WorldBoxBridge.Commands.Action;
 
 /// <summary>
 /// Spawns one or more actors (creatures, races, animals, monsters, mythicals) at a tile.
-/// Covers the ~322 entries in <c>list_actors</c> — including the ones <c>invoke_power</c> can't
+/// Covers the ~322 entries in <c>list_actors</c>, including the ones <c>invoke_power</c> can't
 /// reach (e.g. <c>dragon_red</c>, <c>cthulhu</c>, <c>kraken</c>).
 /// </summary>
 /// <remarks>
@@ -41,8 +41,8 @@ internal sealed class SpawnCommand : ICommand
     public CommandCategory Category => CommandCategory.Action;
     public string Description =>
         "Spawns one or more actors of a given asset id at (x, y). The asset id comes from "
-        + "list_actors and covers every creature in the game — races, animals, monsters, "
-        + "dragons, demons, titans, kraken, cthulhu, …. The game auto-assigns the actor's "
+        + "list_actors and covers every creature in the game, races, animals, monsters, "
+        + "dragons, demons, titans, kraken, cthulhu, .... The game auto-assigns the actor's "
         + "wild kingdom; no kingdom argument is needed. Returns the new actor ids.";
     public bool RequiresMainThread => true;
 
@@ -183,10 +183,10 @@ internal sealed class SpawnCommand : ICommand
         {
             entityId,
             tile,
-            true, // pSpawnSound — agent-initiated, give it a sound
+            true, // pSpawnSound, agent-initiated, give it a sound
             false, // pMiracleSpawn
             spawnHeight,
-            null, // pSubspecies — leave to default
+            null, // pSubspecies, leave to default
             false, // pGiveOwnerlessItems
             adult,
         };
@@ -216,7 +216,7 @@ internal sealed class SpawnCommand : ICommand
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
-                $"spawn '{entityId}' at ({x},{y}) — the game refused all {count} attempts. "
+                $"spawn '{entityId}' at ({x},{y}), the game refused all {count} attempts. "
                     + "Common cause: actor can't survive this terrain (e.g. land animal on water)."
             );
         }

@@ -1,7 +1,7 @@
 """Integration test: spin up a fake mod (aiohttp) on a free port, point a real BridgeClient at
 it, and exercise the full /health path.
 
-No MCP framework is needed at this level — the contract under test is the HTTP boundary.
+No MCP framework is needed at this level, the contract under test is the HTTP boundary.
 The MCP-layer wiring is covered by :mod:`tests.unit.test_client` plus the self-check at
 ``--self-check`` runtime.
 """

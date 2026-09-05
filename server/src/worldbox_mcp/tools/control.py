@@ -1,4 +1,4 @@
-"""Control tools — simulation flow + world lifecycle.
+"""Control tools, simulation flow + world lifecycle.
 
 Six tools that let an agent manage the simulation as a whole: pause/resume + speed
 control for time management, generate/save/load for world lifecycle.
@@ -69,7 +69,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "Regenerates the world map. All kingdoms / cities / actors are wiped. Optional "
             "zone_x and zone_y set the map size in 64-tile zones (default 4x4 = 256x256, "
             "max 16x16 = 1024x1024). Generation runs asynchronously over many frames; the "
-            "response means 'scheduled', not 'ready' — poll worldbox_get_world_state until "
+            "response means 'scheduled', not 'ready', poll worldbox_get_world_state until "
             "tick advances to know when it's done."
         ),
     )
@@ -103,7 +103,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "Loads a previously-saved world. Provide either `path` (a save file, a save "
             "folder, or a name under the game's saves directory such as `save1` or whatever "
             "worldbox_save_world returned) or `bytes_b64` (base64-encoded zipped save bytes). "
-            "Like generate_world the load runs asynchronously — poll worldbox_get_world_state "
+            "Like generate_world the load runs asynchronously, poll worldbox_get_world_state "
             "until tick advances."
         ),
     )

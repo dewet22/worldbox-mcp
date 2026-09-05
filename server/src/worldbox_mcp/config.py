@@ -6,7 +6,7 @@ Resolution order:
     2. Auto-discovered ``BepInEx/config/WorldBoxBridge.cfg`` inside a detected WorldBox install.
     3. Built-in defaults (host 127.0.0.1, port 8723).
 
-The token is **never** defaulted — if neither env nor config provides one, startup fails fast
+The token is **never** defaulted, if neither env nor config provides one, startup fails fast
 with a clear error rather than producing 401 storms at runtime.
 """
 
@@ -128,7 +128,7 @@ def _enumerate_default_paths() -> Iterable[Path]:
             drives = [
                 f"{letter}:\\" for letter in string.ascii_uppercase if Path(f"{letter}:\\").exists()
             ]
-        except Exception:  # pragma: no cover — defensive
+        except Exception:  # pragma: no cover, defensive
             drives = ["C:\\"]
         for drive in drives:
             for relative in _WINDOWS_RELATIVE_CANDIDATES:
@@ -156,7 +156,7 @@ def _parse_bepinex_cfg(cfg_path: Path) -> dict[str, str]:
     """Parse a BepInEx-style INI config file into a flat dict (keys lower-cased).
 
     BepInEx config files use ``##`` for descriptions which configparser doesn't accept as
-    inline comments — we pre-strip them.
+    inline comments, we pre-strip them.
     """
     if not cfg_path.is_file():
         return {}

@@ -26,7 +26,7 @@ public enum Permission
     /// Granted to
     /// active-player roles (God + FactionPlayer) so PvP agents can fast-forward through
     /// quiet phases without needing a god agent in the session. Spectator roles
-    /// (Observer / Narrator) intentionally do NOT have this — they shouldn't be able to
+    /// (Observer / Narrator) intentionally do NOT have this, they shouldn't be able to
     /// skip ahead while the actual players are still deliberating.
     /// </summary>
     AdvanceTime = 1 << 8,

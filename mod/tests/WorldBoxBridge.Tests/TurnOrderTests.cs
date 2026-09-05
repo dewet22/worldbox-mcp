@@ -82,7 +82,7 @@ public class TurnOrderTests
         var ids = order.AgentIds;
         ids.Should().Equal(new[] { "a", "b" });
         order.Advance();
-        // Advance doesn't reorder — the rotation list is immutable.
+        // Advance doesn't reorder, the rotation list is immutable.
         order.AgentIds.Should().Equal(new[] { "a", "b" });
     }
 }

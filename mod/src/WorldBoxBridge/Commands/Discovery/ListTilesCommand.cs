@@ -43,7 +43,7 @@ internal sealed class ListTilesCommand : ICommand
     )
     {
         // HttpBridge already marshalled us onto the main thread (we declare
-        // RequiresMainThread = true) — re-dispatching would deadlock.
+        // RequiresMainThread = true), re-dispatching would deadlock.
         var items = _catalog.ListAssets("tiles", ExtraFields);
         return Task.FromResult<object?>(new { items, count = items.Count });
     }

@@ -3,7 +3,7 @@
 #
 # WorldBox on Linux uses Unity's native Mono build and is often run via Steam Proton on Linux.
 # This script targets a native (Mac/Linux) WorldBox install. Proton installs are usually
-# handled like Windows installs — use install-mod.ps1 inside the Proton prefix instead.
+# handled like Windows installs, use install-mod.ps1 inside the Proton prefix instead.
 
 set -euo pipefail
 

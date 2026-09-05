@@ -26,7 +26,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         description=(
             "Probe the WorldBoxBridge mod. Returns plugin liveness, mod version, "
             "WorldBox version, Unity version, the SHA256 of Assembly-CSharp.dll, "
-            "and the most recent main-thread tick. Call this first — its return value "
+            "and the most recent main-thread tick. Call this first, its return value "
             "tells you whether the bridge is reachable and what game build you're "
             "talking to."
         ),
@@ -38,7 +38,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         name="worldbox_capabilities",
         description=(
             "Returns the full list of commands the WorldBoxBridge mod currently exposes, "
-            "with their JSON-Schema. The mod publishes this list dynamically — when "
+            "with their JSON-Schema. The mod publishes this list dynamically, when "
             "WorldBox is updated, commands that lose backing support disappear from here. "
             "Use this when an agent wants to discover what's actually available rather "
             "than assuming."
@@ -82,7 +82,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "session's turn_order becomes active and may issue action / control commands. "
             "Returns {previous, next, forced_by_god}. Errors with TURN_NOT_YOURS if it's "
             "not your turn and you're not a god, BAD_ARGS if the session is not turn_based. "
-            "Read / discovery / message-bus commands are NEVER gated by turn — only actions "
+            "Read / discovery / message-bus commands are NEVER gated by turn, only actions "
             "and game-flow control are."
         ),
     )
@@ -94,7 +94,7 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         description=(
             "Scoreboard primitive. Returns each registered agent's declared objectives "
             "(from agents.json) AND a snapshot of live kingdom metrics (id, name, units, "
-            "cities, wild flag). The bridge intentionally does NOT compute scores — the "
+            "cities, wild flag). The bridge intentionally does NOT compute scores, the "
             "calling agent interprets the metrics against the objective kinds (wipe_kingdom, "
             "maximize_pop, survive, etc.) to derive its own evaluation. This stays robust "
             "across game-mechanics changes and supports both competitive and cooperative "

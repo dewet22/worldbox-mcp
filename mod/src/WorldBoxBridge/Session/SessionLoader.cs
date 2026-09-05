@@ -32,7 +32,7 @@ namespace WorldBoxBridge.Session;
 /// }
 /// </code>
 /// JSON was picked over TOML because Newtonsoft.Json is already loaded by every command
-/// in the bridge — pulling in a TOML parser would add a dep that BepInEx has to resolve.
+/// in the bridge, pulling in a TOML parser would add a dep that BepInEx has to resolve.
 /// </remarks>
 internal static class SessionLoader
 {
@@ -40,7 +40,7 @@ internal static class SessionLoader
     {
         if (!File.Exists(agentsJsonPath))
         {
-            log.LogInfo($"[session] no '{agentsJsonPath}' — using legacy single-token mode.");
+            log.LogInfo($"[session] no '{agentsJsonPath}', using legacy single-token mode.");
             return Session.Legacy(legacyToken);
         }
 
@@ -159,7 +159,7 @@ internal static class SessionLoader
                 if (!long.TryParse(claim.Substring(3), out var kid))
                 {
                     throw new InvalidDataException(
-                        $"agent '{id}' kingdom_claim '{claim}' — expected 'id:<int>'."
+                        $"agent '{id}' kingdom_claim '{claim}', expected 'id:<int>'."
                     );
                 }
                 kingdomClaim = kid;
@@ -167,11 +167,11 @@ internal static class SessionLoader
             else if (!claim.StartsWith("auto:", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException(
-                    $"agent '{id}' kingdom_claim '{claim}' — must be 'auto:<ordinal>' or 'id:<int>'."
+                    $"agent '{id}' kingdom_claim '{claim}', must be 'auto:<ordinal>' or 'id:<int>'."
                 );
             }
         }
-        // Optional objectives per agent — informational metadata, the evaluator lives client-side.
+        // Optional objectives per agent, informational metadata, the evaluator lives client-side.
         var objectives = new List<Objective>();
         if (ao["objectives"] is JArray oArr)
         {

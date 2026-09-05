@@ -6,7 +6,7 @@ namespace WorldBoxBridge.Http;
 /// Renaming an existing code is a breaking change; adding a new code is backwards-compatible.
 ///
 /// Kept in a dedicated file (split from <c>ErrorEnvelope.cs</c>) so the test project can
-/// link it without pulling in Newtonsoft.Json — only the envelope/detail/exception types
+/// link it without pulling in Newtonsoft.Json, only the envelope/detail/exception types
 /// carry serialization attributes; the codes themselves are plain strings.
 /// </remarks>
 public static class ErrorCode

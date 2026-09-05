@@ -40,7 +40,7 @@ def build_server(settings: Settings) -> tuple[MCPServer, BridgeClient]:
             "`worldbox_health` first to verify the bridge is reachable, then "
             "`worldbox_capabilities` to discover what commands the current mod build "
             "supports. Asset identifiers (tile/actor/power ids) come from the in-game "
-            "registry — never assume them; enumerate via the discovery tools."
+            "registry, never assume them; enumerate via the discovery tools."
         ),
     )
 

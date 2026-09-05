@@ -36,7 +36,7 @@ internal sealed class ListKingdomsCommand : ICommand
                             new JProperty(
                                 "description",
                                 "If true, include wild kingdoms (animal packs, sea monsters). "
-                                    + "Default is false — most agents only care about civilizations."
+                                    + "Default is false, most agents only care about civilizations."
                             )
                         )
                     )

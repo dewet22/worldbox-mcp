@@ -1,11 +1,11 @@
-"""Action tools — modify the world.
+"""Action tools, modify the world.
 
 Three primitives cover the full action surface:
 
-* ``worldbox_invoke_power`` — universal GodPower trigger (most spawns + every disaster).
-* ``worldbox_spawn`` — actor spawn for entries that aren't in the PowerLibrary
-  (dragons, kraken, cthulhu, …).
-* ``worldbox_paint_tile`` — direct tile-type modification with optional radius.
+* ``worldbox_invoke_power``, universal GodPower trigger (most spawns + every disaster).
+* ``worldbox_spawn``, actor spawn for entries that aren't in the PowerLibrary
+  (dragons, kraken, cthulhu, ...).
+* ``worldbox_paint_tile``, direct tile-type modification with optional radius.
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         description=(
             "Invokes any GodPower on a tile. Universal action: covers every spawn-by-race "
             "(by passing a race id like 'human'), every disaster (meteorite, nuke, plague, "
-            "lightning, tsunami, earthquake, …), every toggle (peace, civilization, …) and "
+            "lightning, tsunami, earthquake, ...), every toggle (peace, civilization, ...) and "
             "every modifier the in-game god-mode UI exposes. Discover valid power_id values "
             "via `worldbox_list_powers`. x/y are tile coordinates within the map. Returns "
             "`{power_id, x, y, accepted, via}`; `accepted=false` means the game declined this "
             "time (drop-style powers such as rain or bombs roll a chance, so retry). Powers "
             "that need live mouse/drag state (e.g. 'finger') or a brush are rejected with "
-            "GAME_REJECTED and a reason — use worldbox_paint_tile / worldbox_spawn instead."
+            "GAME_REJECTED and a reason, use worldbox_paint_tile / worldbox_spawn instead."
         ),
     )
     async def worldbox_invoke_power(power_id: str, x: int, y: int) -> dict[str, Any]:
@@ -40,9 +40,9 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         name="worldbox_spawn",
         description=(
             "Spawns one or more actors of a given asset id at (x, y). Use this for "
-            "creatures NOT exposed as GodPowers — dragons, kraken, cthulhu, demons, "
+            "creatures NOT exposed as GodPowers, dragons, kraken, cthulhu, demons, "
             "titans, specific animals. Discover ids via `worldbox_list_actors`. The game "
-            "auto-assigns the actor's wild kingdom from ActorAsset.kingdom_id_wild — no "
+            "auto-assigns the actor's wild kingdom from ActorAsset.kingdom_id_wild, no "
             "kingdom argument needed. count must be 1..100. If the actor can't survive the "
             "terrain (e.g. land animal on water), the game silently refuses and the call "
             "reports failed > 0."
@@ -72,8 +72,8 @@ def register(server: MCPServer, client: BridgeClient) -> None:
         name="worldbox_paint_tile",
         description=(
             "Paints a single tile or a disc of tiles. tile_id changes the main ground "
-            "type (water, lava, sand, soil_low, …); optional top_id sets the top "
-            "decoration (forests, roads, wasteland, …). Discover valid ids via "
+            "type (water, lava, sand, soil_low, ...); optional top_id sets the top "
+            "decoration (forests, roads, wasteland, ...). Discover valid ids via "
             "`worldbox_list_tiles`. With radius > 0, paints a Euclidean disc of `radius` "
             "cells. Out-of-map cells are skipped silently. Returns `{painted, skipped}`."
         ),

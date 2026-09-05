@@ -47,7 +47,7 @@ public sealed class Plugin : BaseUnityPlugin
             var version = VersionDetector.Detect(Application.unityVersion, Application.version);
             Logger.LogInfo(
                 $"Detected WorldBox '{version.WorldBoxVersion}' on Unity {version.UnityVersion} "
-                    + $"(Assembly-CSharp.dll sha256={Truncate(version.AssemblyCSharpSha256, 12)}…)."
+                    + $"(Assembly-CSharp.dll sha256={Truncate(version.AssemblyCSharpSha256, 12)}...)."
             );
 
             var gameRefs = new GameRefs(Logger);
@@ -89,26 +89,26 @@ public sealed class Plugin : BaseUnityPlugin
         catch (Exception ex)
         {
             Logger.LogError($"FATAL: WorldBoxBridge failed to start: {ex}");
-            // Don't rethrow — let other plugins keep loading. The mod is just inert.
+            // Don't rethrow, let other plugins keep loading. The mod is just inert.
         }
     }
 
     private void OnDestroy()
     {
         // IMPORTANT: do NOT dispose _bridge here. On WorldBox (Unity 2022.3.60f1), OnDestroy
-        // fires shortly after Awake for the plugin MonoBehaviour — likely a scene-transition
+        // fires shortly after Awake for the plugin MonoBehaviour, likely a scene-transition
         // side effect or BepInEx host lifecycle quirk that we can't reliably prevent.
         //
         // The bridge keeps itself alive through:
         //   1. A static reference inside HttpBridge (anti-GC anchor).
         //   2. A non-background accept thread that pins the listener.
         // Cleanup happens at process exit (OS) or on OnApplicationQuit (graceful).
-        Logger.LogDebug("Plugin.OnDestroy() ignored — bridge keeps running.");
+        Logger.LogDebug("Plugin.OnDestroy() ignored, bridge keeps running.");
     }
 
     private void OnApplicationQuit()
     {
-        Logger.LogInfo("OnApplicationQuit — disposing bridge.");
+        Logger.LogInfo("OnApplicationQuit, disposing bridge.");
         try
         {
             _bridge?.Dispose();
@@ -137,28 +137,28 @@ public sealed class Plugin : BaseUnityPlugin
     {
         registry.Register(new HealthCommand(version, config, session));
 
-        // Meta — multi-agent identity introspection.
+        // Meta, multi-agent identity introspection.
         registry.Register(new WhoAmICommand());
         registry.Register(new SessionInfoCommand(session));
         registry.Register(new TurnAdvanceCommand(session));
         registry.Register(new ObjectiveStatusCommand(session, worldAccess));
 
-        // Bus — inter-agent messaging.
+        // Bus, inter-agent messaging.
         registry.Register(new SendMessageCommand(session));
         registry.Register(new RecvMessagesCommand(session));
 
-        // Discovery — introspect the in-game asset registries.
+        // Discovery, introspect the in-game asset registries.
         registry.Register(new ListTilesCommand(assetCatalog));
         registry.Register(new ListActorsCommand(assetCatalog));
         registry.Register(new ListPowersCommand(assetCatalog));
         registry.Register(new ListSpeedsCommand(assetCatalog, gameRefs));
 
-        // Actions — modify the world.
+        // Actions, modify the world.
         registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, Logger));
         registry.Register(new SpawnCommand(assetCatalog, worldAccess, Logger));
         registry.Register(new PaintTileCommand(assetCatalog, worldAccess, Logger));
 
-        // Read — observe the world before/after acting.
+        // Read, observe the world before/after acting.
         registry.Register(new GetWorldStateCommand(worldAccess));
         registry.Register(new GetTileCommand(worldAccess));
         registry.Register(new ListKingdomsCommand(worldAccess));
@@ -167,7 +167,7 @@ public sealed class Plugin : BaseUnityPlugin
         registry.Register(new ScreenshotCommand());
         registry.Register(new GetUiStateCommand(gameUi, worldAccess));
 
-        // Control — simulation flow + world lifecycle.
+        // Control, simulation flow + world lifecycle.
         registry.Register(new PauseCommand(gameRefs));
         registry.Register(new ResumeCommand(gameRefs));
         registry.Register(new SetSpeedCommand(assetCatalog, gameRefs));

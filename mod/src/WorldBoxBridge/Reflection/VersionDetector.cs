@@ -11,7 +11,7 @@ namespace WorldBoxBridge.Reflection;
 /// </summary>
 /// <remarks>
 /// Including the SHA256 of <c>Assembly-CSharp.dll</c> in every health response lets users
-/// correlate bug reports with the exact game build that produced them — much more precise
+/// correlate bug reports with the exact game build that produced them, much more precise
 /// than just the displayed game version, which can lag behind Steam beta patches.
 /// </remarks>
 internal sealed class VersionInfo

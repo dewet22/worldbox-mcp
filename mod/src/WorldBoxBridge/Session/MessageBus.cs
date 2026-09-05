@@ -7,7 +7,7 @@ namespace WorldBoxBridge.Session;
 /// <summary>
 /// In-memory pub-sub for inter-agent messages. Each registered agent owns a bounded inbox
 /// (default 200 messages) protected by a single bus-wide lock. When an inbox fills up,
-/// the oldest message is dropped — drop-newest would lose the fresh signal that's usually
+/// the oldest message is dropped, drop-newest would lose the fresh signal that's usually
 /// the more interesting one in a simulation game.
 /// </summary>
 /// <remarks>
@@ -41,7 +41,7 @@ public sealed class MessageBus
         if (_inboxes.Count == 0)
         {
             throw new InvalidOperationException(
-                "MessageBus constructed with zero registered agents — nobody could send or receive."
+                "MessageBus constructed with zero registered agents, nobody could send or receive."
             );
         }
     }
@@ -61,7 +61,7 @@ public sealed class MessageBus
     /// <summary>
     /// Sends a message. <paramref name="to"/> is either a registered agent id or
     /// <c>"*"</c> to broadcast to all other agents. Returns the sequence number of the
-    /// last delivery (the sender always receives a single seq even on broadcast — that's
+    /// last delivery (the sender always receives a single seq even on broadcast, that's
     /// the cursor consumers should advance past after polling).
     /// </summary>
     public long Send(string from, string to, string? kind, string content)

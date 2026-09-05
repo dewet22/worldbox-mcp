@@ -53,7 +53,7 @@ internal abstract class PausedCommandBase : ICommand
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
-                "Config type not found — can't toggle pause."
+                "Config type not found, can't toggle pause."
             );
         }
         _pausedProp ??= configType.GetProperty(

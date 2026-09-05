@@ -8,7 +8,7 @@ using SessionState = WorldBoxBridge.Session.Session;
 namespace WorldBoxBridge.Commands.Bus;
 
 /// <summary>
-/// Polls the calling agent's inbox. Non-destructive — messages stay in the inbox until
+/// Polls the calling agent's inbox. Non-destructive, messages stay in the inbox until
 /// they age out under the bounded-queue policy. Callers use <c>since_seq</c> as a cursor:
 /// pass the highest <c>seq</c> they saw last time to avoid re-fetching.
 /// </summary>
@@ -27,10 +27,10 @@ internal sealed class RecvMessagesCommand : ICommand
     public string Name => "recv_messages";
     public CommandCategory Category => CommandCategory.Bus;
     public string Description =>
-        "Polls this agent's inbox for new messages. `since_seq` is a cursor — pass the "
+        "Polls this agent's inbox for new messages. `since_seq` is a cursor, pass the "
         + "highest `seq` from the previous response to avoid re-reading. `max` caps the "
         + "result (default 50, hard ceiling 500). Returns {items, count, next_cursor}. "
-        + "Messages are NOT consumed — calling again with the same since_seq returns the "
+        + "Messages are NOT consumed, calling again with the same since_seq returns the "
         + "same items until they age out of the bounded inbox.";
     public bool RequiresMainThread => false;
 

@@ -21,8 +21,7 @@ namespace WorldBoxBridge.Threading;
 /// GameObject. The plugin code never sees the destruction (no exception, just a silent stop
 /// of <c>Update()</c>), which is the worst kind of failure.</para>
 ///
-/// <para><b>PlayerLoop instead:</b> we hook a delegate into Unity's internal frame loop —
-/// the same mechanism the engine uses for built-in subsystems like the physics tick or the
+/// <para><b>PlayerLoop instead:</b> we hook a delegate into Unity's internal frame loop, /// the same mechanism the engine uses for built-in subsystems like the physics tick or the
 /// animation update. This delegate lives in the engine's player-loop table, not as a managed
 /// Component, so GameObject lifecycle quirks can't reach it. The same pattern is used by
 /// <a href="https://github.com/BepInEx/RuntimeUnityEditor">RuntimeUnityEditor</a> and most
@@ -68,7 +67,7 @@ public static class MainThreadDispatcher
         if (!TryInjectInto(ref loop, typeof(Update)))
         {
             log.LogError(
-                "Could not find the Update phase in Unity's PlayerLoop — dispatcher disabled. "
+                "Could not find the Update phase in Unity's PlayerLoop, dispatcher disabled. "
                     + "Commands that require main-thread access will fail."
             );
             return;
@@ -76,7 +75,7 @@ public static class MainThreadDispatcher
         PlayerLoop.SetPlayerLoop(loop);
         _registered = true;
         log.LogInfo(
-            "[dispatcher] injected into Unity PlayerLoop Update phase — survives MonoBehaviour lifecycle."
+            "[dispatcher] injected into Unity PlayerLoop Update phase, survives MonoBehaviour lifecycle."
         );
     }
 

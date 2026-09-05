@@ -57,14 +57,14 @@ internal sealed class TurnAdvanceCommand : ICommand
         }
 
         // God agents can advance the turn even if the rotation doesn't currently point at
-        // them — useful for unsticking a dropped player in hierarchical scenarios.
+        // them, useful for unsticking a dropped player in hierarchical scenarios.
         if (!ctx.Has(Permission.ActionGlobal))
         {
             if (!_session.TurnOrder.IsCurrentlyActive(ctx.AgentId))
             {
                 throw new BridgeRejectionException(
                     ErrorCode.TurnNotYours,
-                    $"Not your turn — current is '{_session.TurnOrder.Current}', you are '{ctx.AgentId}'."
+                    $"Not your turn, current is '{_session.TurnOrder.Current}', you are '{ctx.AgentId}'."
                 );
             }
         }

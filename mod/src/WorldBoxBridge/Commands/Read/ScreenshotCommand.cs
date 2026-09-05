@@ -13,10 +13,10 @@ namespace WorldBoxBridge.Commands.Read;
 /// Captures the current game framebuffer, optionally downscales it, and returns it base64-encoded.
 /// </summary>
 /// <remarks>
-/// Uses Unity's <c>ScreenCapture.CaptureScreenshotAsTexture()</c> — main-thread only.
+/// Uses Unity's <c>ScreenCapture.CaptureScreenshotAsTexture()</c>, main-thread only.
 /// HttpBridge already marshals us onto the main thread because <c>RequiresMainThread=true</c>.
-/// A full Retina frame (3354×2654) is ~2.8 MB as PNG, ~3.8 MB once base64'd — far too much to
-/// hand a language model per call — so by default the longest edge is clamped to
+/// A full Retina frame (3354×2654) is ~2.8 MB as PNG, ~3.8 MB once base64'd, far too much to
+/// hand a language model per call, so by default the longest edge is clamped to
 /// <see cref="ScreenshotScaler.DefaultMaxDimension"/> and the result is JPEG. Downscaling is a
 /// GPU blit into a temporary RenderTexture (bilinear), read back into a small Texture2D.
 /// All textures are destroyed immediately after encoding to avoid VRAM/GC pressure.
@@ -83,7 +83,7 @@ internal sealed class ScreenshotCommand : ICommand
         CancellationToken cancellationToken
     )
     {
-        // Screenshot leaks the entire map at once — gate it on ReadAll so FactionPlayers
+        // Screenshot leaks the entire map at once, gate it on ReadAll so FactionPlayers
         // under partial_intel can't bypass their fog-of-war by snapping a picture.
         ctx.Require(Permission.ReadAll);
 

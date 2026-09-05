@@ -10,7 +10,7 @@ namespace WorldBoxBridge.Commands.Control;
 /// <remarks>
 /// The game keeps its save slots under <c>&lt;persistentDataPath&gt;/saves/saveN</c>. Agents
 /// naturally pass a bare name ("save3", "before-the-flood") rather than an absolute path, and
-/// before this helper existed such a name was handed to the game verbatim — which resolved it
+/// before this helper existed such a name was handed to the game verbatim, which resolved it
 /// against the process working directory, i.e. the game install folder.
 /// </remarks>
 public static class SavePathResolver

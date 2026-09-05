@@ -12,7 +12,7 @@ namespace WorldBoxBridge.Session;
 /// <remarks>
 /// Constructed by <see cref="SessionLoader"/> only when <c>turn_based: true</c> is set in
 /// agents.json. The rotation can be explicit (<c>"turn_order": ["athena", "ares"]</c>) or
-/// implicit (all registered agents in declaration order — handy for quick tests).
+/// implicit (all registered agents in declaration order, handy for quick tests).
 /// God-role agents bypass the gate entirely (see <c>HttpBridge.CheckTurnGate</c>) so a
 /// hierarchical "DM watches over the PvP" scenario remains workable.
 /// </remarks>
@@ -30,7 +30,7 @@ public sealed class TurnOrder
         if (_agentIds.Count == 0)
         {
             throw new InvalidOperationException(
-                "TurnOrder constructed with zero agents — no one would ever be allowed to act."
+                "TurnOrder constructed with zero agents, no one would ever be allowed to act."
             );
         }
     }

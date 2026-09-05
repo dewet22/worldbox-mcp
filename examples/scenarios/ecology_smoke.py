@@ -1,13 +1,12 @@
-"""Ecology smoke scenario — end-to-end agentic loop demo.
+"""Ecology smoke scenario, end-to-end agentic loop demo.
 
 Simulates what an agent does when asked: "Build a small ecology on the map and
-report what happens after a few moments." Uses **only** the MCP-exposed tools —
-no shortcuts, no hardcoded ids. The agent discovers what's available at runtime,
+report what happens after a few moments." Uses **only** the MCP-exposed tools, no shortcuts, no hardcoded ids. The agent discovers what's available at runtime,
 plans actions, and observes the outcome.
 
 Prerequisites:
     - WorldBox running with WorldBoxBridge loaded (see scripts/install-mod.ps1).
-    - A world started — the title-screen stub only has a handful of actors and
+    - A world started, the title-screen stub only has a handful of actors and
       produces a boring demo. Click "New World" in-game first.
 
 Run from the repo root:

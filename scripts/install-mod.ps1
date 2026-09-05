@@ -5,9 +5,9 @@
 
 .DESCRIPTION
     Two modes:
-      * Default — downloads the latest BepInEx 5 Mono x64 and the latest
+      * Default, downloads the latest BepInEx 5 Mono x64 and the latest
         WorldBoxBridge.dll from the GitHub release, installs both.
-      * -Local — uses a locally built DLL at mod/src/WorldBoxBridge/bin/Release/net462/WorldBoxBridge.dll
+      * -Local, uses a locally built DLL at mod/src/WorldBoxBridge/bin/Release/net462/WorldBoxBridge.dll
         (for development).
 
     Generates a per-install auth token in BepInEx/config/WorldBoxBridge.cfg if not present.
@@ -111,7 +111,7 @@ Write-Host "✓ WorldBox at $WorldBoxPath" -ForegroundColor Green
 
 Stop-WorldBoxIfRunning
 
-# Step 1 — BepInEx
+# Step 1, BepInEx
 $bepinexCore = Join-Path $WorldBoxPath 'BepInEx\core\BepInEx.dll'
 if (Test-Path $bepinexCore) {
     Write-Host "✓ BepInEx already installed" -ForegroundColor Green
@@ -126,7 +126,7 @@ else {
     Remove-Item $bepZip -Force
 }
 
-# Step 2 — WorldBoxBridge.dll
+# Step 2, WorldBoxBridge.dll
 $pluginsDir = Join-Path $WorldBoxPath 'BepInEx\plugins'
 New-Item -ItemType Directory -Force -Path $pluginsDir | Out-Null
 $dllDest = Join-Path $pluginsDir 'WorldBoxBridge.dll'
@@ -158,7 +158,7 @@ else {
     Write-Host "✓ Installed WorldBoxBridge.dll from $($release.tag_name)" -ForegroundColor Green
 }
 
-# Step 3 — Config + token
+# Step 3, Config + token
 $configDir = Join-Path $WorldBoxPath 'BepInEx\config'
 New-Item -ItemType Directory -Force -Path $configDir | Out-Null
 $configFile = Join-Path $configDir 'WorldBoxBridge.cfg'

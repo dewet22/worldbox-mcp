@@ -1,6 +1,6 @@
 """Transport selection: stdio (default) or Streamable HTTP.
 
-stdio is the MCP standard for desktop AI clients (Claude Code, Cursor, Codex, …). HTTP
+stdio is the MCP standard for desktop AI clients (Claude Code, Cursor, Codex, ...). HTTP
 exists for web clients, agents that can't spawn subprocesses, or one-off curl debugging.
 """
 

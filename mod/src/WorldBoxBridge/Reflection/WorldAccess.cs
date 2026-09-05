@@ -14,7 +14,7 @@ namespace WorldBoxBridge.Reflection;
 /// <remarks>
 /// Same fail-soft pattern as <see cref="GameRefs"/>: if a symbol disappears in a future game
 /// update, the affected getter returns null and the dependent command surfaces a clear error
-/// — the rest of the bridge keeps running.
+///, the rest of the bridge keeps running.
 /// </remarks>
 internal sealed class WorldAccess
 {
@@ -188,7 +188,7 @@ internal sealed class WorldAccess
         return map.GetValue(x, y);
     }
 
-    /// <summary>Plain struct rather than <c>(int, int)?</c> — avoids System.ValueTuple
+    /// <summary>Plain struct rather than <c>(int, int)?</c>, avoids System.ValueTuple
     /// which isn't always loadable in Unity Mono.</summary>
     public readonly struct MapDimensions
     {
@@ -217,17 +217,17 @@ internal sealed class WorldAccess
     /// Enumerates the live objects managed by <paramref name="manager"/>.
     /// </summary>
     /// <remarks>
-    /// All WorldBox managers (<c>ActorManager</c>, <c>KingdomManager</c>, <c>CityManager</c>, …)
+    /// All WorldBox managers (<c>ActorManager</c>, <c>KingdomManager</c>, <c>CityManager</c>, ...)
     /// derive from <c>CoreSystemManager&lt;T, TData&gt;</c> which implements <c>IEnumerable&lt;T&gt;</c>
     /// with the underlying storage being a <c>HashSet&lt;T&gt;</c>. Iterating via the
     /// non-generic <see cref="IEnumerable"/> interface works uniformly across the two manager
     /// hierarchies (<c>SimSystemManager</c> for actors, <c>MetaSystemManager</c> for
     /// kingdoms / cities). The earlier reflection-on-<c>getSimpleList()</c> only worked for
-    /// the SimSystem half — the MetaSystem managers don't define that method.
+    /// the SimSystem half, the MetaSystem managers don't define that method.
     /// </remarks>
     public IList? GetSimpleList(object manager)
     {
-        // Snapshot via IEnumerable — works for every CoreSystemManager subclass.
+        // Snapshot via IEnumerable, works for every CoreSystemManager subclass.
         if (manager is IEnumerable enumerable)
         {
             var list = new List<object>();
@@ -241,7 +241,7 @@ internal sealed class WorldAccess
             return list;
         }
         _log.LogWarning(
-            $"[WorldAccess] {manager.GetType().FullName} does not implement IEnumerable — can't enumerate."
+            $"[WorldAccess] {manager.GetType().FullName} does not implement IEnumerable, can't enumerate."
         );
         return null;
     }
@@ -316,7 +316,7 @@ internal sealed class WorldAccess
         MethodInfo? mi = null;
         for (var cur = type; cur != null && mi == null; cur = cur.BaseType)
         {
-            // Don't use GetMethod(name, flags) without arg types — it throws
+            // Don't use GetMethod(name, flags) without arg types, it throws
             // AmbiguousMatchException when overloads exist. Enumerate instead and pick
             // the first method whose signature matches the requested arg types.
             foreach (

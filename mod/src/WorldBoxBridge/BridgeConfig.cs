@@ -34,7 +34,7 @@ internal sealed class BridgeConfig
             "Bridge",
             "host",
             "127.0.0.1",
-            "Listener host. 127.0.0.1 only — binding to 0.0.0.0 or external IPs is refused at startup."
+            "Listener host. 127.0.0.1 only, binding to 0.0.0.0 or external IPs is refused at startup."
         );
 
         Port = file.Bind("Bridge", "port", 8723, "Listener TCP port.");

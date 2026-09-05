@@ -18,7 +18,7 @@ public enum CommandCategory
 
 /// <summary>
 /// Contract every HTTP-exposed command implements. One <see cref="ICommand"/> instance lives
-/// for the lifetime of the plugin and is invoked concurrently from many request threads — keep
+/// for the lifetime of the plugin and is invoked concurrently from many request threads, keep
 /// implementations stateless or thread-safe.
 /// </summary>
 public interface ICommand

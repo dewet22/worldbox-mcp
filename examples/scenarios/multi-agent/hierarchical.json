@@ -1,5 +1,5 @@
 {
-  "_comment": "Hierarchical scenario — 1 god/MJ + 2 faction players + 1 narrator. Use for storytelling sessions where a 'Dungeon Master' AI sets up situations, two players react in-character with their kingdoms, and a narrator broadcasts colorful summaries. Fog-of-war is on so each player only sees their own kingdom — the god sees everything and the narrator sees everything (with no action permission).",
+  "_comment": "Hierarchical scenario, 1 god/MJ + 2 faction players + 1 narrator. Use for storytelling sessions where a 'Dungeon Master' AI sets up situations, two players react in-character with their kingdoms, and a narrator broadcasts colorful summaries. Fog-of-war is on so each player only sees their own kingdom, the god sees everything and the narrator sees everything (with no action permission).",
   "scenario": "hierarchical",
   "partial_intel": true,
   "turn_based": false,

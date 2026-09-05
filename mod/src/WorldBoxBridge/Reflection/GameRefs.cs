@@ -9,7 +9,7 @@ namespace WorldBoxBridge.Reflection;
 /// Cached, fail-soft reflection lookup into the running game's <c>Assembly-CSharp</c>.
 /// </summary>
 /// <remarks>
-/// <para>The mod never references game types via <c>using</c> — it resolves them by name through
+/// <para>The mod never references game types via <c>using</c>, it resolves them by name through
 /// this class. Why: WorldBox updates can rename, remove or obfuscate types. If a hard <c>using</c>
 /// were used, the whole plugin would fail to load. With this indirection, an individual command
 /// can degrade gracefully while the rest of the bridge keeps serving.</para>
@@ -18,7 +18,7 @@ namespace WorldBoxBridge.Reflection;
 /// avoid repeated noise.</para>
 ///
 /// <para>Phase 2 will add accessors for the WorldBox singletons (<c>MapBox</c>, <c>World</c>,
-/// <c>AssetManager</c>, …). The infrastructure here is intentionally generic so adding a new
+/// <c>AssetManager</c>, ...). The infrastructure here is intentionally generic so adding a new
 /// accessor is a one-liner.</para>
 /// </remarks>
 internal sealed class GameRefs

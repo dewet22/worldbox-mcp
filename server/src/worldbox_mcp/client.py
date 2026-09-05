@@ -3,10 +3,10 @@
 Wraps :mod:`httpx` with the bridge's auth header and unified error decoding. One instance
 per server lifetime; the underlying httpx client is reused for connection pooling.
 
-Auth — v0.3 multi-agent: each request sends ``Authorization: Bearer <token>``. The token
+Auth, v0.3 multi-agent: each request sends ``Authorization: Bearer <token>``. The token
 is taken from :attr:`BridgeAddress.token` by default (single-process / stdio mode) but
 can be overridden per-call via the ``token`` kwarg (multi-tenant front-ends in Phase 2.5).
-The legacy ``X-WB-Token`` header is **not** sent — the C# bridge accepts both, but the
+The legacy ``X-WB-Token`` header is **not** sent, the C# bridge accepts both, but the
 unified Authorization path keeps the wire format consistent with the broader MCP / HTTP
 ecosystem.
 """
@@ -46,7 +46,7 @@ class BridgeClient:
         self._address = address
         self._timeout = timeout
         self._owns_client = client is None
-        # No baked-in Authorization header — every request injects one explicitly so
+        # No baked-in Authorization header, every request injects one explicitly so
         # callers can override per-call (Phase 2.5 multi-tenant) without rebuilding
         # the httpx client.
         self._client = client or httpx.AsyncClient(
@@ -121,7 +121,7 @@ class BridgeClient:
 
         if data.get("ok") is True:
             result = data.get("result")
-            # /health is special: there's no separate `result` — the whole envelope is the result.
+            # /health is special: there's no separate `result`, the whole envelope is the result.
             if result is None and path == "/health":
                 return data
             return result if isinstance(result, dict) else {"value": result}

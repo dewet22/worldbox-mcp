@@ -51,7 +51,7 @@ internal sealed class GameUiAccess
         return _isWindowActive?.Invoke(null, Array.Empty<object>()) as bool?;
     }
 
-    /// <summary>The <c>screen_id</c> of the window currently shown ("welcome", "settings", …), or null.</summary>
+    /// <summary>The <c>screen_id</c> of the window currently shown ("welcome", "settings", ...), or null.</summary>
     public string? CurrentWindowId()
     {
         var t = ScrollWindowType;
@@ -114,8 +114,7 @@ internal sealed class GameUiAccess
 
     /// <summary>
     /// Sets <c>Config.disable_startup_window</c>, which the game checks at the end of world
-    /// loading before showing the "welcome" window. Must run before the first world loads —
-    /// i.e. from plugin Awake — to take effect. Returns false if the field is missing.
+    /// loading before showing the "welcome" window. Must run before the first world loads, /// i.e. from plugin Awake, to take effect. Returns false if the field is missing.
     /// </summary>
     public bool SetDisableStartupWindow(bool value)
     {
@@ -133,7 +132,7 @@ internal sealed class GameUiAccess
         )
         {
             _log.LogWarning(
-                "[ui] Config.disable_startup_window not writable — startup window can't be suppressed."
+                "[ui] Config.disable_startup_window not writable, startup window can't be suppressed."
             );
             return false;
         }

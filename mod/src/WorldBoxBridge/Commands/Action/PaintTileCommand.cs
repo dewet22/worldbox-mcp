@@ -12,7 +12,7 @@ namespace WorldBoxBridge.Commands.Action;
 
 /// <summary>
 /// Sets the tile type at a single coordinate or across a disc of <c>radius</c> cells.
-/// Optional <c>top_id</c> sets the top decoration (forest, road, wasteland, …) on the same disc.
+/// Optional <c>top_id</c> sets the top decoration (forest, road, wasteland, ...) on the same disc.
 /// </summary>
 /// <remarks>
 /// Calls <c>WorldTile.setTileType(string)</c> and <c>WorldTile.setTopTileType(TopTileType, true)</c>.
@@ -38,8 +38,8 @@ internal sealed class PaintTileCommand : ICommand
     public CommandCategory Category => CommandCategory.Action;
     public string Description =>
         "Paints a tile (or a disc of tiles for radius > 0). tile_id changes the main "
-        + "ground type (water, lava, sand, soil, …). Optional top_id changes the top "
-        + "decoration overlay (forests, roads, wasteland, …). Discover valid ids via "
+        + "ground type (water, lava, sand, soil, ...). Optional top_id changes the top "
+        + "decoration overlay (forests, roads, wasteland, ...). Discover valid ids via "
         + "list_tiles. Out-of-map cells are silently skipped.";
     public bool RequiresMainThread => true;
 
@@ -68,7 +68,7 @@ internal sealed class PaintTileCommand : ICommand
                             new JProperty("type", "string"),
                             new JProperty(
                                 "description",
-                                "Optional top decoration id (forests, roads, wasteland, …)."
+                                "Optional top decoration id (forests, roads, wasteland, ...)."
                             )
                         )
                     ),
@@ -97,7 +97,7 @@ internal sealed class PaintTileCommand : ICommand
         CancellationToken cancellationToken
     )
     {
-        // Terraforming is genuinely global (no per-kingdom semantics in WorldBox) — gate on
+        // Terraforming is genuinely global (no per-kingdom semantics in WorldBox), gate on
         // ActionGlobal so FactionPlayers can't reshape opponents' territory.
         ctx.Require(Permission.ActionGlobal);
         if (!args.TryGetValue("x", out var xT) || !args.TryGetValue("y", out var yT))
@@ -138,7 +138,7 @@ internal sealed class PaintTileCommand : ICommand
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
-                "MapBox dimensions not available — game world not initialised."
+                "MapBox dimensions not available, game world not initialised."
             );
         }
         var w = dims.Value.Width;

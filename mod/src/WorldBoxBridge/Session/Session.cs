@@ -5,11 +5,11 @@ namespace WorldBoxBridge.Session;
 
 /// <summary>
 /// One game world = one Session. Holds the agent roster, scenario preset, and global
-/// switches that affect how every command behaves (fog-of-war, turn ordering, …).
+/// switches that affect how every command behaves (fog-of-war, turn ordering, ...).
 /// </summary>
 /// <remarks>
 /// v0.3 ships with a single Session singleton constructed at <see cref="WorldBoxBridge.Plugin.Awake"/>.
-/// Multi-session routing is deferred to a later release — see plan §6.
+/// Multi-session routing is deferred to a later release, see plan §6.
 /// </remarks>
 public sealed class Session
 {
@@ -27,8 +27,7 @@ public sealed class Session
         PartialIntel = partialIntel;
         TurnBased = turnBased;
         TurnOrder = turnOrder;
-        // Auto-build a default MessageBus from the registry if the caller didn't pass one —
-        // tests and the legacy factory just want a working bus without ceremony.
+        // Auto-build a default MessageBus from the registry if the caller didn't pass one, // tests and the legacy factory just want a working bus without ceremony.
         var allIds = new List<string>(agents.Count);
         foreach (var a in agents.All)
             allIds.Add(a.Id);

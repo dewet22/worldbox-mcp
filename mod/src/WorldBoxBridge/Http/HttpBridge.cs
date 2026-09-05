@@ -24,7 +24,7 @@ namespace WorldBoxBridge.Http;
 /// <para><b>Why not <see cref="System.Net.HttpListener"/>?</b> Under Unity's Mono runtime
 /// (verified on Unity 2022.3.60f1), <c>HttpListener.Start()</c> returns successfully and
 /// <c>IsListening</c> reports <c>true</c>, but no TCP socket is actually bound. This is a
-/// long-standing bug in Mono's managed HTTP implementation — see
+/// long-standing bug in Mono's managed HTTP implementation, see
 /// <see href="https://discussions.unity.com/t/httplistener-ignores-port-on-some-windows-platform-s/755558"/>
 /// for the discussion. <see cref="TcpListener"/> bypasses the broken managed HTTP layer and
 /// goes straight to the platform socket APIs, which work reliably.</para>
@@ -51,7 +51,7 @@ internal sealed class HttpBridge : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private Task? _loop;
 
-    /// <summary>Per-connection read timeout. Local agents respond fast — any longer = wedged.</summary>
+    /// <summary>Per-connection read timeout. Local agents respond fast, any longer = wedged.</summary>
     private static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(35);
     private const int MaxHeaderBytes = 16 * 1024;
     private const int MaxBodyBytes = 4 * 1024 * 1024;
@@ -144,7 +144,7 @@ internal sealed class HttpBridge : IDisposable
             $"[accept-thread] entered. listener.IsBound={_listener.Server.IsBound} "
                 + $"LocalEndPoint={_listener.Server.LocalEndPoint}"
         );
-        // (self-connect probe removed — it triggered OnDestroy in some Unity configurations)
+        // (self-connect probe removed, it triggered OnDestroy in some Unity configurations)
         while (!_cts.IsCancellationRequested)
         {
             TcpClient client;
@@ -265,7 +265,7 @@ internal sealed class HttpBridge : IDisposable
             req.Headers[line.Substring(0, colon).Trim()] = line.Substring(colon + 1).Trim();
         }
 
-        // Body — only if Content-Length is present and positive.
+        // Body, only if Content-Length is present and positive.
         if (int.TryParse(req.GetHeader("Content-Length"), out var len) && len > 0)
         {
             if (len > MaxBodyBytes)
@@ -278,7 +278,7 @@ internal sealed class HttpBridge : IDisposable
 
             // For small requests, the body often arrives in the same TCP read as the headers.
             // Copy whatever leftover bytes the header read already consumed into req.Body before
-            // pulling more from the stream — otherwise we'd block forever (or, with timeouts,
+            // pulling more from the stream, otherwise we'd block forever (or, with timeouts,
             // throw EndOfStreamException on a connection that's perfectly fine).
             var leftover = totalRead - headerEnd;
             if (leftover > 0)
@@ -305,7 +305,7 @@ internal sealed class HttpBridge : IDisposable
 
     /// <summary>
     /// Triple returned by <see cref="ReadHeadersAsync"/>. Plain struct rather than a
-    /// <c>ValueTuple</c> — <c>System.ValueTuple</c> isn't always loadable under Unity's
+    /// <c>ValueTuple</c>, <c>System.ValueTuple</c> isn't always loadable under Unity's
     /// Mono runtime (out-of-band package on net462).
     /// </summary>
     private readonly struct HeaderReadResult
@@ -324,7 +324,7 @@ internal sealed class HttpBridge : IDisposable
 
     /// <summary>
     /// Reads from the stream until the empty-line CRLF CRLF terminator. Returns the buffer,
-    /// total bytes read, and the offset where headers end — so the caller can recover any body
+    /// total bytes read, and the offset where headers end, so the caller can recover any body
     /// bytes that arrived in the same TCP read as the headers.
     /// </summary>
     private static async Task<HeaderReadResult> ReadHeadersAsync(
@@ -363,12 +363,12 @@ internal sealed class HttpBridge : IDisposable
             }
         }
         throw new InvalidOperationException(
-            $"Request header exceeds {MaxHeaderBytes} bytes — refusing."
+            $"Request header exceeds {MaxHeaderBytes} bytes, refusing."
         );
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Routing — same logic as before, just using HttpRequest instead of HttpListenerRequest
+    // Routing, same logic as before, just using HttpRequest instead of HttpListenerRequest
     // ──────────────────────────────────────────────────────────────────────
 
     private sealed class HttpResponse
@@ -489,7 +489,7 @@ internal sealed class HttpBridge : IDisposable
             // Turn-based gate (Phase 4): in turn_based sessions, action + control commands
             // are reserved for the current-turn agent. God-role agents (ActionGlobal) bypass
             // the gate so a hierarchical "DM" can always intervene. Meta / Discovery / Read /
-            // Bus commands are not gated — they can be called any time.
+            // Bus commands are not gated, they can be called any time.
             if (
                 _session.TurnBased
                 && _session.TurnOrder is not null
@@ -503,8 +503,8 @@ internal sealed class HttpBridge : IDisposable
                     throw new WorldBoxBridge.Commands.Action.BridgeRejectionException(
                         ErrorCode.TurnNotYours,
                         $"Not your turn (current='{current}', you='{ctx.AgentId}'). "
-                            + "Wait for them to call turn_advance, or — if you are the current "
-                            + "agent in another session — check that the agents.json turn_order "
+                            + "Wait for them to call turn_advance, or, if you are the current "
+                            + "agent in another session, check that the agents.json turn_order "
                             + "includes you."
                     );
                 }
@@ -549,7 +549,7 @@ internal sealed class HttpBridge : IDisposable
         }
         catch (WorldBoxBridge.Commands.Action.BridgeRejectionException brex)
         {
-            // Structured rejection from a command — map directly to its error code.
+            // Structured rejection from a command, map directly to its error code.
             var status = brex.Code switch
             {
                 ErrorCode.UnknownAsset => 400,
@@ -702,12 +702,12 @@ internal sealed class HttpBridge : IDisposable
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Auth — extracts a bearer credential from either the new
+    // Auth, extracts a bearer credential from either the new
     // 'Authorization: Bearer <token>' header (multi-agent) or the legacy
-    // 'X-WB-Token: <token>' header (v0.1–v0.2 single-tenant clients).
+    // 'X-WB-Token: <token>' header (v0.1, v0.2 single-tenant clients).
     // Looks the token up in the AgentRegistry; returns a RequestContext on
     // success, null otherwise. Constant-time lookup happens inside the
-    // registry — see AgentRegistry.FixedTimeEquals.
+    // registry, see AgentRegistry.FixedTimeEquals.
     // ──────────────────────────────────────────────────────────────────────
 
     private RequestContext? Authenticate(HttpRequest req)

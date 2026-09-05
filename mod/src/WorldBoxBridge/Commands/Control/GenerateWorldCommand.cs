@@ -18,7 +18,7 @@ namespace WorldBoxBridge.Commands.Control;
 /// Pipeline (per decompiled <c>MapBox.generateNewMap</c>):
 ///   1. <c>MapBox.instance.setMapSize(zone_x, zone_y)</c> if size args provided.
 ///   2. <c>MapBox.instance.generateNewMap()</c> queues work on SmoothLoader.
-///   3. The actual generation happens over many frames after we return — our success
+///   3. The actual generation happens over many frames after we return, our success
 ///      response signals "generation scheduled", not "world ready".
 /// Map dimensions = zone_x * 64 × zone_y * 64. Default zones 4×4 → 256×256 tiles.
 /// </remarks>
@@ -87,7 +87,7 @@ internal sealed class GenerateWorldCommand : ICommand
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
-                "MapBox.instance is null — engine not ready to generate a world."
+                "MapBox.instance is null, engine not ready to generate a world."
             );
         }
         var zoneX = args.Value<int?>("zone_x");

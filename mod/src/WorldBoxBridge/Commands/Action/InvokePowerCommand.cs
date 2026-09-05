@@ -12,13 +12,13 @@ namespace WorldBoxBridge.Commands.Action;
 
 /// <summary>
 /// Invokes a god power on a given tile. Powers cover most in-game actions:
-/// spawn-by-race, disasters (meteor, nuke, plague, …), toggles (peace, civilization, …),
+/// spawn-by-race, disasters (meteor, nuke, plague, ...), toggles (peace, civilization, ...),
 /// and modifiers. The full list comes from <c>list_powers</c>.
 /// </summary>
 /// <remarks>
 /// Mechanism: a <c>GodPower</c> carries one of several click delegates. Most use
 /// <c>click_action</c> (<c>PowerActionWithID(WorldTile, string powerId) → bool</c>); the
-/// drops / bombs / drop-building families (rain, fire, bomb, volcano, …) use
+/// drops / bombs / drop-building families (rain, fire, bomb, volcano, ...) use
 /// <c>click_power_action</c> (<c>PowerAction(WorldTile, GodPower) → bool</c>) instead. The
 /// game's UI calls whichever is set when the user clicks a tile; we try them in that order.
 /// Brush-only and toggle powers (<c>click_brush_action</c>, <c>toggle_action</c>) are not
@@ -46,13 +46,13 @@ internal sealed class InvokePowerCommand : ICommand
     public CommandCategory Category => CommandCategory.Action;
     public string Description =>
         "Invokes any GodPower (god-mode action) on the world. Covers spawning by race, "
-        + "disasters (meteor, nuke, plague, lightning, …), global toggles (peace, civ, …) "
+        + "disasters (meteor, nuke, plague, lightning, ...), global toggles (peace, civ, ...) "
         + "and modifiers. Discover valid power_id values via list_powers. For powers that "
         + "target a position (most), pass x and y; for global toggles, x/y are typically "
         + "ignored but must still be inside the map. Returns {power_id, x, y, accepted, via}; "
         + "accepted=false means the game declined this time (some powers roll a chance). "
         + "Powers that need live mouse/drag state (e.g. 'finger') or a brush are rejected "
-        + "with GAME_REJECTED — use paint_tile / spawn instead.";
+        + "with GAME_REJECTED, use paint_tile / spawn instead.";
     public bool RequiresMainThread => true;
 
     public JObject ArgsSchema =>
@@ -172,7 +172,7 @@ internal sealed class InvokePowerCommand : ICommand
             );
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
-                $"Power '{powerId}' threw NullReferenceException inside the game — it depends on "
+                $"Power '{powerId}' threw NullReferenceException inside the game, it depends on "
                     + "live mouse/drag state the API can't supply. Use paint_tile or spawn instead."
             );
         }
@@ -211,7 +211,7 @@ internal sealed class InvokePowerCommand : ICommand
         if (mapBox == null)
         {
             tile = null;
-            why = "MapBox.instance is null — game world not yet initialised.";
+            why = "MapBox.instance is null, game world not yet initialised.";
             return false;
         }
         _tilesMapField ??= mapBoxType.GetField(

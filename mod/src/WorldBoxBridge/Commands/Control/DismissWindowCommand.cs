@@ -9,7 +9,7 @@ using WorldBoxBridge.Session;
 namespace WorldBoxBridge.Commands.Control;
 
 /// <summary>
-/// Closes whatever in-game window is open — most usefully the startup "welcome" screen — via
+/// Closes whatever in-game window is open, most usefully the startup "welcome" screen, via
 /// the game's own <c>ScrollWindow.hideAllEvent</c>.
 /// </summary>
 internal sealed class DismissWindowCommand : ICommand

@@ -165,7 +165,7 @@ public class RequestContextTests
     [Fact]
     public void RequireKingdomAccess_observer_without_ActionGlobal_cannot_act_on_foreign_kingdom()
     {
-        // Observer has no claim and no ActionGlobal — the throwsite hits.
+        // Observer has no claim and no ActionGlobal, the throwsite hits.
         // (Observer can't act at all due to a separate Require(Permission.ActionFaction) gate
         // in the command itself, but this test isolates RequireKingdomAccess's own logic.)
         var ctx = Ctx(AgentRole.Observer, kingdomClaim: 7);

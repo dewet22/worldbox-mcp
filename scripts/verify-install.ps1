@@ -85,13 +85,13 @@ $ok = (Check 'config contains token' { -not [string]::IsNullOrWhiteSpace($token)
 Write-Host ""
 Write-Host "Live HTTP check (requires WorldBox running):" -ForegroundColor White
 if (-not $token) {
-    Write-Host "  Skipped — no token available." -ForegroundColor Yellow
+    Write-Host "  Skipped, no token available." -ForegroundColor Yellow
 }
 else {
     try {
         $resp = Invoke-RestMethod -Uri "http://127.0.0.1:$port/health" -Headers @{ 'X-WB-Token' = $token } -TimeoutSec 3
         if ($resp.ok) {
-            Write-Host "  /health OK — mod_version=$($resp.mod_version), tick=$($resp.tick), unity=$($resp.unity_version)" -ForegroundColor Green
+            Write-Host "  /health OK, mod_version=$($resp.mod_version), tick=$($resp.tick), unity=$($resp.unity_version)" -ForegroundColor Green
         }
         else {
             Write-Host "  /health returned ok=false: $($resp | ConvertTo-Json -Compress)" -ForegroundColor Yellow
@@ -110,6 +110,6 @@ if ($ok) {
     exit 0
 }
 else {
-    Write-Host "Some components are missing — see above." -ForegroundColor Yellow
+    Write-Host "Some components are missing, see above." -ForegroundColor Yellow
     exit 1
 }

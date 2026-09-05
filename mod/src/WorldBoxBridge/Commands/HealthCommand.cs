@@ -12,7 +12,7 @@ namespace WorldBoxBridge.Commands;
 /// Liveness probe + version snapshot. The very first thing every client calls.
 /// </summary>
 /// <remarks>
-/// Runs off-thread because it only reads cached metadata — there is no value in waiting a
+/// Runs off-thread because it only reads cached metadata, there is no value in waiting a
 /// frame to answer this one.
 /// </remarks>
 internal sealed class HealthCommand : ICommand
