@@ -111,7 +111,14 @@ internal sealed class LoadWorldCommand : ICommand
         }
         else
         {
-            readFrom = ResolveMapFile(path!);
+            try
+            {
+                readFrom = SavePathResolver.ResolveMapFile(path, GameSavePaths.SavesRoot);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
+            }
             data = File.ReadAllBytes(readFrom);
         }
 
@@ -148,36 +155,5 @@ internal sealed class LoadWorldCommand : ICommand
                 note = "Load runs asynchronously. Poll get_world_state until tick advances.",
             }
         );
-    }
-
-    /// <summary>Turns whatever the caller passed (file, folder, or slot name) into a map file path.</summary>
-    private static string ResolveMapFile(string path)
-    {
-        string resolved;
-        try
-        {
-            resolved = SavePathResolver.ResolveFolder(path, GameSavePaths.SavesRoot);
-        }
-        catch (ArgumentException ex)
-        {
-            throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
-        }
-        if (Directory.Exists(resolved))
-        {
-            return SavePathResolver.FindMapFile(resolved)
-                ?? throw new BridgeRejectionException(
-                    ErrorCode.BadArgs,
-                    $"'{resolved}' contains no map.wbox / map.wbax / map.json."
-                );
-        }
-        if (!File.Exists(resolved))
-        {
-            throw new BridgeRejectionException(
-                ErrorCode.BadArgs,
-                $"path '{path}' not found (resolved to '{resolved}'). Pass a save file, a save "
-                    + "folder, or a name under the game's saves directory."
-            );
-        }
-        return resolved;
     }
 }
