@@ -113,11 +113,11 @@ Every error response follows this shape:
 | Code | Meaning |
 |---|---|
 | `UNKNOWN_COMMAND` | No tool with that name. Call `worldbox_capabilities`. |
-| `BAD_ARGS` | JSON shape doesn't match the tool's schema. |
+| `BAD_ARGS` | JSON shape doesn't match the tool's schema, or a command rejected an argument value (a missing coordinate, a count out of range, an unresolvable save path). |
 | `UNKNOWN_ASSET` | An asset id wasn't found in the live registry. Use the included `did_you_mean` (Levenshtein top-5) to self-correct. |
 | `OUT_OF_BOUNDS` | `(x, y)` outside the current map dimensions. |
 | `GAME_REJECTED` | Game logic refused the action (e.g. spawning a land animal on water, a brush-only power, `save_world` while the world is still loading). |
-| `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. |
+| `GAME_CRASH` | Game-side exception. `exception` field carries full type + message + stack top. Argument validation no longer lands here: a command's `ArgumentException` is reported as 400 `BAD_ARGS`. |
 | `PERMISSION_DENIED` _(v0.3)_ | The agent's role lacks the permission this command requires. HTTP 403. |
 | `FACTION_SCOPE_VIOLATION` _(v0.3)_ | The agent tried to act on a kingdom it doesn't claim. HTTP 403. |
 | `TURN_NOT_YOURS` _(v0.3)_ | Turn-based mode is active and another agent currently holds the slot. HTTP 409. |

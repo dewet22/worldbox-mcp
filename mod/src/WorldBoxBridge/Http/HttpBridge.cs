@@ -572,6 +572,24 @@ internal sealed class HttpBridge : IDisposable
                 didYouMean: brex.DidYouMean
             );
         }
+        catch (ArgumentException aex)
+        {
+            // Commands validate their arguments with plain ArgumentException (14 throws across
+            // 8 files today: "x and y are required integers", "count must be >= 1", ...). Without
+            // this arm they fell through to the handler below and a caller mistake came back as
+            // 500 GAME_CRASH, which tells the agent the game broke rather than that it asked
+            // wrongly. The exception detail is still attached, so a genuine internal
+            // ArgumentException stays diagnosable.
+            return ErrorResponse(
+                400,
+                "Bad Request",
+                ErrorCode.BadArgs,
+                aex.Message,
+                commandName: name,
+                args: args,
+                exception: ExceptionInfo.From(aex)
+            );
+        }
         catch (Exception ex)
         {
             return ErrorResponse(
