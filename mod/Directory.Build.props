@@ -15,6 +15,14 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/fullya99/worldbox-mcp</RepositoryUrl>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!--
+      Emit packages.lock.json so the locked-mode restore that ci.yml and release.yml already run
+      actually pins content hashes. Without a lock file that flag silently succeeds and verifies
+      nothing, which matters now that UnityEngine refs come from a third-party feed and the
+      release build runs in a job that holds the PyPI id-token.
+      Regenerate after a deliberate version change with a force-evaluate restore.
+    -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
