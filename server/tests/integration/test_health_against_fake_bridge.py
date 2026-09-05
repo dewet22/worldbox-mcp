@@ -98,11 +98,14 @@ class FakeBridge:
                 status=400,
             )
         if body.get("name") == "screenshot":
+            # Echo the requested format the way the real bridge does. Hardcoding "png" here
+            # left the tool's own default (jpg -> image/jpeg) with no coverage at all.
+            requested_format = (body.get("args") or {}).get("format", "jpg")
             return web.json_response(
                 {
                     "ok": True,
                     "result": {
-                        "format": "png",
+                        "format": requested_format,
                         "width": 1,
                         "height": 1,
                         "source_width": 2,
@@ -233,7 +236,9 @@ async def test_screenshot_returns_image_block_and_metadata(
     bridge, address = fake_bridge
     server, client = build_server(Settings(bridge=address, worldbox_dir=None))
     try:
-        result = await server.call_tool("worldbox_screenshot", {"max_dimension": 64})
+        result = await server.call_tool(
+            "worldbox_screenshot", {"max_dimension": 64, "format": "png"}
+        )
     finally:
         await client.aclose()
 
@@ -251,7 +256,33 @@ async def test_screenshot_returns_image_block_and_metadata(
 
     _method, _path, body = bridge.calls[-1]
     assert body["name"] == "screenshot"
-    assert body["args"] == {"max_dimension": 64, "format": "jpg", "quality": 80}
+    assert body["args"] == {"max_dimension": 64, "format": "png", "quality": 80}
+
+
+async def test_screenshot_defaults_to_jpeg_mime(
+    fake_bridge: tuple[FakeBridge, BridgeAddress],
+) -> None:
+    """Called with no arguments the tool asks the bridge for a 1280px jpg, and the image block
+    must be labelled image/jpeg. This is the path almost every real call takes."""
+    from mcp.types import ImageContent
+
+    from worldbox_mcp.config import Settings
+    from worldbox_mcp.server import build_server
+
+    bridge, address = fake_bridge
+    server, client = build_server(Settings(bridge=address, worldbox_dir=None))
+    try:
+        result = await server.call_tool("worldbox_screenshot", {})
+    finally:
+        await client.aclose()
+
+    assert not result.is_error
+    images = [c for c in result.content if isinstance(c, ImageContent)]
+    assert len(images) == 1
+    assert images[0].mime_type == "image/jpeg"
+
+    _method, _path, body = bridge.calls[-1]
+    assert body["args"] == {"max_dimension": 1280, "format": "jpg", "quality": 80}
 
 
 @pytest.mark.parametrize(
