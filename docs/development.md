@@ -180,9 +180,10 @@ actually works and the only one still written by hand. Nothing used to check tha
 existed, so the failure mode was a matrix quietly a release behind, which reads exactly like a
 release nobody has reported a problem with.
 
-That step is skipped on release-please's own branch, the same way the lockfile check is: that
-PR bumps the four files and the row is written once the release is out. The next ordinary PR
-fails until it is.
+That one check stands down on release-please's own branch, passed `--skip-release-version`:
+that PR bumps the four files and the row is written once the release is out. Only that check is
+dropped, the counts, the inventories and the screenshot defaults all keep running there. The
+next ordinary PR fails until the row is written.
 
 The script itself is covered by `server/tests/unit/test_gen_docs.py`, which drives it against
 a throwaway tree. A check that stays quiet when the docs drift would be worse than no check.
@@ -261,7 +262,7 @@ The release-please PR is the one exception to all of this and is squashed.
 
 **Use `ci:` for CI-only work, not `fix(ci):`.** `fix` is a `fix` whatever its scope, so a
 workflow tweak lands under "Bug Fixes" beside real user-facing fixes and bumps the patch
-version of a package whose shipped code did not change. Seven `fix(ci):` commits are in the
+version of a package whose shipped code did not change. Several `fix(ci):` commits are in the
 changelog for that reason. `ci:` is mapped to a hidden section and bumps nothing, which is
 what a runner-only change deserves. The exception is a CI change that alters what ships or
 whether it ships at all, a broken release workflow for instance: that is a real fix and the

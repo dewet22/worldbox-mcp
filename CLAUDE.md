@@ -96,10 +96,12 @@ Each of these fixed a real failure. Read the reason before tidying one away.
   `id-token: write`. Only `publish-pypi` gets the PyPI token. Do not hoist these back to the top.
 - **FluentAssertions is capped at 6.x** in dependabot config. v7 moved to a paid commercial
   licence. v6 is the last MIT release.
-- **The lockfile and gen-docs checks skip release-please's branch.** That PR bumps
-  `pyproject.toml` and cannot run `uv`, so `uv.lock` is legitimately one version behind until the
-  release lands, and the compatibility matrix has no row for a version that is not out yet. Both
-  fail on the next ordinary PR until someone runs `uv lock` and writes the row.
+- **Two checks stand down on release-please's branch.** That PR bumps `pyproject.toml` and
+  cannot run `uv`, so `uv.lock` is legitimately one version behind until the release lands, and
+  the compatibility matrix has no row for a version that is not out yet. The lockfile step is
+  skipped whole; gen-docs keeps running and drops only its version check, via
+  `--skip-release-version`. Both fail on the next ordinary PR until someone runs `uv lock` and
+  writes the row.
 - **The Pre-commit job does not run csharpier**, because that runner has no .NET SDK. The
   dedicated `lint-mod` job covers it.
 - **The MCP conformance check calls `worldbox-mcp --self-check` directly**, not the MCP Inspector
