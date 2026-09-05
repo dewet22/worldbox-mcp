@@ -126,11 +126,7 @@ public static class MainThreadDispatcher
             )
         );
 
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
-        }
-
+        RegisterCancellation(tcs, cancellationToken);
         return tcs.Task;
     }
 
@@ -156,7 +152,7 @@ public static class MainThreadDispatcher
     /// Runs <paramref name="step"/> once per Unity frame on the main thread until it returns
     /// false, then completes the returned task with <paramref name="onCompleted"/>'s value.
     /// The first step runs on the frame AFTER registration, so a job registered from inside a
-    /// dispatched action is spaced one full frame from that action — the synthetic equivalent
+    /// dispatched action is spaced one full frame from that action, the synthetic equivalent
     /// of holding the mouse button down.
     /// </summary>
     public static Task<T> RunPerFrameOnMainThreadAsync<T>(
@@ -204,11 +200,34 @@ public static class MainThreadDispatcher
                 deadline: DateTime.UtcNow + effectiveTimeout
             )
         );
-        if (cancellationToken.CanBeCanceled)
-        {
-            cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
-        }
+        RegisterCancellation(tcs, cancellationToken);
         return tcs.Task;
+    }
+
+    /// <summary>
+    /// Wires cancellation into <paramref name="tcs"/> WITHOUT leaking the registration: the
+    /// tokens passed here are typically process-lifetime (the bridge's shutdown token), so an
+    /// undisposed registration would pin the TCS and its captured closures forever, a slow
+    /// unbounded leak over a long game session. The registration is disposed as soon as the
+    /// task settles by any route.
+    /// </summary>
+    private static void RegisterCancellation<T>(
+        TaskCompletionSource<T> tcs,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!cancellationToken.CanBeCanceled)
+        {
+            return;
+        }
+        var registration = cancellationToken.Register(() => tcs.TrySetCanceled(cancellationToken));
+        tcs.Task.ContinueWith(
+            static (_, state) => ((CancellationTokenRegistration)state!).Dispose(),
+            registration,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default
+        );
     }
 
     private static void Tick()

@@ -56,6 +56,7 @@ public sealed class Plugin : BaseUnityPlugin
             var gameUi = new GameUiAccess(gameRefs, Logger);
             var gameSpeed = new GameSpeedAccess(gameRefs);
             var brushAccess = new BrushAccess(gameRefs, Logger);
+            var delegateFields = new PowerDelegateFields();
             if (config.SuppressStartupWindow.Value && gameUi.SetDisableStartupWindow(true))
             {
                 Logger.LogInfo(
@@ -79,6 +80,7 @@ public sealed class Plugin : BaseUnityPlugin
                 gameUi,
                 gameSpeed,
                 brushAccess,
+                delegateFields,
                 session
             );
             Logger.LogInfo($"{registry.Count} commands registered.");
@@ -138,6 +140,7 @@ public sealed class Plugin : BaseUnityPlugin
         GameUiAccess gameUi,
         GameSpeedAccess gameSpeed,
         BrushAccess brushAccess,
+        PowerDelegateFields delegateFields,
         SessionState session
     )
     {
@@ -156,11 +159,21 @@ public sealed class Plugin : BaseUnityPlugin
         // Discovery, introspect the in-game asset registries.
         registry.Register(new ListTilesCommand(assetCatalog));
         registry.Register(new ListActorsCommand(assetCatalog));
-        registry.Register(new ListPowersCommand(assetCatalog));
+        registry.Register(new ListPowersCommand(assetCatalog, delegateFields, Logger));
         registry.Register(new ListSpeedsCommand(assetCatalog, gameSpeed));
 
         // Actions, modify the world.
-        registry.Register(new InvokePowerCommand(assetCatalog, gameRefs, brushAccess, Logger));
+        registry.Register(
+            new InvokePowerCommand(
+                assetCatalog,
+                gameRefs,
+                brushAccess,
+                delegateFields,
+                worldAccess,
+                session,
+                Logger
+            )
+        );
         registry.Register(new SpawnCommand(assetCatalog, worldAccess, Logger));
         registry.Register(new PaintTileCommand(assetCatalog, worldAccess, Logger));
 

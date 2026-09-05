@@ -8,6 +8,7 @@ using WorldBoxBridge.Http;
 using WorldBoxBridge.Reflection;
 using WorldBoxBridge.Session;
 using WorldBoxBridge.Threading;
+using SessionState = WorldBoxBridge.Session.Session;
 
 namespace WorldBoxBridge.Commands.Action;
 
@@ -30,16 +31,20 @@ namespace WorldBoxBridge.Commands.Action;
 /// </remarks>
 internal sealed class InvokePowerCommand : ICommand
 {
+    /// <summary>Soft wall-clock budget for a multi-pulse run: comfortably under both the
+    /// dispatcher's 30 s job deadline and the MCP client's 35 s HTTP timeout, so a run cut
+    /// short by low frame rates still delivers its partial aggregate instead of a timeout
+    /// error after half the world mutation has already happened.</summary>
+    private static readonly TimeSpan PulseRunBudget = TimeSpan.FromSeconds(25);
+
     private readonly AssetCatalog _catalog;
     private readonly GameRefs _refs;
     private readonly BrushAccess _brush;
+    private readonly PowerDelegateFields _delegateFields;
+    private readonly WorldAccess _world;
+    private readonly SessionState _session;
     private readonly ManualLogSource _log;
 
-    private FieldInfo? _clickActionField;
-    private FieldInfo? _clickPowerActionField;
-    private FieldInfo? _clickBrushActionField;
-    private FieldInfo? _clickPowerBrushActionField;
-    private FieldInfo? _toggleActionField;
     private FieldInfo? _mapBoxInstanceField;
     private FieldInfo? _tilesMapField;
 
@@ -47,12 +52,18 @@ internal sealed class InvokePowerCommand : ICommand
         AssetCatalog catalog,
         GameRefs refs,
         BrushAccess brush,
+        PowerDelegateFields delegateFields,
+        WorldAccess world,
+        SessionState session,
         ManualLogSource log
     )
     {
         _catalog = catalog;
         _refs = refs;
         _brush = brush;
+        _delegateFields = delegateFields;
+        _world = world;
+        _session = session;
         _log = log;
     }
 
@@ -71,8 +82,11 @@ internal sealed class InvokePowerCommand : ICommand
         + "Optional pulses (1-200) applies the power once per game frame that many times, "
         + "the equivalent of holding the mouse button (~60 pulses/s); with x2/y2 the pulses "
         + "sweep from (x, y) to (x2, y2) like a click-hold-drag. Multi-pulse calls return "
-        + "{pulses, accepted_count} instead of accepted and take pulses/60 seconds to "
-        + "complete. accepted=false means the game declined this time (some powers roll a "
+        + "{pulses, accepted_count, pulses_applied} instead of accepted and take pulses/60 "
+        + "seconds to complete; a run stops early (stopped: turn_ended | world_changed | "
+        + "deadline | error) when the caller's turn ends, the world is replaced mid-run, the "
+        + "25s budget runs out, or a pulse throws (error_code/error_message then carry the "
+        + "failure). accepted=false means the game declined this time (some powers roll a "
         + "chance). Powers that need live mouse/drag state (e.g. 'finger') are rejected with "
         + "GAME_REJECTED, use paint_tile / spawn instead. Needs the global action scope "
         + "(God role) in a multi-agent session; a FactionPlayer uses spawn.";
@@ -205,6 +219,16 @@ internal sealed class InvokePowerCommand : ICommand
         }
         if (hasX2)
         {
+            if (pulses == 1)
+            {
+                // Without this, a drag request with pulses omitted would validate the
+                // endpoints and then silently tap only (x, y), documented behaviour ignored.
+                throw new BridgeRejectionException(
+                    ErrorCode.BadArgs,
+                    "x2/y2 describe a drag, which needs pulses > 1, a single pulse would "
+                        + "only ever land at (x, y)."
+                );
+            }
             x2 = (int)x2Token!;
             y2 = (int)y2Token!;
         }
@@ -235,28 +259,22 @@ internal sealed class InvokePowerCommand : ICommand
             }
         }
 
-        // 3. Gather the delegates the game itself would consider. FieldInfos are cached per session.
-        const BindingFlags Inst =
-            BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-        var powerType = power.GetType();
-        _clickActionField ??= powerType.GetField("click_action", Inst);
-        _clickPowerActionField ??= powerType.GetField("click_power_action", Inst);
-        _clickBrushActionField ??= powerType.GetField("click_brush_action", Inst);
-        _clickPowerBrushActionField ??= powerType.GetField("click_power_brush_action", Inst);
-        _toggleActionField ??= powerType.GetField("toggle_action", Inst);
-        if (_clickActionField == null && _clickPowerActionField == null)
+        // 3. Gather the delegates the game itself would consider (field lookups cached per
+        // concrete asset type in PowerDelegateFields, shared with list_powers).
+        if (!_delegateFields.AnyFieldPresent(power))
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
-                "GodPower.click_action / click_power_action fields not found in this WorldBox build."
+                "GodPower delegate fields (click_action ...) not found in this WorldBox build."
             );
         }
 
-        var clickDel = _clickActionField?.GetValue(power) as Delegate;
-        var clickPowerDel = _clickPowerActionField?.GetValue(power) as Delegate;
-        var clickBrushDel = _clickBrushActionField?.GetValue(power) as Delegate;
-        var clickPowerBrushDel = _clickPowerBrushActionField?.GetValue(power) as Delegate;
-        var toggleDel = _toggleActionField?.GetValue(power) as Delegate;
+        var delegates = _delegateFields.Read(power);
+        var clickDel = delegates.ClickAction;
+        var clickPowerDel = delegates.ClickPowerAction;
+        var clickBrushDel = delegates.ClickBrushAction;
+        var clickPowerBrushDel = delegates.ClickPowerBrushAction;
+        var toggleDel = delegates.ToggleAction;
         var choice = PowerDelegateSelector.Select(
             clickDel != null,
             clickPowerDel != null,
@@ -341,10 +359,14 @@ internal sealed class InvokePowerCommand : ICommand
 
         bool DoPulse(object? pulseTile)
         {
+            // Separate flag: a legitimately-null previous brush must still be restored,
+            // otherwise our synthetic circ_N would stay selected in the player's picker.
+            var overrodeBrush = false;
             string? previousBrush = null;
             if (brushId != null)
             {
                 previousBrush = _brush.CurrentBrushId;
+                overrodeBrush = true;
                 if (!_brush.TrySetCurrentBrush(brushId))
                 {
                     throw new BridgeRejectionException(
@@ -391,9 +413,13 @@ internal sealed class InvokePowerCommand : ICommand
             }
             finally
             {
-                if (previousBrush != null)
+                if (overrodeBrush)
                 {
-                    _brush.TrySetCurrentBrush(previousBrush);
+                    // A null previous selection (unseen on stock builds, whose static default
+                    // is "circ_5") still gets a restore: leaving our synthetic brush selected
+                    // would be worse than resetting to the game default, and pushing null
+                    // through the setter would null current_brush_data for the game itself.
+                    _brush.TrySetCurrentBrush(previousBrush ?? "circ_5");
                 }
             }
         }
@@ -433,25 +459,96 @@ internal sealed class InvokePowerCommand : ICommand
         // 6. Multi-pulse: one application per Unity frame via the dispatcher, the synthetic
         // equivalent of holding the button, and with x2/y2 of dragging the cursor across the
         // map while holding it. The returned task completes frames later; HttpBridge awaits it
-        // off the main thread.
+        // off the main thread. Because the run spans real time, each step re-checks the
+        // conditions that were only admission-checked for single-frame commands, and a run cut
+        // short still completes successfully with its partial aggregate (stopped + pulses_applied)
+        // rather than erroring after the world was already part-mutated.
         var totalPulses = pulses;
         var endX = x2 ?? x;
         var endY = y2 ?? y;
         var acceptedCount = 0;
         var pulseIndex = 0;
+        string? stoppedReason = null;
+        string? stoppedErrorCode = null;
+        string? stoppedErrorMessage = null;
+        var runDeadline = DateTime.UtcNow + PulseRunBudget;
+        var worldAtStart = GetTilesMap();
         return MainThreadDispatcher.RunPerFrameOnMainThreadAsync<object?>(
             step: () =>
             {
+                // Turn guard: the admission gate in HttpBridge only checked the turn when the
+                // request arrived. A synthetic "hold" must let go when the caller's turn ends,
+                // exactly as a player loses the mouse when it stops being their turn. Same
+                // shape as the admission gate: TurnGate says whether this command is gated at
+                // all, ActionGlobal bypasses. (With ActionPermissions.InvokePower currently
+                // being ActionGlobal every admitted caller bypasses, so this only bites if the
+                // permission model widens again, which is exactly when it must not be missing.)
+                if (
+                    _session.TurnBased
+                    && _session.TurnOrder is not null
+                    && TurnGate.IsTurnGated(Name, Category)
+                    && !ctx.Has(Permission.ActionGlobal)
+                    && !_session.TurnOrder.IsCurrentlyActive(ctx.AgentId)
+                )
+                {
+                    stoppedReason = "turn_ended";
+                    return false;
+                }
+                // World guard: generate_world / load_world replaces MapBox.tiles_map, but the
+                // replacement happens in asynchronous SmoothLoader steps that may run after a
+                // short pulse run would otherwise finish. Config.worldLoading flips true the
+                // moment the load is scheduled, so check it first; the reference comparison
+                // then catches a swap already completed between frames. (The game itself locks
+                // gameplay input during loading, this mirrors that.)
+                if (_world.IsWorldLoading == true || !ReferenceEquals(GetTilesMap(), worldAtStart))
+                {
+                    stoppedReason = "world_changed";
+                    return false;
+                }
+                // Deadline guard: at low frame rates a long run could outlive the dispatcher's
+                // 30 s job deadline and the client's 35 s HTTP timeout, deliver the partial
+                // aggregate instead of a timeout error.
+                if (DateTime.UtcNow > runDeadline)
+                {
+                    stoppedReason = "deadline";
+                    return false;
+                }
                 var point = PulsePath.At(pulseIndex, totalPulses, x, y, endX, endY);
                 if (!TryGetWorldTile(point.X, point.Y, out var pulseTile, out var whyPulse))
                 {
-                    // Endpoints were checked up front; only a world regeneration mid-run can
-                    // land us here.
-                    throw new BridgeRejectionException(ErrorCode.OutOfBounds, whyPulse);
+                    // Endpoints were checked up front and the world guard ran above; this is
+                    // a same-frame race at worst, treat it like a world change.
+                    _log.LogWarning(
+                        $"[invoke_power] pulse {pulseIndex} tile lookup failed: {whyPulse}"
+                    );
+                    stoppedReason = "world_changed";
+                    return false;
                 }
-                if (DoPulse(pulseTile))
+                // A pulse that throws must not fault the whole job: the world is already
+                // part-mutated, and the dispatcher would deliver only the exception, losing
+                // pulses_applied/accepted_count, the exact harm the other guards avoid. Stop
+                // instead and carry the failure inside the partial aggregate.
+                try
                 {
-                    acceptedCount++;
+                    if (DoPulse(pulseTile))
+                    {
+                        acceptedCount++;
+                    }
+                }
+                catch (BridgeRejectionException ex)
+                {
+                    stoppedReason = "error";
+                    stoppedErrorCode = ex.Code;
+                    stoppedErrorMessage = ex.Message;
+                    return false;
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"[invoke_power] pulse {pulseIndex} threw: {ex}");
+                    stoppedReason = "error";
+                    stoppedErrorCode = ErrorCode.GameCrash;
+                    stoppedErrorMessage = $"{ex.GetType().Name}: {ex.Message}";
+                    return false;
                 }
                 pulseIndex++;
                 return pulseIndex < totalPulses;
@@ -464,9 +561,19 @@ internal sealed class InvokePowerCommand : ICommand
                     ["x"] = x,
                     ["y"] = y,
                     ["pulses"] = totalPulses,
+                    ["pulses_applied"] = pulseIndex,
                     ["accepted_count"] = acceptedCount,
                     ["via"] = via,
                 };
+                if (stoppedReason != null)
+                {
+                    aggregate["stopped"] = stoppedReason;
+                }
+                if (stoppedErrorCode != null)
+                {
+                    aggregate["error_code"] = stoppedErrorCode;
+                    aggregate["error_message"] = stoppedErrorMessage;
+                }
                 if (x2 is int doneX2 && y2 is int doneY2)
                 {
                     aggregate["x2"] = doneX2;
@@ -483,14 +590,14 @@ internal sealed class InvokePowerCommand : ICommand
         );
     }
 
-    private bool TryGetWorldTile(int x, int y, out object? tile, out string why)
+    /// <summary>The live MapBox.tiles_map array, or null. Reference identity doubles as world
+    /// identity: generate_world / load_world swap the array, never mutate it in place.</summary>
+    private Array? GetTilesMap()
     {
         var mapBoxType = _refs.Type("MapBox");
         if (mapBoxType == null)
         {
-            tile = null;
-            why = "MapBox type not found in this WorldBox build.";
-            return false;
+            return null;
         }
         _mapBoxInstanceField ??= mapBoxType.GetField(
             "instance",
@@ -499,15 +606,18 @@ internal sealed class InvokePowerCommand : ICommand
         var mapBox = _mapBoxInstanceField?.GetValue(null);
         if (mapBox == null)
         {
-            tile = null;
-            why = "MapBox.instance is null, game world not yet initialised.";
-            return false;
+            return null;
         }
         _tilesMapField ??= mapBoxType.GetField(
             "tiles_map",
             BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
         );
-        if (_tilesMapField?.GetValue(mapBox) is not Array tilesMap)
+        return _tilesMapField?.GetValue(mapBox) as Array;
+    }
+
+    private bool TryGetWorldTile(int x, int y, out object? tile, out string why)
+    {
+        if (GetTilesMap() is not Array tilesMap)
         {
             tile = null;
             why = "MapBox.tiles_map not found or not an array.";

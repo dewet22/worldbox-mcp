@@ -13,7 +13,7 @@ public static class PulsePath
     public const int MinPulses = 1;
     public const int MaxPulses = 200;
 
-    /// <summary>Plain struct rather than a tuple — System.ValueTuple isn't always loadable under Unity Mono.</summary>
+    /// <summary>Plain struct rather than a tuple, System.ValueTuple isn't always loadable under Unity Mono.</summary>
     public readonly struct Point
     {
         public Point(int x, int y)

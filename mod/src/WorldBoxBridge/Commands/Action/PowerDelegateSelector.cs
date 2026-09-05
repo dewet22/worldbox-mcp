@@ -22,12 +22,12 @@ public enum PowerDelegatePath
 /// </summary>
 public static class PowerDelegateSelector
 {
-    /// <summary>Inclusive bounds for the caller-supplied brush radius (circ_1 … circ_50 —
+    /// <summary>Inclusive bounds for the caller-supplied brush radius (circ_1 ... circ_50 —
     /// the same ceiling the game's own <c>Brush.getRandom</c> uses).</summary>
     public const int MinRadius = 1;
     public const int MaxRadius = 50;
 
-    /// <summary>Plain struct rather than a tuple — System.ValueTuple isn't always loadable under Unity Mono.</summary>
+    /// <summary>Plain struct rather than a tuple, System.ValueTuple isn't always loadable under Unity Mono.</summary>
     public readonly struct Choice
     {
         public Choice(PowerDelegatePath path, int? brushRadius)
@@ -67,7 +67,7 @@ public static class PowerDelegateSelector
         }
 
         // No radius: the pre-radius bridge behaviour first (single-tile delegates), so existing
-        // callers see byte-for-byte identical results …
+        // callers see byte-for-byte identical results ...
         if (hasClickAction)
         {
             return new Choice(PowerDelegatePath.ClickAction, null);
@@ -76,7 +76,7 @@ public static class PowerDelegateSelector
         {
             return new Choice(PowerDelegatePath.ClickPowerAction, null);
         }
-        // … then the delegates that used to be rejected outright: brush-only powers run at a
+        // ... then the delegates that used to be rejected outright: brush-only powers run at a
         // deterministic minimal brush, and global toggles fire their toggle_action.
         if (hasClickPowerBrushAction)
         {

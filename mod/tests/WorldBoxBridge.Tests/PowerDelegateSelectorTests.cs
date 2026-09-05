@@ -36,7 +36,7 @@ public class PowerDelegateSelectorTests
     [Fact]
     public void No_radius_falls_back_to_click_power_action()
     {
-        // The drops family (rain, fire, …) carries click_power_action AND
+        // The drops family (rain, fire, ...) carries click_power_action AND
         // click_power_brush_action; without a radius the single-tile variant wins,
         // matching the bridge's pre-radius behaviour.
         var c = Select(clickPowerAction: true, clickPowerBrushAction: true);
