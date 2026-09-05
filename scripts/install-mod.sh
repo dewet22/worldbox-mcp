@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-BEPINEX_VERSION="${BEPINEX_VERSION:-5.4.23.2}"
+BEPINEX_VERSION="${BEPINEX_VERSION:-5.4.23.5}"
 WORLDBOX_PATH="${WORLDBOX_PATH:-}"
 
 err() { printf '\033[31m✗ %s\033[0m\n' "$*" >&2; exit 1; }
@@ -32,8 +32,9 @@ detect_platform_zip() {
     local uname_s
     uname_s="$(uname -s)"
     case "$uname_s" in
-        Linux)  echo "BepInEx_unix_${BEPINEX_VERSION}.zip" ;;
-        Darwin) echo "BepInEx_macos_${BEPINEX_VERSION}.zip" ;;
+        # Asset naming changed in 5.4.23.x: per-arch Linux zips and a universal macOS zip.
+        Linux)  echo "BepInEx_linux_x64_${BEPINEX_VERSION}.zip" ;;
+        Darwin) echo "BepInEx_macos_universal_${BEPINEX_VERSION}.zip" ;;
         *)      err "Unsupported OS: $uname_s. Use install-mod.ps1 on Windows." ;;
     esac
 }
@@ -58,6 +59,8 @@ else
     rm -rf "$tmp"
     ok "BepInEx installed"
 fi
+# The zip does not always preserve the executable bit on the launcher script.
+[[ -f "$WORLDBOX_PATH/run_bepinex.sh" ]] && chmod +x "$WORLDBOX_PATH/run_bepinex.sh"
 
 log "Fetching latest WorldBoxBridge release..."
 asset_url=$(curl -fsSL https://api.github.com/repos/fullya99/worldbox-mcp/releases/latest \
@@ -99,6 +102,10 @@ cat <<EOF
 Install complete.
 Next:
   1. Enable Experimental Mode in WorldBox (Settings → Experimental Mode).
-  2. Launch WorldBox. Check $WORLDBOX_PATH/BepInEx/LogOutput.log for:
-       [Info: WorldBoxBridge] listening on 127.0.0.1:8723
+  2. On Linux/macOS BepInEx only loads when the game starts through run_bepinex.sh.
+     In Steam: WorldBox → Properties → Launch Options, set:
+       "$WORLDBOX_PATH/run_bepinex.sh" %command%
+     (or start it by hand: sh "$WORLDBOX_PATH/run_bepinex.sh")
+  3. Launch WorldBox. Check $WORLDBOX_PATH/BepInEx/LogOutput.log for:
+       [Info: WorldBoxBridge] listening on http://127.0.0.1:8723
 EOF

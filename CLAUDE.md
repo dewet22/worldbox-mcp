@@ -173,6 +173,32 @@ Invoke-WebRequest -Uri 'http://127.0.0.1:8723/health' `
   -TimeoutSec 5 -SkipHttpErrorCheck
 ```
 
+**macOS dev loop** (the mod builds and runs on macOS too; the Steam install is an app bundle):
+
+```bash
+# .NET SDK via Homebrew formula (the cask needs an interactive sudo). SDK 10 builds the
+# net462 mod fine; the net8.0 test project and 0.x csharpier need a runtime roll-forward.
+brew install dotnet
+export DOTNET_ROOT=/opt/homebrew/opt/dotnet/libexec DOTNET_ROLL_FORWARD=Major PATH="$HOME/.dotnet/tools:$PATH"
+
+# Build + test. Point the build at the .app bundle's Managed dir (Directory.Build.props only
+# knows the Windows layout).
+export WORLDBOX_MANAGED_DIR="$HOME/Library/Application Support/Steam/steamapps/common/worldbox/worldbox.app/Contents/Resources/Data/Managed"
+dotnet build mod/WorldBoxBridge.sln --configuration Release
+dotnet test mod/tests/WorldBoxBridge.Tests/WorldBoxBridge.Tests.csproj --configuration Release
+dotnet tool install -g csharpier --version 0.30.6 && dotnet csharpier --check mod
+
+# Deploy. The game must be started through run_bepinex.sh (Steam launch option
+# "<worldbox>/run_bepinex.sh" %command%), otherwise BepInEx is not loaded at all.
+WB="$HOME/Library/Application Support/Steam/steamapps/common/worldbox"
+osascript -e 'tell application "WorldBox" to quit'
+cp mod/src/WorldBoxBridge/bin/Release/WorldBoxBridge.dll "$WB/BepInEx/plugins/"
+(cd "$WB" && sh ./run_bepinex.sh "$WB/worldbox.app/Contents/MacOS/WorldBox" &)
+
+# Logs: BepInEx/LogOutput.log for the plugin; plugin *load* exceptions only appear in Unity's
+# own log at ~/Library/Logs/mkarpenko/WorldBox/Player.log.
+```
+
 ```bash
 # Python (works the same in bash + PowerShell since uv handles env vars)
 cd server && uv sync --all-extras && uv run pytest tests/unit tests/integration
