@@ -9,6 +9,12 @@
     <PackageVersion Include="BepInEx.Core"            Version="5.4.21" />
     <PackageVersion Include="BepInEx.PluginInfoProps" Version="2.1.0" />
 
+    <!-- Unity reference assemblies. MUST match the engine version WorldBox ships (see /health
+         unity_version; 0.51.2 = 2022.3.60f1). Compile-time only: at runtime the plugin binds to
+         the game's real UnityEngine.*.dll. Keeps the build independent of a local game install,
+         so CI and release builds work on a bare runner. -->
+    <PackageVersion Include="UnityEngine.Modules"     Version="2022.3.60" />
+
     <!-- JSON: WorldBox ships its own Newtonsoft.Json (Newtonsoft.Json-for-Unity 13.0.2) in
          Managed/, and that is what the plugin binds to at runtime. The nuget version MUST NOT
          exceed the game's: 13.0.4 added JToken.ToString(Formatting), the compiler prefers it

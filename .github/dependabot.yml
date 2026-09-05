@@ -38,6 +38,9 @@ updates:
       # Pin Newtonsoft.Json to the version WorldBox bundles in Managed/ (13.0.2). The game's
       # copy wins at runtime, so any API added in a newer nuget throws MissingMethodException.
       - dependency-name: "Newtonsoft.Json"
+      # Pin UnityEngine.Modules to the engine version WorldBox ships (2022.3.60f1 for 0.51.2).
+      # Bumping it must follow a game update, not a package release.
+      - dependency-name: "UnityEngine.Modules"
       # Cap FluentAssertions at 6.x — v7+ shipped under a paid commercial license
       # ($130/dev/year via Xceed). v6 was the last MIT/Apache release. Stay there until
       # we either pay or migrate to AwesomeAssertions / Shouldly. Tracked separately.

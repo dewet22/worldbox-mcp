@@ -24,7 +24,7 @@ End user runs `claude mcp add worldbox -- uvx worldbox-mcp` (or equivalent for t
 - **Latest tag**: `v0.3.1` (PyPI `worldbox-mcp 0.3.1`, GitHub Release Latest, mod ZIP attached).
 - **Branch**: `main` is the shipping branch; release-please continuously maintains a `chore(main): release X.Y.Z` PR with the next bump as commits land.
 - **Docs site**: `https://fullya99.github.io/worldbox-mcp/` (default GitHub Pages URL — the user-level `fullya99/fullya99.github.io` repo had a stale CNAME to a dead `fullya.me` domain; removed 2026-05-17 so all project sites default to `<user>.github.io/<project>/`).
-- **CI**: green except for `Build mod` which is intentionally `continue-on-error: true` (no Unity DLLs on CI runners — known limitation, mod ZIP is built locally and `gh release upload`-ed per release).
+- **CI**: the mod builds on bare runners — UnityEngine references come from the `UnityEngine.Modules` NuGet package (BepInEx feed), so `Build mod` / `Test mod` are hard-failing jobs and `build-and-attach-mod` attaches the ZIP automatically.
 - **Recently shipped on this branch**: full multi-agent session layer (Phases 1–7) + `AdvanceTime` permission split + docs refresh + CI cleanup. See `~/.claude/plans/ok-j-aimeraisd-que-tu-purrfect-pearl.md` for the execution log.
 
 Memory files for this project live at `C:\Users\fullya\.claude\projects\C--worldbox-mcp\memory\` — load `MEMORY.md` for the index.
@@ -147,11 +147,12 @@ All assume the repo root as cwd.
 ```powershell
 $env:DOTNET_ROOT="$env:USERPROFILE\.dotnet"
 $env:PATH="$env:USERPROFILE\.dotnet;$env:USERPROFILE\.dotnet\tools;"+$env:PATH
-$env:WORLDBOX_DIR='X:\GAMES\steamapps\common\worldbox'
 ```
 
+No game install is needed to build: UnityEngine references come from NuGet (`UnityEngine.Modules`, pinned to the game's engine version in `Directory.Packages.props`) and the mod touches `Assembly-CSharp` only via reflection.
+
 ```powershell
-# Build mod (Release). Errors out fast if WORLDBOX_DIR isn't pointing at the Managed/ dir.
+# Build mod (Release)
 dotnet build C:\worldbox-mcp\mod\WorldBoxBridge.sln --configuration Release
 
 # Test mod (xUnit, ~70 cases, no game needed — linked-source pattern)
@@ -238,7 +239,7 @@ These choices are baked into `.github/workflows/` + `.github/dependabot.yml`. Ea
 
 - **csharpier is pinned to 0.30.6** (`ci.yml#Install csharpier`). csharpier 1.x changed the CLI (`csharpier check .` instead of `dotnet csharpier --check .`) and added new XML formatting defaults that would reformat the whole csproj/props tree. Upgrading is a deliberate decision — track it in a PR by itself.
 - **`mkdocs.yml` lives at the repo root**, not `docs/`. mkdocs 1.x rejects configs where `docs_dir` is the parent of the config file. Layout: `mkdocs.yml` at root with `docs_dir: docs`, `site_dir: site`.
-- **`Build mod` and `Test mod` are `continue-on-error: true`**. The CI runner has no Unity DLLs, so the mod project genuinely can't compile there. The jobs stay green-ish (showing the gap) while the workflow doesn't go red. Real fix is a Unity-refs cache (in roadmap).
+- **Unity references come from `UnityEngine.Modules` on the BepInEx NuGet feed** (`NuGet.config` maps `UnityEngine.*` there; nuget.org's copy stops at 2021.3). The version must match the game's engine (`/health` → `unity_version`); dependabot ignores it. `Assembly-CSharp.dll` is not referenced at all — everything game-specific is reflection — which is what makes bare-runner builds possible.
 - **GitHub Pages was bootstrapped via `gh api repos/.../pages -X POST -F build_type=workflow`** (one-time). The default `GITHUB_TOKEN` lacks the admin scope to *create* the Pages site, but `actions/configure-pages@v5 with: enablement: true` is idempotent afterward.
 - **No user-level CNAME**: `fullya99/fullya99.github.io` used to carry a `CNAME` file pointing at `fullya.me`, which silently 301-redirected *every* project site under the user — including this one — to a dead domain. Removed 2026-05-17 (commit `6af015a` in that repo). If a project ever needs a custom domain again, prefer a per-project `docs/CNAME` instead of the user-level one so the blast radius stays bounded.
 - **FluentAssertions is capped at 6.x** in `.github/dependabot.yml`. v7+ ships under a paid Xceed commercial license (~$130/dev/year). v6 is the last MIT/Apache release. Migration alternatives if needed: AwesomeAssertions or Shouldly.
@@ -319,7 +320,7 @@ Don't confuse them.
 4. The same `release.yml` workflow has dependent jobs gated on `release_created==true`:
    - `publish-pypi` — builds wheel/sdist with `uv build` and publishes via [PyPI trusted publisher](https://docs.pypi.org/trusted-publishers/). Environment `pypi` (configured both in repo and on pypi.org).
    - `build-and-attach-mod` — Windows runner, `dotnet build`, ZIP + SHA256 + GH release upload.
-5. **Known limitation, manual step every release**: `build-and-attach-mod` fails because the CI runner doesn't have the Unity DLLs. The workflow's overall conclusion is "failure" but PyPI + the GitHub Release itself are intact. Run the local recipe and upload the ZIP:
+5. `build-and-attach-mod` builds the mod on the runner and attaches `WorldBoxBridge-vX.Y.Z.zip` + `.sha256` to the release. If it ever fails, the manual fallback is:
    ```powershell
    # 1. Sync local to the merge commit (which has the bumped version files)
    git pull --ff-only origin main
@@ -358,11 +359,11 @@ Don't confuse them.
 | Asset id rejected with `UNKNOWN_ASSET` but you're sure it exists | Call `list_*` from the same session — game might have renamed it. Use the `did_you_mean` suggestions. |
 | `list_kingdoms` / `list_cities` return 0 with kingdoms alive | Gotcha #4 — re-verify `WorldAccess.GetSimpleList` is using `IEnumerable` not `getSimpleList`. Bug pre-v0.1.1. |
 | `release.yml` PyPI publish fails | Trusted publisher config drift. Verify <https://pypi.org/manage/project/worldbox-mcp/settings/publishing/> has the GitHub provider with `release.yml` + `pypi` environment. |
-| `dotnet build` fails locally with "Assembly-CSharp not found" | `WORLDBOX_DIR` env var not set, or set to wrong path. `Directory.Build.props` does fallback heuristics including `X:\GAMES\steamapps\common\worldbox`. Set it explicitly. |
+| `dotnet restore` fails on `UnityEngine.Modules` | The BepInEx NuGet feed (`nuget.bepinex.dev`) is unreachable or `NuGet.config`'s `UnityEngine.*` source mapping was removed. |
 | CI `Lint mod (csharpier)` fails with "dotnet-csharpier does not exist" | csharpier 1.x got installed instead of 0.30.6. Check `ci.yml#Install csharpier` is pinned. See CI/CD operational notes. |
 | CI `Docs` fails with "docs_dir should not be the parent directory of the config file" | Someone moved `mkdocs.yml` back into `docs/`. Move it to the repo root with `docs_dir: docs`. |
 | CI `Docs` fails with "Get Pages site failed / Resource not accessible by integration" | GitHub Pages was disabled on the repo. Re-bootstrap: `gh api repos/fullya99/worldbox-mcp/pages -X POST -F build_type=workflow`. |
-| CI `Build mod` fails (Unity refs not found) | Expected — `continue-on-error: true` absorbs it. Don't try to fix in CI without wiring a Unity-refs cache. |
+| CI `Build mod` fails after a WorldBox update | The game moved to a new Unity version: bump `UnityEngine.Modules` in `Directory.Packages.props` to match `/health` → `unity_version`. |
 | Dependabot reopens a FluentAssertions major bump PR | Verify `.github/dependabot.yml` still has the FluentAssertions `version-update:semver-major` ignore. v7+ is paid commercial license. |
 
 ---
@@ -373,7 +374,7 @@ The v0.3 multi-agent layer (identity, permissions, fog-of-war, turn-based, messa
 objectives, four scenario presets, pvp_smoke) shipped on `main` 2026-05-17 as `v0.3.0` / `v0.3.1`.
 Pending items, roughly in priority order:
 
-1. **CI mod build** — wire `actions/cache` + a script that pulls only the UnityEngine.* DLLs we reference from a stable URL (or download a stripped Unity reference assembly pack). Lifts the `continue-on-error: true` hack on `Build mod` and `Test mod` jobs, and lets `build-and-attach-mod` actually attach the ZIP automatically.
+1. ~~CI mod build~~ — done via the `UnityEngine.Modules` NuGet package; `build-and-attach-mod` now attaches the ZIP itself.
 2. **Single multi-tenant MCP server (Phase 2.5)** — currently "N agents on one world" = N `worldbox-mcp` processes each with their own `WORLDBOX_MCP_TOKEN`. The bridge already supports it; what's missing is one MCP server that accepts multiple MCP clients with distinct bearer headers and forwards `ctx.request.headers["authorization"]` per-call. `BridgeClient.call(token=...)` is already plumbed; the work is in `tools/*.py` to take `ctx: Context` and extract the bearer.
 3. **Auto-resolve `kingdom_claim: "auto:N"`** — currently parked as `null` until claimed; need a hook on first world-load to bind the Nth alive kingdom to the agent. Today `RequireKingdomAccess` is permissive on null claims, so PvP scoping is partly best-effort.
 4. **`scripts/gen-docs.py`** — calls `worldbox_capabilities` against a running game and regenerates `docs/command-reference.md` from the JSON Schema. Removes the drift risk between code and doc tool counts (which bit us during the v0.3 docs sweep — "20 tools" appeared in 6 places).

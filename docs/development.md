@@ -31,7 +31,7 @@ dotnet restore
 dotnet build --configuration Release
 ```
 
-Build output: `mod/src/WorldBoxBridge/bin/Release/net462/WorldBoxBridge.dll`.
+Build output: `mod/src/WorldBoxBridge/bin/Release/WorldBoxBridge.dll` (no game install required; Unity references come from the `UnityEngine.Modules` NuGet package pinned to the game's engine version).
 
 Deploy to your local WorldBox install:
 
@@ -52,7 +52,7 @@ The mod test suite (xUnit, ~70 cases) covers the suggester, the agent registry, 
 
 ### Decompiling the game
 
-Open `<worldbox>/worldbox_Data/Managed/Assembly-CSharp.dll` in ILSpy. Record findings in [game-api-notes.md](game-api-notes.md).
+Open `<worldbox>/worldbox_Data/Managed/Assembly-CSharp.dll` (macOS: `worldbox.app/Contents/Resources/Data/Managed/`) in ILSpy. The mod itself never references this assembly — everything game-specific goes through reflection (`GameRefs`), which is what lets it build on a bare CI runner from the `UnityEngine.Modules` NuGet package alone. Record findings in [game-api-notes.md](game-api-notes.md).
 
 ## Working on the server
 
