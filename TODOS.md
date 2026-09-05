@@ -32,7 +32,7 @@ What landed after the release:
 - `dismiss_window` is no longer turn-gated (#50). An open window freezes the simulation for the
   whole session, so clearing it is a shared unblock, not a move. The decision moved into a
   `TurnGate` class the test project can link, which `HttpBridge` cannot.
-- `scripts/gen-docs.py` (#51) generates the tool counts and verifies the inventories, with
+- `scripts/gen-docs.py` (#52) generates the tool counts and verifies the inventories, with
   `--check` wired into CI. See [development.md](docs/development.md) for how it works.
 
 **In flight**: nothing.
