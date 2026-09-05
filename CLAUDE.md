@@ -19,15 +19,16 @@ End user runs `claude mcp add worldbox -- uvx worldbox-mcp` (or equivalent for t
 
 ---
 
-## Status snapshot (2026-05-17)
+## Status snapshot (2026-09-05)
 
-- **Latest tag**: `v0.3.1` (PyPI `worldbox-mcp 0.3.1`, GitHub Release Latest, mod ZIP attached).
+- **Latest tag**: `v0.4.0` (PyPI `worldbox-mcp 0.4.0`, GitHub Release Latest, mod ZIP + `.sha256` attached automatically by CI for the first time).
 - **Branch**: `main` is the shipping branch; release-please continuously maintains a `chore(main): release X.Y.Z` PR with the next bump as commits land.
 - **Docs site**: `https://fullya99.github.io/worldbox-mcp/` (default GitHub Pages URL — the user-level `fullya99/fullya99.github.io` repo had a stale CNAME to a dead `fullya.me` domain; removed 2026-05-17 so all project sites default to `<user>.github.io/<project>/`).
 - **CI**: the mod builds on bare runners — UnityEngine references come from the `UnityEngine.Modules` NuGet package (BepInEx feed), so `Build mod` / `Test mod` are hard-failing jobs and `build-and-attach-mod` attaches the ZIP automatically.
-- **Recently shipped on this branch**: full multi-agent session layer (Phases 1–7) + `AdvanceTime` permission split + docs refresh + CI cleanup. See `~/.claude/plans/ok-j-aimeraisd-que-tu-purrfect-pearl.md` for the execution log.
+- **Recently shipped**: v0.4.0 on 2026-09-05. Six PRs from external contributor @dewet22 (#37–#42) plus a hardening follow-up (#47). Headline: the release DLLs for 0.3.0–0.3.3 did not load at all (HarmonyX 2.16 pulled `MonoMod.Backports`, which BepInEx 5.4.23 does not ship) and #37 fixes that; the mod now builds on bare CI runners; the server migrated to the mcp 2.x SDK; macOS is supported; the tool surface went 26 → 29.
+- **Read `CODEMAP.md` and `TODOS.md` first.** They are the start-cold kit. This file holds what is true all the time; `TODOS.md` holds what to do next.
 
-Memory files for this project live at `C:\Users\fullya\.claude\projects\C--worldbox-mcp\memory\` — load `MEMORY.md` for the index.
+Project memory lives under `<your ~/.claude>/projects/<slug>/memory/` — the slug is machine-dependent, so resolve it from your own home rather than copying a path. Load `MEMORY.md` for the index.
 
 ---
 
@@ -384,4 +385,53 @@ Pending items, roughly in priority order:
 8. **Persistent message log** (v0.3.2 candidate) — opt-in JSONL on disk for replay / post-mortem.
 9. **`changelog-sections` refinement** in `release-please-config.json` — `fix(ci):` commits currently land under "Dependencies" in the generated CHANGELOG. Cosmetic, but worth tuning before the next minor.
 
-Earlier long plan (the original 600-line spec) at `~/.claude/plans/option-b-fait-un-gentle-pancake.md`; the v0.3 implementation plan at `~/.claude/plans/ok-j-aimeraisd-que-tu-purrfect-pearl.md` documents what shipped and the remaining gaps. Project memory index at `~/.claude/projects/C--worldbox-mcp/memory/MEMORY.md` distills the recurring gotchas + user preferences for next-session pickup.
+Live task list is `TODOS.md`, which supersedes this section for day-to-day pickup: the roadmap above says what is worth building, `TODOS.md` says what to do next and what is currently broken.
+
+Earlier long plan (the original 600-line spec) at `~/.claude/plans/option-b-fait-un-gentle-pancake.md`; the v0.3 implementation plan at `~/.claude/plans/ok-j-aimeraisd-que-tu-purrfect-pearl.md` documents what shipped and the remaining gaps. Both were written on the Windows workstation and may not exist on another machine.
+
+---
+
+## Context convention
+
+<!-- style-redaction
+prose: en
+code: en
+commentaires: en
+interface: en
+git: en
+-->
+
+This repo is documented so that starting from a cold context never costs information. The
+repository is the source of truth, not the conversation.
+
+**Read at the start of a session, in this order**
+
+1. `TODOS.md`, the "Pick up here" block first. That is the anchor.
+2. `CODEMAP.md`, to locate what you are about to touch and to see the sensitive zones.
+3. This file, for what is true all the time.
+4. Only the `docs/` pages that concern the task at hand.
+
+**At the end of a session, before any `/clear`**: run `/cloture`, or just ask for the project to
+be tidied. It resynchronises the pillars and removes anything that has become false.
+
+**Two deviations from the plain convention, both deliberate**
+
+- `CHANGELOG.md` is generated and owned by release-please. Never hand-edit it. Put the intent in
+  the Conventional Commit and it lands in the changelog on its own.
+- `docs/` is the published MkDocs site, not an internal knowledge base, so its pages carry no
+  status headers and its index is `docs/index.md`, per `mkdocs.yml`. Internal operational
+  knowledge belongs here or in `CODEMAP.md`.
+
+**Rules that hold the whole thing together**
+
+- No silent deletion. Anything obsolete moves to `archives/` with the reason attached.
+- No known-false statement left in the pillars or in the docs. A durable rule that has become
+  wrong is deleted outright, not archived: a wrong rule is worse than a missing one.
+- One owner per piece of knowledge. Game API traps go in the gotchas section above, environment
+  constraints in `CODEMAP.md`, what to do next in `TODOS.md`.
+- No work in progress without a written task in `TODOS.md`.
+- No secret in a tracked file. Say where the key lives, never what it is.
+
+**Writing style**: English throughout, including commits, since that is what the code and every
+existing document already use. Direct tone. No em dashes, no decorative participles, no wording
+that reads as generated.
