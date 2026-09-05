@@ -111,14 +111,9 @@ internal sealed class LoadWorldCommand : ICommand
         }
         else
         {
-            try
-            {
-                readFrom = SavePathResolver.ResolveMapFile(path, GameSavePaths.SavesRoot);
-            }
-            catch (ArgumentException ex)
-            {
-                throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
-            }
+            // ArgumentException reaches HttpBridge as 400 BAD_ARGS with the exception detail
+            // attached, so wrapping it here would only lose that detail.
+            readFrom = SavePathResolver.ResolveMapFile(path, GameSavePaths.SavesRoot);
             data = File.ReadAllBytes(readFrom);
         }
 

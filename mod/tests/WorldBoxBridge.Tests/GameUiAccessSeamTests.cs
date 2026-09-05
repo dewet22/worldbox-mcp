@@ -125,6 +125,31 @@ public class GameUiAccessSeamTests
     }
 
     [Fact]
+    public void An_open_window_still_reads_as_paused_when_the_game_cannot_say()
+    {
+        // WorldAccess.IsPaused is null whenever MapBoxInstance is null, and that can coincide
+        // with a window being open. Coalescing to false there would tell the agent the
+        // simulation is running while a window freezes it, and it would poll for a tick that
+        // cannot arrive instead of calling dismiss_window.
+        var ui = new FakeUi { WindowActive = true, WindowId = "welcome" };
+
+        var report = UiStateReport.From(ui, effectivePaused: null, worldLoading: null);
+
+        report.EffectivePaused.Should().BeTrue();
+    }
+
+    [Fact]
+    public void The_games_own_pause_wins_when_it_is_available()
+    {
+        var ui = new FakeUi { WindowActive = true, Paused = true };
+
+        UiStateReport
+            .From(ui, effectivePaused: false, worldLoading: null)
+            .EffectivePaused.Should()
+            .BeFalse();
+    }
+
+    [Fact]
     public void Every_missing_symbol_reads_as_not_blocked_rather_than_failing_the_read()
     {
         var ui = new FakeUi { WindowActive = null, Paused = null };

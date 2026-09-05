@@ -18,21 +18,34 @@ public static class SavePathResolver
     private static readonly string[] MapFileNames = { "map.wbox", "map.wbax", "map.json" };
 
     /// <summary>
-    /// Rooted paths pass through untouched. Drive-relative Windows forms are rejected.
-    /// Everything else is resolved under <paramref name="savesRoot"/>, with parent-directory
-    /// segments rejected, so a relative name can never escape the saves directory.
+    /// A fully qualified path passes through untouched. Anything else is resolved under
+    /// <paramref name="savesRoot"/> and then verified to still be inside it, so a relative
+    /// name can never escape the saves directory.
     /// </summary>
     /// <remarks>
-    /// The rules are applied to the string itself rather than through
-    /// <c>Path.IsPathRooted</c>, which is platform-dependent in exactly the place that matters:
-    /// on Windows it answers true for the drive-relative <c>C:foo</c> and so used to wave those
-    /// straight past the <c>..</c> check, while on Linux it answers false and no test could see
-    /// it. <c>C:foo</c> is not an absolute path, it resolves against the working directory
-    /// <em>of drive C</em>, which for the game is its install folder. That is the escape this
-    /// helper exists to prevent, so it is refused rather than silently accepted.
+    /// Containment is established by resolving, not by inspecting the string. Two rounds of
+    /// prefix rules were written here and both leaked, in opposite directions:
+    /// <c>Path.IsPathRooted</c> answers true on Windows for the drive-relative <c>C:foo</c>,
+    /// which waved it past the <c>..</c> check; hand-written prefix rules then classified
+    /// <c>C:/../../etc/passwd</c> as rooted on Linux, where <c>C:</c> is just filename
+    /// characters, and passed it through for the same reason. The shape of a path does not
+    /// tell you where it lands. <c>Path.GetFullPath</c> does, on whichever platform is
+    /// actually running, and it collapses <c>..</c>, mixed separators and redundant
+    /// separators on the way.
+    /// <para>
+    /// This also covers the <c>Path.Combine</c> trap: <c>Combine</c> discards its first
+    /// argument when the second is rooted for the running platform, so
+    /// <c>Combine(savesRoot, @"\foo")</c> is <c>\foo</c> on Windows. That result simply
+    /// fails the containment check rather than needing a rule of its own.
+    /// </para>
+    /// <para>
+    /// <paramref name="windowsPaths"/> exists so both branches of the fully-qualified test can
+    /// be exercised from a Linux CI runner. Production never passes it.
+    /// </para>
     /// </remarks>
-    public static string ResolveFolder(string? folder, string savesRoot)
+    public static string ResolveFolder(string? folder, string savesRoot, bool? windowsPaths = null)
     {
+        var windows = windowsPaths ?? Path.DirectorySeparatorChar == '\\';
         var trimmed = (folder ?? string.Empty).Trim();
         if (trimmed.Length == 0)
         {
@@ -40,28 +53,67 @@ public static class SavePathResolver
                 "folder is required: an absolute path, or a name under the game's saves directory."
             );
         }
-        if (IsDriveRelative(trimmed))
-        {
-            throw new ArgumentException(
-                $"'{trimmed}' is drive-relative, which resolves against the game's working "
-                    + "directory rather than the saves directory. Pass a full path such as "
-                    + $"'{trimmed.Substring(0, 2)}\\{trimmed.Substring(2)}', or a plain save name."
-            );
-        }
-        if (IsRooted(trimmed))
+        if (IsFullyQualified(trimmed, windows))
         {
             return trimmed;
         }
-        foreach (var segment in trimmed.Split('/', '\\'))
+        var root = Path.GetFullPath(savesRoot);
+        string resolved;
+        try
         {
-            if (segment == "..")
-            {
-                throw new ArgumentException(
-                    $"'{trimmed}' contains '..'; relative save names must stay inside the saves directory."
-                );
-            }
+            resolved = Path.GetFullPath(Path.Combine(root, trimmed));
         }
-        return Path.Combine(savesRoot, trimmed);
+        catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException)
+        {
+            throw new ArgumentException($"'{trimmed}' is not a usable save name: {ex.Message}");
+        }
+        if (!IsInside(resolved, root))
+        {
+            throw new ArgumentException(
+                $"'{trimmed}' resolves to '{resolved}', outside the saves directory '{root}'. "
+                    + "Pass a fully qualified path if you meant somewhere else, or a plain save "
+                    + "name to stay inside."
+            );
+        }
+        return resolved;
+    }
+
+    /// <summary>
+    /// Absolute on the running platform: a Unix path from the root, or on Windows a drive
+    /// letter plus a separator, or a UNC path. Deliberately <em>not</em>
+    /// <c>Path.IsPathRooted</c>, which also answers true for the drive-relative <c>C:foo</c>
+    /// and for a bare leading separator, neither of which says where the path lands.
+    /// </summary>
+    private static bool IsFullyQualified(string path, bool windows)
+    {
+        if (!windows)
+        {
+            return path[0] == '/';
+        }
+        if (path.Length > 1 && IsSeparator(path[0]) && IsSeparator(path[1]))
+        {
+            return true; // UNC
+        }
+        return HasDrivePrefix(path) && path.Length > 2 && IsSeparator(path[2]);
+    }
+
+    /// <summary>Whether <paramref name="candidate"/> is the root itself or sits under it.</summary>
+    /// <remarks>
+    /// Compares with a trailing separator so a sibling directory whose name merely starts with
+    /// the root's, <c>/saves-backup</c> against <c>/saves</c>, is not mistaken for a child.
+    /// Ordinal rather than culture-aware: this is a path, not prose.
+    /// </remarks>
+    private static bool IsInside(string candidate, string root)
+    {
+        var normalized = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (string.Equals(candidate, normalized, StringComparison.Ordinal))
+        {
+            return true;
+        }
+        return candidate.StartsWith(
+            normalized + Path.DirectorySeparatorChar,
+            StringComparison.Ordinal
+        );
     }
 
     /// <summary>
@@ -121,14 +173,6 @@ public static class SavePathResolver
         }
         return null;
     }
-
-    /// <summary>Unix absolute, UNC, or a Windows drive followed by a separator.</summary>
-    private static bool IsRooted(string path) =>
-        path[0] == '/' || path[0] == '\\' || (HasDrivePrefix(path) && IsSeparator(path[2]));
-
-    /// <summary>A Windows drive prefix that is <em>not</em> followed by a separator.</summary>
-    private static bool IsDriveRelative(string path) =>
-        HasDrivePrefix(path) && (path.Length == 2 || !IsSeparator(path[2]));
 
     private static bool HasDrivePrefix(string path) =>
         path.Length >= 2

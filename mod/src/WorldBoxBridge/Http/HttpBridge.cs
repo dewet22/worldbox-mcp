@@ -572,14 +572,20 @@ internal sealed class HttpBridge : IDisposable
                 didYouMean: brex.DidYouMean
             );
         }
-        catch (ArgumentException aex)
+        catch (ArgumentException aex) when (aex.GetType() == typeof(ArgumentException))
         {
-            // Commands validate their arguments with plain ArgumentException (14 throws across
-            // 8 files today: "x and y are required integers", "count must be >= 1", ...). Without
+            // Commands validate their arguments with plain ArgumentException ("x and y are
+            // required integers", "count must be >= 1", a save path that escapes). Without
             // this arm they fell through to the handler below and a caller mistake came back as
             // 500 GAME_CRASH, which tells the agent the game broke rather than that it asked
-            // wrongly. The exception detail is still attached, so a genuine internal
-            // ArgumentException stays diagnosable.
+            // wrongly.
+            //
+            // Exact type on purpose. ArgumentNullException and ArgumentOutOfRangeException
+            // derive from ArgumentException, and the bridge's own invariant checks throw those
+            // (MainThreadDispatcher on a null delegate, MessageBus on a bad index). Catching
+            // the base type would report an internal fault as a client error, so the agent
+            // would rewrite its arguments and retry something that was never its fault, and the
+            // fault would stop showing up as a 5xx. Those keep falling through below.
             return ErrorResponse(
                 400,
                 "Bad Request",

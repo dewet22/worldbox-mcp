@@ -26,7 +26,7 @@ internal sealed class GameSpeedAccess
     public GameSpeedAccess(GameRefs refs) => _refs = refs;
 
     /// <summary>The active <c>WorldTimeScaleAsset</c>, or null if unavailable.</summary>
-    public object? CurrentSpeedAsset()
+    private object? CurrentSpeedAsset()
     {
         var configType = _refs.Type("Config");
         if (configType == null)

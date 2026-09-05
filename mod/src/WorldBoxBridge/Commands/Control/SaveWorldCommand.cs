@@ -76,15 +76,8 @@ internal sealed class SaveWorldCommand : ICommand
         var folder = args.Value<string?>("folder");
         var compress = args.Value<bool?>("compress") ?? true;
 
-        string resolved;
-        try
-        {
-            resolved = SavePathResolver.ResolveFolder(folder, GameSavePaths.SavesRoot);
-        }
-        catch (ArgumentException ex)
-        {
-            throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
-        }
+        // Same as load_world: ArgumentException reaches HttpBridge as 400 BAD_ARGS already.
+        var resolved = SavePathResolver.ResolveFolder(folder, GameSavePaths.SavesRoot);
 
         // Pre-flight: a save only makes sense when a world is actually loaded. Width alone
         // isn't enough, MapBox reports dimensions while generation/loading is still running

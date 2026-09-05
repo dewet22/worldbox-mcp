@@ -14,7 +14,7 @@ namespace WorldBoxBridge.Commands.Read;
 /// </remarks>
 public readonly struct UiStateReport
 {
-    public UiStateReport(
+    private UiStateReport(
         bool windowActive,
         string? currentWindow,
         bool configPaused,
@@ -49,12 +49,21 @@ public readonly struct UiStateReport
     /// come from <c>WorldAccess</c>, which touches Unity types and so is passed in rather than
     /// depended on.
     /// </summary>
-    public static UiStateReport From(IGameUiAccess ui, bool? effectivePaused, bool? worldLoading) =>
-        new(
-            windowActive: ui.IsWindowActive() ?? false,
+    public static UiStateReport From(IGameUiAccess ui, bool? effectivePaused, bool? worldLoading)
+    {
+        var windowActive = ui.IsWindowActive() ?? false;
+        var configPaused = ui.ConfigPaused ?? false;
+        return new UiStateReport(
+            windowActive: windowActive,
             currentWindow: ui.CurrentWindowId(),
-            configPaused: ui.ConfigPaused ?? false,
-            effectivePaused: effectivePaused ?? false,
+            configPaused: configPaused,
+            // The game's own effective pause when it can tell us, and the documented relation
+            // when it cannot. Coalescing to false here would have reported a running
+            // simulation while a window froze it, which is the one wrong answer that leaves an
+            // agent stuck: it would keep polling for a tick that cannot arrive instead of
+            // calling dismiss_window.
+            effectivePaused: effectivePaused ?? (configPaused || windowActive),
             worldLoading: worldLoading ?? false
         );
+    }
 }
