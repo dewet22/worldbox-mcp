@@ -39,13 +39,15 @@ What landed today, across #54, #55 and #56:
   Conventional Commits, so release-please counts the work twice. Every entry in the 0.5.0 changelog
   that predates the fix is duplicated. Pass `--body` with a prose review note.
 - release-please read the `BREAKING CHANGE` footer and proposed `1.0.0`. That was forced back to
-  0.5.0 with a `Release-As:` footer, because the per-kingdom action scope is enforced nowhere and
-  `load_world` can still hang the game. Expect the same on the next breaking change.
+  0.5.0 with a `Release-As:` footer, because at the time the per-kingdom action scope was enforced
+  nowhere and `load_world` could hang the game. Both have since been dealt with, but expect the
+  same proposal on the next breaking change.
 
-**In flight**: nothing. Working tree clean, `main` at the lockfile refresh, all 16 CI checks green.
+**In flight**: this PR. `load_world` no longer reads the save from the Unity main thread, so one
+call naming a FIFO or a huge file can no longer freeze the game. Read the Debt section for what
+is still owed on it, which is a manual check against a running WorldBox.
 
-**Next step**: the `load_world` main-thread hazard in the Debt section is the only item that can
-hurt a user today. It wants its own PR and a manual check against a running WorldBox.
+**Next step**: run that live check. Nothing else in the Debt section can hurt a user today.
 
 **Know before you touch anything**
 
@@ -74,14 +76,28 @@ Nothing queued. The Debt section is the natural queue.
 ## 🧹 Debt
 
 - [ ] **Verify the `load_world` threading fix against a running game.** The fix is in:
-      `LoadWorldCommand` now reports `RequiresMainThread => false`, resolves the path and reads
-      the file on the pool thread, and marshals nothing but the `loadMapFromBytes` call. Two
-      things about it cannot be exercised on a bare machine and want a live check. First that a
-      load still works at all, by `path` and by `bytes_b64`, since the command changed which
-      thread it starts on. Second that `GameSavePaths.Capture()` really does run before any
-      request: it samples `Application.persistentDataPath` in `Plugin.Awake` because that
-      property is main-thread only, and if it is ever missed, every `load_world` by name fails
-      with `GAME_CRASH` instead of resolving. A bare `save1` load proves both at once.
+      `LoadWorldCommand` reports `RequiresMainThread => false`, resolves the path and reads the
+      file on the pool thread, and marshals nothing but the `loadMapFromBytes` call. What the
+      test suite now pins: the saves root is unavailable until `GameSavePaths.Capture` is handed
+      a path, the reader refuses a zero-length file before opening it, and short reads reassemble.
+      What no bare machine can answer is whether a load still works at all now that the command
+      starts on a different thread. One `load_world` with `path: "save1"` and one with
+      `bytes_b64` settle it; the first also proves `Capture` ran, since a save name cannot
+      resolve without it.
+- [ ] **No cap on in-flight requests, and no timeout on the read.** `HttpBridge` hands every
+      accepted client to `Task.Run` with nothing bounding concurrency, so N parallel `load_world`
+      calls allocate N saves at once. Worse, a regular file on a dead network mount still blocks
+      in the read with no deadline anywhere: socket timeouts are spent once the request is parsed
+      and the dispatcher's deadline is not on this path. Each such call costs a thread-pool
+      thread, a descriptor and a socket for the life of the process. One `SemaphoreSlim` in
+      `HandleClientAsync` bounds both. The FIFO and character-device cases, which were the easy
+      way to trigger this, are now refused before the open.
+- [ ] **`load_world` has no `IsWorldLoading` pre-flight, where `save_world` does.** Two loads can
+      now do their reads in parallel and queue two `loadMapFromBytes` invokes that the dispatcher
+      can drain in the same frame, the second landing on a load the game just started. Mirroring
+      the `save_world` guard means checking `_world.IsWorldLoading` inside the marshalled
+      delegate, so the check and the invoke share a frame, and injecting `WorldAccess` into the
+      command. Not verifiable without the game, so it wants the same live pass as the item above.
 - [ ] **`save_world` can still stall a frame, and the load fix does not transfer.** The write
       that blocks is the game's own `SaveManager.saveWorldToDirectory`, which serializes the
       live world and writes it in one call, so it has to hold the main thread. Our own

@@ -104,7 +104,8 @@ def register(server: MCPServer, client: BridgeClient) -> None:
             "folder, or a name under the game's saves directory such as `save1` or whatever "
             "worldbox_save_world returned) or `bytes_b64` (base64-encoded zipped save bytes). "
             "Like generate_world the load runs asynchronously, poll worldbox_get_world_state "
-            "until tick advances."
+            "until tick advances. A `path` that is not a regular file, or is larger than the "
+            "save ceiling, comes back BAD_ARGS without being read."
         ),
     )
     async def worldbox_load_world(

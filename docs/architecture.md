@@ -144,6 +144,6 @@ The dispatcher's 30-second deadline is a **queueing** deadline, not a watchdog. 
 
 | Thread | Owns |
 |---|---|
-| .NET thread pool | HTTP socket I/O, JSON parsing, command queueing |
+| .NET thread pool | HTTP socket I/O, JSON parsing, command queueing, and everything a command does that does not touch a Unity API, which for `load_world` includes resolving the path and reading the save |
 | Unity main thread | All game state reads/writes, all `MapBox`/`World`/`Actor` access |
 | Logger | Thread-safe via `BepInEx.Logging.ManualLogSource` |

@@ -17,8 +17,9 @@ namespace WorldBoxBridge.Commands.Control;
 /// Loads a previously-saved world from disk via <c>SaveManager.loadMapFromBytes</c>.
 /// </summary>
 /// <remarks>
-/// One of the few commands that reports <see cref="RequiresMainThread"/> false while still
-/// touching the game. See the property for why.
+/// The only command that reports <see cref="RequiresMainThread"/> false and still calls into
+/// the game. The other six false commands never touch Assembly-CSharp at all, so this one is
+/// not a pattern to copy without reading the property below.
 /// </remarks>
 internal sealed class LoadWorldCommand : ICommand
 {
@@ -33,23 +34,24 @@ internal sealed class LoadWorldCommand : ICommand
         "Loads a world from a save. Either `bytes_b64` (base64-encoded zipped save) or "
         + "`path`: a save file, a save folder, or a name under the game's saves directory "
         + "(e.g. `save1`, or whatever save_world returned). Like generate_world, the load "
-        + "runs asynchronously over many frames.";
+        + "runs asynchronously over many frames. A `path` that is not a regular file, or is "
+        + "larger than the save ceiling, comes back as BAD_ARGS rather than being read.";
 
     /// <summary>
     /// False, deliberately, even though this command ends in a game call.
     /// </summary>
     /// <remarks>
-    /// The dispatcher runs a queued action to completion inside <c>MainThreadDispatcher.Tick</c>,
-    /// and its deadline is only checked <em>before</em> an action starts: nothing interrupts one
-    /// that has begun. Reading the file from there therefore put an unbounded blocking syscall in
-    /// the middle of a frame, and since <c>path</c> accepts absolute paths by contract, one call
-    /// naming a FIFO, a character device or a very large file froze the game until the process was
-    /// killed. So the argument work, the path resolution and the read all happen on the HTTP
-    /// thread, where a stuck read costs one thread-pool thread, and only
-    /// <c>loadMapFromBytes</c> is marshalled onto the main thread. Nothing before that call
-    /// touches a Unity API: <see cref="GameSavePaths"/> samples <c>persistentDataPath</c> at
-    /// start-up precisely so this stays true, and <see cref="GameRefs"/> is a
-    /// <c>ConcurrentDictionary</c> over plain reflection.
+    /// Reading the file from the dispatcher put an unbounded blocking syscall in the middle of a
+    /// frame, with no way to interrupt it, and <c>path</c> accepts absolute paths by contract, so
+    /// one call naming a FIFO or a very large file froze the game until the process was killed.
+    /// Gotcha 11 in <c>docs/game-api-notes.md</c> is the canonical statement of why the deadline
+    /// does not save that; do not restate it here, point at it.
+    /// <para>So the argument work, the path resolution and the read all happen on the HTTP
+    /// thread, and only <c>loadMapFromBytes</c> is marshalled onto the main thread. Nothing
+    /// before that call touches a Unity API, which is the invariant the whole change rests on:
+    /// <see cref="GameSavePaths"/> is handed <c>persistentDataPath</c> at start-up precisely so
+    /// this stays true, and <see cref="GameRefs"/> is a <c>ConcurrentDictionary</c> over plain
+    /// reflection.</para>
     /// </remarks>
     public bool RequiresMainThread => false;
 
@@ -149,14 +151,24 @@ internal sealed class LoadWorldCommand : ICommand
                 // contract its own.
                 throw new BridgeRejectionException(ErrorCode.BadArgs, ex.Message);
             }
+            catch (SaveFileChangedException ex)
+            {
+                // Not the caller's fault and worth retrying, so not BAD_ARGS: something is
+                // writing the file right now. Since the read moved off the main thread it can
+                // interleave with the game's own save, which it never could before.
+                throw new BridgeRejectionException(ErrorCode.GameRejected, ex.Message);
+            }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 // The path resolved to something that exists and still could not be read: a
                 // directory permission, a locked file, a dead mount. That is the caller's path
                 // being wrong, not the game breaking, so it must not surface as 500 GAME_CRASH.
+                // `readFrom` is null when the resolver itself threw, which PathTooLongException
+                // does on net462 from the fully-qualified branch, so fall back to what was asked
+                // for rather than reporting an empty path.
                 throw new BridgeRejectionException(
                     ErrorCode.BadArgs,
-                    $"could not read '{readFrom}': {ex.Message}"
+                    $"could not read '{readFrom ?? path}': {ex.Message}"
                 );
             }
         }
