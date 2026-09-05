@@ -69,9 +69,11 @@ construction and only kept for history.
 - **`packages.lock.json` is committed.** Change a package version and CI fails with NU1004 until
   you regenerate it with `dotnet restore mod/WorldBoxBridge.sln --force-evaluate`.
 - **No `[email protected]` in workflows.** Cloudflare email obfuscation has mangled a real action ref
-  here before. `actionlint` catches it.
-- **Tool counts drift.** Nine files can state the number. When you add or remove a tool, grep for
-  the old count before you commit.
+  here before. Nothing catches it automatically today, `actionlint` would but nothing runs it.
+  See TODOS.md.
+- **Never edit a stated tool count by hand.** Six files state it and it drifted three times.
+  `scripts/gen-docs.py --write`, run from `server/`, owns every one of them, and `--check` runs
+  in CI. See [development.md](docs/development.md).
 
 ## CI choices that look wrong and are not
 

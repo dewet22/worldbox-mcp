@@ -22,7 +22,7 @@ What landed after the release:
   workflow stored as the current version, then compared against a file that never existed. It now
   reads the `public` branch build id from `api.steamcmd.net` and compares it against
   `.github/worldbox-build-baseline.txt`, seeded with build `19962337`, which is 0.51.2. The
-  `wb-update` and `needs-triage` labels exist now; `needs-triage` is referenced by both issue
+  `wb-update` and `needs-triage` labels exist now, and `needs-triage` is referenced by both issue
   templates, so every bug report filed so far had silently lost it.
 - `xunit.runner.visualstudio` 4.0.0 (#46), reviewed and merged. The major is an alignment with
   the core framework, not a break: same target frameworks, still runs xunit v1/v2/v3, and 104
@@ -35,7 +35,9 @@ What landed after the release:
 - `scripts/gen-docs.py` (#52) generates the tool counts and verifies the inventories, with
   `--check` wired into CI. See [development.md](docs/development.md) for how it works.
 
-**In flight**: nothing.
+**In flight**: nothing on the working tree. release-please has #49 open, `chore(main): release
+0.5.0`, because the `dismiss_window` change landed as a `feat`. Merge it when you want 0.5.0 cut,
+and squash that one, it is the single exception to the merge-commit rule.
 
 **Next step**: nothing is blocking. The Debt section below is the natural queue, and the two
 protocol-correctness items in it are the ones worth doing first, `load_world` lying about its

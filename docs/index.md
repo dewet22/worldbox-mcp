@@ -17,7 +17,7 @@ It ships as two open-source components:
 
 - 🚀 **[Install](install/index.md)**, pick your AI client
 - 🏗 **[Architecture](architecture.md)**, how the two halves talk to each other
-- 📚 **[Command reference](command-reference.md)**, every tool, auto-generated
+- 📚 **[Command reference](command-reference.md)**, every tool, checked against the server
 - 👥 **[Multi-agent sessions](multi-agent.md)**, N AIs on one world (v0.3+)
 - 🧩 **[Compatibility](compatibility.md)**, WorldBox × mod version matrix
 - 🤝 **[Contributing](contributing.md)**, code, docs, issues
