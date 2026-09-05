@@ -3,19 +3,22 @@
 > What to do next. This file keeps only the future. Anything done leaves here and lives in the
 > CHANGELOG, which release-please generates from the commits.
 
-## 🔄 Pick up here, 2026-09-05, second session of the day
+## 🔄 Pick up here, 2026-09-05, third session of the day
 
-**Where things stand**: `main` is at `81111f4`, clean, 213 xUnit and 80 pytest green on a bare
-machine. Three PRs landed in this order and the order mattered: #58 the `load_world` threading
-fix, #57 dewet22's radius, pulses and drag for `invoke_power`, #62 a follow-up correcting two
-things #57's review turned up. `v0.5.0` is still the published version. **#60 is open and now
-proposes 0.6.0**, up from the 0.5.1 it proposed this morning, because #57 carried a `feat:`. Its
-changelog is five entries with no duplicates, which is the merge-body convention working.
+**Where things stand**: `main` is at `ec3dbab` and **`v0.6.0` is out**. #63 closed the previous
+session, then #60 cut the release, squashed because it is release-please's own PR and that is the
+single exception to the merge-commit rule. Its changelog landed six entries with no duplicates,
+one `feat`, four `fix`, one `refactor`, which is the merge-body convention holding across five
+merges. Both post-release chores are done: `uv lock` moved the project to 0.6.0, and
+[compatibility.md](docs/compatibility.md) carries a 🔵 row for it. `gen-docs.py --check` is clean
+and the tool count is still 29.
 
-**The one thing owed to a running game**: nothing here has been checked against WorldBox. The
-machine these sessions run on has no game installed, so the live pass is genuinely blocked, not
-forgotten. The Debt section leads with what a single live run would settle, and the ZIP to
-install is rebuildable from `main` exactly as `release.yml` does it.
+**The one thing owed to a running game, and it now costs more**: two releases in a row, 0.5.0 and
+0.6.0, ship on static evidence alone. 213 xUnit and 80 pytest are green on this machine and not
+one of them can see the game. The machine these sessions run on has no WorldBox install, so the
+live pass is blocked on hardware, not forgotten. The Debt section leads with what a single live
+run would settle, and the ZIP to install now downloads straight off the 0.6.0 release instead of
+needing a rebuild.
 
 **Do not redo these three arguments**, each cost a review round.
 
@@ -46,9 +49,10 @@ install is rebuildable from `main` exactly as `release.yml` does it.
   outside code blocks and table notation.
 - Every stated tool count is generated. Run `uv run python ../scripts/gen-docs.py --write` from
   `server/`, never edit a count by hand.
-- After the release lands, run `uv lock` from `server/` and commit it, then write the 0.6.0 row
-  in [compatibility.md](docs/compatibility.md). Skip either and the next ordinary PR fails, which
-  is the design.
+- Every release owes two chores, both done for 0.6.0 and both worth remembering for 0.7.0: run
+  `uv lock` from `server/` and commit it, then write the new row in
+  [compatibility.md](docs/compatibility.md). Skip either and the next ordinary PR fails on the
+  lockfile step or on `gen-docs.py --check`, which is the design.
 - `.NET` on this box: `export DOTNET_ROOT=$HOME/.dotnet` and
   `PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"`.
 - There is no `CODEMAP.md` and no `archives/` here, on purpose. A context audit will flag both,
@@ -56,9 +60,11 @@ install is rebuildable from `main` exactly as `release.yml` does it.
   `docs/` pages, a PowerShell snippet in `multi-agent.md` read as dead links, and two test
   tokens one of which is literally named `test-token-do-not-use`. All expected, none real.
 
-**Next step**: merge #60 to cut 0.6.0, which publishes to PyPI and attaches the mod ZIP, then do
-the two post-release chores above. Or run the live pass first if a machine with the game is
-available, since 0.6.0 would otherwise ship a second unverified release on top of 0.5.0.
+**Next step**: the live pass, and nothing else is close in value. Install the 0.6.0 ZIP from the
+GitHub release on a machine that has WorldBox and run the four checks the Blocked section names.
+One session there closes four Debt items and turns both 🔵 rows into ✅ or into bug reports. The
+next thing after that, if the live pass has to wait, is the `SemaphoreSlim` in `HandleClientAsync`,
+which needs no game and closes two Debt items at once.
 
 ---
 
@@ -68,18 +74,21 @@ available, since 0.6.0 would otherwise ship a second unverified release on top o
   run on has no WorldBox install, so nothing in the Debt list that needs a running game can be
   closed from here. Four items are waiting on one session at a machine that has the game: the
   `load_world` load path, the `IsWorldLoading` pre-flight, what `Brush.get(int, string)` returns,
-  and dewet22's two untested guards in `invoke_power`. Build the ZIP the way `release.yml` does,
-  Release plus `-warnaserror` plus `restore --locked-mode`, then stage the DLL with
-  `scripts/install-mod.ps1`, the README and the LICENSE.
+  and dewet22's two untested guards in `invoke_power`. The ZIP no longer needs rebuilding:
+  `WorldBoxBridge-v0.6.0.zip` and its `.sha256` hang off the
+  [v0.6.0 release](https://github.com/fullya99/worldbox-mcp/releases/tag/v0.6.0), built by CI the
+  way `release.yml` does it, Release plus `-warnaserror` plus `restore --locked-mode`, with the
+  DLL staged by `scripts/install-mod.ps1` alongside the README and the LICENSE.
 
 ## 🎯 Next up
 
-1. **Merge #60 and cut 0.6.0.** It publishes to PyPI and attaches the mod ZIP, so it is the one
-   irreversible step in the list. Decide first whether shipping a second unverified release on
-   top of 0.5.0 is what you want, or whether the live pass comes first.
-2. **The two chores the release creates**, both of which fail the next ordinary PR if skipped:
-   `uv lock` from `server/`, and the 0.6.0 row in [compatibility.md](docs/compatibility.md).
-3. Then the Debt section, which is the natural queue.
+1. **The live pass on a machine that has the game.** Everything else in this file is either
+   blocked behind it or worth less than it. See the Blocked section for the four checks and the
+   install recipe.
+2. **Bound the in-flight work**, the one Debt item that needs no game and closes two: a
+   `SemaphoreSlim` in `HttpBridge.HandleClientAsync` caps concurrent requests, and the per-frame
+   job registry wants the same bound or one of its own.
+3. Then the rest of the Debt section, which is the natural queue.
 
 ## 🧹 Debt
 

@@ -27,9 +27,9 @@ the bridge runs single-tenant.
 
 ## Status
 
-- **Latest**: `v0.5.0`, 2026-09-05. PyPI and the GitHub Release are both current, and CI attaches
-  the mod ZIP by itself. Not yet verified against a live game, see
-  [compatibility](docs/compatibility.md).
+- **Latest**: `v0.6.0`, 2026-09-05. PyPI and the GitHub Release are both current, and CI attaches
+  the mod ZIP by itself. Not yet verified against a live game, and neither was `v0.5.0`, so two
+  releases now stand on static evidence alone, see [compatibility](docs/compatibility.md).
 - **Breaking in 0.5.0**: a `FactionPlayer` agent can no longer call `invoke_power` and gets
   `PERMISSION_DENIED`. God powers are map-wide, so they carry the same gate as `paint_tile`.
   Creature placement stays available through `spawn`.
@@ -108,6 +108,13 @@ Each of these fixed a real failure. Read the reason before tidying one away.
   skipped whole; gen-docs keeps running and drops only its version check, via
   `--skip-release-version`. Both fail on the next ordinary PR until someone runs `uv lock` and
   writes the row.
+- **CI never starts by itself on release-please's PR.** That PR is opened by
+  `github-actions[bot]`, whose author association is `CONTRIBUTOR`, so the repo's
+  workflow-approval gate holds it: the run sits at `action_required` with zero jobs and the PR
+  reads `UNSTABLE`, which means unmeasured, not failing. Approve it with
+  `gh api -X POST repos/fullya99/worldbox-mcp/actions/runs/<id>/approve`, or merge on the strength
+  of a green `main`, since that PR only touches version strings, the release manifest and the
+  changelog. The same gate is why CI does not auto-run on an external contributor's PR.
 - **The Pre-commit job does not run csharpier**, because that runner has no .NET SDK. The
   dedicated `lint-mod` job covers it.
 - **The MCP conformance check calls `worldbox-mcp --self-check` directly**, not the MCP Inspector
