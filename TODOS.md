@@ -89,11 +89,6 @@ Nothing queued. The Debt section is the natural queue.
       check against a running WorldBox.
 - [ ] Roadmap item 9: `fix(ci):` commits land under "Dependencies" in the generated changelog.
       Cosmetic, but easier to fix before the next minor than after.
-- [ ] `RequestContext.RequireKingdomAccess` has no call site anywhere in the mod. The method is
-      documented as the guard for "who may act on which kingdom" and nothing invokes it, so the
-      per-kingdom action scope is not enforced at all. Either wire it into `spawn` (the one
-      Action command a FactionPlayer can still reach) or delete it and say plainly in
-      [multi-agent.md](docs/multi-agent.md) that claims scope reads, not writes.
 - [ ] `docs/compatibility.md` is still updated by hand after a release, and nothing checks it.
 
 ## 💡 Not committed to

@@ -71,6 +71,17 @@ public readonly struct RequestContext
     /// read result. Gods/observers (ReadAll) always see all; with fog-of-war off everyone
     /// sees all; bound factionplayers only see their own kingdom.
     /// </summary>
+    /// <remarks>
+    /// This is the whole of what a kingdom claim does. It scopes <em>reads</em>, and there is
+    /// deliberately no write-side counterpart. A <c>RequireKingdomAccess</c> shipped here in 0.3.0
+    /// and never had a call site anywhere in the mod, which read as an enforced boundary while
+    /// enforcing nothing. It could not be wired either: <c>spawn</c>, the one Action command a
+    /// FactionPlayer still reaches, takes no kingdom argument at all (the game assigns one from
+    /// <c>ActorAsset.kingdom_id_wild</c>), and <c>paint_tile</c> and <c>invoke_power</c> are
+    /// map-wide and gated by <see cref="Permission.ActionGlobal"/> instead. Writing the guard
+    /// again is a ten-line job the day <c>kingdom_claim: "auto:N"</c> resolves and a command
+    /// actually names a kingdom.
+    /// </remarks>
     public bool CanSeeKingdom(long kingdomId)
     {
         if (Has(Permission.ReadAll))
@@ -80,25 +91,6 @@ public readonly struct RequestContext
         if (!ClaimedKingdomId.HasValue)
             return true;
         return ClaimedKingdomId.Value == kingdomId;
-    }
-
-    /// <summary>
-    /// Validates that the agent is allowed to *act* on the given kingdom. Stricter than
-    /// <see cref="CanSeeKingdom"/>: ignores partial_intel (claim is enforced even with
-    /// fog-of-war off, since it scopes *who can act* not just *who can see*).
-    /// </summary>
-    public void RequireKingdomAccess(long kingdomId)
-    {
-        if (Has(Permission.ActionGlobal))
-            return;
-        if (!ClaimedKingdomId.HasValue)
-            return; // unbound (auto:N not yet resolved), allow
-        if (ClaimedKingdomId.Value == kingdomId)
-            return;
-        throw new BridgeRejectionException(
-            ErrorCode.FactionScopeViolation,
-            $"Agent '{AgentId}' (kingdom={ClaimedKingdomId}) cannot affect kingdom {kingdomId}."
-        );
     }
 
     /// <summary>
