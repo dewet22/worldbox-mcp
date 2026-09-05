@@ -47,6 +47,13 @@ internal sealed class BridgeConfig
             "Shared secret. Sent by clients in the X-WB-Token header. Generated automatically if empty."
         );
 
+        // The range clamps, it does not reject: BepInEx v5-lts routes a value read from the file
+        // through ConfigEntry<T>.Value, which calls ClampValue, and AcceptableValueRange.Clamp
+        // returns MinValue or MaxValue rather than throwing. A value that will not parse at all
+        // is caught in SetSerializedValue, logged as a warning, and the default stands. So a
+        // hand-edited 0 or 500 here degrades to 1 or 64 and never fails plugin load, which is
+        // the failure mode this repo cannot see in a normal log. BepInEx also writes the range
+        // into the generated .cfg, so the file documents its own bounds.
         MaxConcurrentRequests = file.Bind(
             "Bridge",
             "max_concurrent_requests",
