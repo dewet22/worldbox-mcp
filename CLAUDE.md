@@ -52,8 +52,11 @@ construction and only kept for history.
 ## Conventions
 
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/), in English.
-  release-please reads them to bump SemVer and write the changelog. CI-only work is `ci:`, not
-  `fix(ci):`, which bumps the patch and lands under "Bug Fixes" for a change that ships nothing.
+  release-please reads them to bump SemVer and write the changelog. **A change that ships no
+  code takes a type that does not bump**: `ci:` for workflows, `docs:` for prose, `chore:` for
+  tooling and lockfiles. Reaching for `fix:` there opens a release PR for a version nobody can
+  install anything new from, which is how #66 came to propose 0.6.1 for a corrected sample
+  response and a `gen-docs` check. The rule used to name only `ci:`, and that was too narrow.
 - **Merge PRs with a merge commit, never a squash.** The repo takes the PR title as the squash
   subject, so squashing a PR titled `deps: ...` hides the `feat:` commits inside it and the minor
   bump is silently skipped. The one exception is release-please's own PR, which is squashed.

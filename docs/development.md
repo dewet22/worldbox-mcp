@@ -302,3 +302,11 @@ that nobody has run it against a game yet. It becomes ✅ only once the
 written by hand, on purpose, since no script can know whether a release works. What is checked
 is that the row exists: `gen-docs.py --check` fails while the matrix has no row for the version
 the tree declares, so a forgotten row blocks the next ordinary PR rather than going unnoticed.
+
+Last, bump the `mod_version` shown in the two sample responses under `docs/install/`, one for
+`/health` in `index.md` and one for `capabilities()` in `manual.md`. `gen-docs.py --check`
+enforces this one too, and stands down on release-please's branch for the same reason. The check
+exists because that sample stated `0.3.0` through three releases, and 0.3.0 to 0.3.3 is the one
+family whose DLLs never load, so a reader with a dead mod found the number the page had told them
+to expect. It is checked rather than generated: the JSON around the field is illustrative, and a
+`gen-docs` region would render as a visible comment inside the fenced block.
