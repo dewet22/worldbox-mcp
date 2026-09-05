@@ -68,7 +68,6 @@ public class SavePathResolverTests
             "a/../../escape",
             "../../../../../../etc/passwd",
             "C:foo",
-            "C:/../../../../etc/passwd",
             "c:..\\..\\Windows",
             "Z:",
             "\\foo",
@@ -77,6 +76,11 @@ public class SavePathResolverTests
             "sub/../..",
             "./../..",
             "a//../../b",
+            // Deliberately absent: "C:/../../etc/passwd" and "/../../etc/passwd". Each is
+            // fully qualified on one of the two platforms (drive plus separator on Windows, a
+            // leading slash on Unix) and an ordinary relative name on the other, so neither
+            // has a platform-independent answer. They are pinned in the classification tests
+            // below instead, which is where the split belongs.
         };
 
     [Theory]
@@ -129,8 +133,14 @@ public class SavePathResolverTests
     [InlineData("c:/saves/world")]
     [InlineData("\\\\server\\share\\world")]
     [InlineData("//server/share/world")]
+    [InlineData("C:/../../etc/passwd")] // hostile-looking, still a drive plus a separator
     public void Windows_recognises_drive_and_UNC_paths_as_fully_qualified(string input)
     {
+        // The last case is the point of the contract rather than a hole in it. On Windows it
+        // is an absolute path and GetFullPath resolves it to C:\etc\passwd, which is exactly
+        // what the caller named. save_world and load_world require ControlWorld, held only by
+        // a God agent, and such an agent can already write anywhere. Containment is there to
+        // stop a relative name from reaching somewhere it should not.
         SavePathResolver.IsFullyQualified(input, windows: true).Should().BeTrue();
     }
 
