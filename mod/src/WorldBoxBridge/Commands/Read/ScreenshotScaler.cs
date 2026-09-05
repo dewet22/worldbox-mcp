@@ -16,6 +16,13 @@ public static class ScreenshotScaler
     public const string Jpg = "jpg";
     public const string Png = "png";
 
+    /// <summary>
+    /// What an unspecified format resolves to. Separate from <see cref="Jpg"/>, which is only
+    /// the name of the format: the two were the same constant, so a check comparing the
+    /// server's default against Jpg would have stayed silent if this arm ever returned Png.
+    /// </summary>
+    public const string DefaultFormat = Jpg;
+
     /// <summary>Plain struct rather than a tuple, System.ValueTuple isn't always loadable under Unity Mono.</summary>
     public readonly struct ScaledSize
     {
@@ -61,6 +68,7 @@ public static class ScreenshotScaler
         switch (f)
         {
             case "":
+                return DefaultFormat;
             case "jpg":
             case "jpeg":
                 return Jpg;

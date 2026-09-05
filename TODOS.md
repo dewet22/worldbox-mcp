@@ -39,9 +39,7 @@ What landed after the release:
 0.5.0`, because the `dismiss_window` change landed as a `feat`. Merge it when you want 0.5.0 cut,
 and squash that one, it is the single exception to the merge-commit rule.
 
-**Next step**: nothing is blocking. The Debt section below is the natural queue, and the two
-protocol-correctness items in it are the ones worth doing first, `load_world` lying about its
-source and `invoke_power` letting a FactionPlayer trigger global disasters.
+**Next step**: nothing is blocking. Cut 0.5.0, then pick from the Debt section.
 
 **Know before you touch anything**
 

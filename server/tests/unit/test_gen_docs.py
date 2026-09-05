@@ -190,6 +190,7 @@ internal static class ScreenshotScaler
     public const int DefaultQuality = 80;
     public const string Jpg = "jpg";
     public const string Png = "png";
+    public const string DefaultFormat = Jpg;
 }
 """
 
@@ -200,6 +201,9 @@ MATCHING_PYTHON = {
 }
 
 
+REFERENCE_ROW = "| `worldbox_screenshot` | Args {max_dimension=1280, quality=80}. |\n"
+
+
 @pytest.fixture
 def scaler(tmp_path: Path) -> Path:
     path = tmp_path / "ScreenshotScaler.cs"
@@ -207,38 +211,106 @@ def scaler(tmp_path: Path) -> Path:
     return path
 
 
-def test_matching_screenshot_defaults_report_nothing(scaler: Path) -> None:
+@pytest.fixture
+def reference(tmp_path: Path) -> Path:
+    path = tmp_path / "command-reference.md"
+    path.write_text(REFERENCE_ROW, encoding="utf-8")
+    return path
+
+
+def test_matching_screenshot_defaults_report_nothing(scaler: Path, reference: Path) -> None:
     report = gen_docs.Report()
-    gen_docs.check_screenshot_defaults(report, scaler=scaler, python_values=MATCHING_PYTHON)
+    gen_docs.check_screenshot_defaults(
+        report, scaler=scaler, python_values=MATCHING_PYTHON, reference=reference
+    )
 
     assert report.problems == []
 
 
-def test_screenshot_default_drift_is_reported(scaler: Path) -> None:
+def test_screenshot_default_drift_is_reported(scaler: Path, reference: Path) -> None:
     report = gen_docs.Report()
     drifted = {**MATCHING_PYTHON, "SCREENSHOT_QUALITY": "75"}
-    gen_docs.check_screenshot_defaults(report, scaler=scaler, python_values=drifted)
+    gen_docs.check_screenshot_defaults(
+        report, scaler=scaler, python_values=drifted, reference=reference
+    )
 
     assert any("DefaultQuality" in p and "75" in p for p in report.problems)
 
 
-def test_screenshot_default_renamed_on_the_csharp_side_is_reported(tmp_path: Path) -> None:
+def test_screenshot_default_renamed_on_the_csharp_side_is_reported(
+    tmp_path: Path, reference: Path
+) -> None:
     path = tmp_path / "ScreenshotScaler.cs"
     path.write_text(SCALER_SOURCE.replace("DefaultQuality", "DefaultJpegQuality"), encoding="utf-8")
 
     report = gen_docs.Report()
-    gen_docs.check_screenshot_defaults(report, scaler=path, python_values=MATCHING_PYTHON)
+    gen_docs.check_screenshot_defaults(
+        report, scaler=path, python_values=MATCHING_PYTHON, reference=reference
+    )
 
     assert any("no longer declares" in p for p in report.problems)
 
 
-def test_missing_scaler_is_reported_rather_than_passing_quietly(tmp_path: Path) -> None:
+def test_screenshot_default_renamed_on_the_python_side_is_reported(
+    scaler: Path, reference: Path
+) -> None:
+    # The C# side has its own message for this. Without the matching branch the Python side
+    # reported the constant as having drifted to the string "None", which sends the reader
+    # looking for a number that was set wrong rather than for a constant that is gone.
+    gone = {k: v for k, v in MATCHING_PYTHON.items() if k != "SCREENSHOT_QUALITY"}
+
     report = gen_docs.Report()
     gen_docs.check_screenshot_defaults(
-        report, scaler=tmp_path / "gone.cs", python_values=MATCHING_PYTHON
+        report, scaler=scaler, python_values=gone, reference=reference
+    )
+
+    assert any("no longer declares SCREENSHOT_QUALITY" in p for p in report.problems)
+    assert not any("'None'" in p for p in report.problems)
+
+
+def test_missing_scaler_is_reported_rather_than_passing_quietly(
+    tmp_path: Path, reference: Path
+) -> None:
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(
+        report, scaler=tmp_path / "gone.cs", python_values=MATCHING_PYTHON, reference=reference
     )
 
     assert any("is missing" in p for p in report.problems)
+
+
+def test_csharp_const_alias_is_resolved(scaler: Path) -> None:
+    # `DefaultFormat = Jpg` is how the bridge names its default without restating "jpg". A
+    # checker that could not follow the alias reported the constant as missing.
+    values = gen_docs.csharp_screenshot_defaults(scaler)
+
+    assert values["DefaultFormat"] == "jpg"
+
+
+def test_command_reference_row_drift_is_reported(scaler: Path, tmp_path: Path) -> None:
+    # The defaults are stated a third time, in prose, in the command reference.
+    drifted = tmp_path / "drifted.md"
+    drifted.write_text(REFERENCE_ROW.replace("quality=80", "quality=75"), encoding="utf-8")
+
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(
+        report, scaler=scaler, python_values=MATCHING_PYTHON, reference=drifted
+    )
+
+    assert any("quality=75" in p and "SCREENSHOT_QUALITY" in p for p in report.problems)
+
+
+def test_command_reference_row_reworded_away_is_reported(scaler: Path, tmp_path: Path) -> None:
+    # A reworded row must fail loudly rather than pass because there is nothing left to match.
+    reworded = tmp_path / "reworded.md"
+    reworded.write_text("| `worldbox_screenshot` | See the guide. |\n", encoding="utf-8")
+
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(
+        report, scaler=scaler, python_values=MATCHING_PYTHON, reference=reworded
+    )
+
+    assert any("no longer states 'max_dimension=<value>'" in p for p in report.problems)
 
 
 def test_the_real_tree_states_the_same_screenshot_defaults_on_both_sides() -> None:
@@ -254,8 +326,20 @@ def test_run_against_a_throwaway_tree_does_not_check_the_real_repo(
     # The screenshot check is repo-global. If run() applied it to every root, a real-repo
     # drift would fail every test in this file with a problem about files the throwaway tree
     # never created, which is exactly the coupling this file's fixtures exist to avoid.
-    (docs / "mod").mkdir(parents=True, exist_ok=True)
-
     report = gen_docs.run(surface, docs, write=False)
 
     assert not any("screenshot" in p for p in report.problems)
+
+
+def test_run_checks_the_screenshot_defaults_for_the_real_repository(
+    surface: object, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Only the negative side of run()'s root gate was pinned. If the gate ever became
+    # always-false, or CI started passing `--root .`, the check would stop running and every
+    # test here would still pass.
+    calls: list[int] = []
+    monkeypatch.setattr(gen_docs, "check_screenshot_defaults", lambda report: calls.append(1))
+
+    gen_docs.run(surface, gen_docs.REPO_ROOT, write=False)
+
+    assert calls == [1]
