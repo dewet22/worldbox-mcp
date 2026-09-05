@@ -84,15 +84,18 @@ Nothing queued. The Debt section is the natural queue.
 
 ## 🧹 Debt
 
-- [ ] **Verify the `load_world` threading fix against a running game.** The fix is in:
-      `LoadWorldCommand` reports `RequiresMainThread => false`, resolves the path and reads the
-      file on the pool thread, and marshals nothing but the `loadMapFromBytes` call. What the
-      test suite now pins: the saves root is unavailable until `GameSavePaths.Capture` is handed
-      a path, the reader refuses a zero-length file before opening it, and short reads reassemble.
-      What no bare machine can answer is whether a load still works at all now that the command
-      starts on a different thread. One `load_world` with `path: "save1"` and one with
-      `bytes_b64` settle it; the first also proves `Capture` ran, since a save name cannot
-      resolve without it.
+- [ ] **One live `load_world` is still owed.** The fix landed in #58 without it, on static
+      evidence, and the merge commit of `ccf4261` records exactly what that evidence was. A probe
+      harness linked `SaveFileReader`, `SavePathResolver` and `GameSavePaths` out of the branch
+      and ran them against real special files under a watchdog: a FIFO with no writer is refused
+      in 2 ms where `File.ReadAllBytes` on that same FIFO was still blocked after 3 seconds,
+      `/dev/zero` goes the same way, a 300 MB file is refused after allocating 1232 bytes, and a
+      save name resolves under a sampled `persistentDataPath` and reads a real zip back whole,
+      which is also the proof that the `Capture` handoff works. So the refusal half is settled.
+      What is not: that a load still completes now that the command starts on a pool thread,
+      which needs one `load_world` with `path: "save1"` and one with `bytes_b64`. Note also that
+      the probe ran on Linux under .NET 8, and the zero-length signal for special files is a
+      measurement on the wrong runtime for a plugin that ships against Mono net462.
 - [ ] **No cap on in-flight requests, and no timeout on the read.** `HttpBridge` hands every
       accepted client to `Task.Run` with nothing bounding concurrency, so N parallel `load_world`
       calls allocate N saves at once. Worse, a regular file on a dead network mount still blocks
@@ -107,6 +110,40 @@ Nothing queued. The Debt section is the natural queue.
       the `save_world` guard means checking `_world.IsWorldLoading` inside the marshalled
       delegate, so the check and the invoke share a frame, and injecting `WorldAccess` into the
       command. Not verifiable without the game, so it wants the same live pass as the item above.
+- [ ] **Nobody has written down what `Brush.get(int, string)` returns.** The brush-machinery
+      section of [game-api-notes](docs/game-api-notes.md) is headed "verified against the 0.51.2
+      decompile" and records that this overload clones `circ_1` as `circ_N`, but not its return
+      type, while the same section says the `Config.current_brush` setter fills
+      `current_brush_data` "via `Brush.get(id)`". So at least one overload of that name answers
+      with brush data rather than with the library asset, and `BrushAccess` cannot safely prefer
+      the returned asset's `id` over the name it constructs. It now logs, once per build, when
+      the two disagree, which is what a single live `invoke_power` with a radius turns into an
+      answer. Write the return type down, then let `TryEnsureCircleBrush` prefer the real id and
+      drop the guess. Same live pass as the `load_world` item above.
+- [ ] **`GameRefs` caches members without their binding flags, and claims a consequence it
+      cannot know.** `Field`, `Property` and `Method` all key on `$"{owner.FullName}.{name}"`
+      with the flags left out, so two call sites asking for the same type and member under
+      different flags silently share the first one's answer, including a cached null.
+      `owner.FullName` is also null for some constructed types, which collapses every such
+      lookup onto `".id"`. Nothing collides today, every live `Field` call site passes `Static`.
+      Include the flags and a non-null identity in the key. While there, drop "Dependent
+      commands disabled." from the three warnings: a missing member sometimes disables nothing,
+      and the message is read by whoever is already debugging the wrong thing.
+- [ ] **Per-frame jobs have no cap, where the action queue has one.** `MainThreadDispatcher`
+      drains at most 32 queued actions per frame, but `ActiveJobs` steps every registered
+      per-frame job every frame with nothing bounding how many there are. N concurrent
+      `invoke_power` runs with `pulses` therefore cost N delegate invocations per frame for up to
+      25 seconds each, which is a longer-lived version of the in-flight-request item above and
+      wants the same `SemaphoreSlim` or a cap of its own. Found reviewing #57, not introduced by
+      it: the primitive is new, the missing bound is the same one.
+- [ ] **A cancelled request can be reported as a main-thread timeout.** The 60-second backstop in
+      `HttpBridge` builds its timer from a token linked to the request token, so when that token
+      is cancelled the timer task completes as cancelled, can win the `Task.WhenAny`, and the
+      handler throws `TimeoutException` with a message about 60 seconds that did not elapse.
+      Nothing in the handler catches `OperationCanceledException` either, so before #57 the same
+      path produced a 500 `GAME_CRASH`. Both labels are wrong for "the bridge is shutting down".
+      Cheap to fix by checking the token before deciding it was a timeout, and worth doing
+      because the wrong label lands in the log of whoever is debugging a hang.
 - [ ] **`save_world` can still stall a frame, and the load fix does not transfer.** The write
       that blocks is the game's own `SaveManager.saveWorldToDirectory`, which serializes the
       live world and writes it in one call, so it has to hold the main thread. Our own
