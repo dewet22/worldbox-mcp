@@ -194,8 +194,9 @@ a throwaway tree. A check that stays quiet when the docs drift would be worse th
    - Implement `ICommand`, pick a `CommandCategory` (Meta, Discovery, Action, Read, Control, Bus)
      and set `RequiresMainThread`.
    - The signature is `Task<object?> ExecuteAsync(JObject args, RequestContext ctx, CancellationToken)`.
-     Call `ctx.Require(Permission.X)` first to gate it, and `ctx.CanSeeKingdom` or
-     `ctx.RequireKingdomAccess` for fog-of-war and faction binding.
+     Call `ctx.Require(Permission.X)` first to gate it, and `ctx.CanSeeKingdom` to filter a read
+     under fog of war. There is no write-side counterpart on purpose, see
+     [multi-agent.md](multi-agent.md#a-kingdom-claim-scopes-reads-not-writes).
    - Reuse `AssetCatalog.Resolve` for any asset id, which gives you `did_you_mean` for free, and
      `WorldAccess` for `MapBox`, units, kingdoms and cities.
    - Throw `BridgeRejectionException` for structured errors, including plain argument

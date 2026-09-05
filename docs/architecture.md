@@ -134,7 +134,7 @@ does pin content hashes. See [development.md](development.md) for how to regener
 3. Mod's HTTP handler verifies the bearer against the `AgentRegistry`, resolves it into a `RequestContext` (agent id, role, kingdom claim, permissions, scenario flags), then parses the JSON body.
 4. The bridge runs the per-command permission gate (`ctx.Require(Permission.X)`) and (in turn-based sessions) checks that the caller holds the current turn. Both fail fast before any game-state work.
 5. Bridge enqueues an `Action` on the main-thread dispatcher with a `TaskCompletionSource`.
-6. Next Unity frame: dispatcher pops the action, the command runs with `RequestContext` in scope (so it can fog-of-war-filter reads or scope writes to the caller's kingdom), sets the TCS result.
+6. Next Unity frame: dispatcher pops the action, the command runs with `RequestContext` in scope, so it knows who is calling and can fog-of-war-filter what it returns, and sets the TCS result. It cannot scope a write to the caller's kingdom: nothing in the bridge does, see [multi-agent.md](multi-agent.md#a-kingdom-claim-scopes-reads-not-writes).
 7. HTTP handler awaits the TCS, serializes the result, returns `200 OK`.
 8. Python server returns the result to the MCP client.
 

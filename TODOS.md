@@ -42,10 +42,28 @@ What landed today, across #54, #55 and #56:
   0.5.0 with a `Release-As:` footer, because the per-kingdom action scope is enforced nowhere and
   `load_world` can still hang the game. Expect the same on the next breaking change.
 
-**In flight**: nothing. Working tree clean, `main` at the lockfile refresh, all 16 CI checks green.
+**In flight**: three open PRs, and none of them is yours to forget.
 
-**Next step**: the `load_world` main-thread hazard in the Debt section is the only item that can
-hurt a user today. It wants its own PR and a manual check against a running WorldBox.
+- **#58, the `load_world` fix.** Green, reviewed twice, waiting on one thing only: a check against
+  a running WorldBox. Do not redo this work, read the Debt item below first.
+- **#60, release-please proposing 0.5.1.** Cut from the single `refactor:` commit in #59, which
+  is the useful discovery: `refactor:` bumps the patch here, while the `ci:` commits in #61
+  contributed nothing to it, which is what the new convention is for. Its base is one merge
+  behind `main`, so it regenerates on the next push. Its branch name starts with
+  `release-please--`, so the compatibility-matrix check stands down on it as designed.
+- **#57, from dewet22**, `feat:` adding radius, pulses and drag to `invoke_power` by driving the
+  brush and toggle delegates. Green, unreviewed. It reaches for the three power delegates listed
+  under "Not committed to" below, so read that entry before reviewing it.
+
+**Next step**: run the live check for #58 and merge it. Then review #57.
+
+**Known false on `main` right now**: `docs/architecture.md` line 141, the
+`MAIN_THREAD_TIMEOUT` rows in `docs/protocol.md` and `docs/command-reference.md`. All three
+describe the dispatcher's 30-second deadline as a watchdog that keeps the game from freezing. It
+is a queueing deadline: `MainThreadDispatcher.Tick` tests it before calling `pending.Run()`, so it
+drops an action that waited too long for a frame and does nothing at all about one that started.
+Believing otherwise is what let the `load_world` hazard sit there. The correction is written and
+sits in #58, so it lands with it. Until then, do not trust those three sentences.
 
 **Know before you touch anything**
 
@@ -73,28 +91,36 @@ Nothing queued. The Debt section is the natural queue.
 
 ## 🧹 Debt
 
-- [ ] **One `load_world` call can wedge the game for good.** `LoadWorldCommand` declares
-      `RequiresMainThread => true` and then calls `File.ReadAllBytes`. Absolute paths are
-      accepted by design, so a FIFO, a character device, or a multi-GB file blocks or loops
-      *inside* `MainThreadDispatcher.Tick`. The 30s deadline does not save it:
-      `MainThreadDispatcher.cs:171` tests `DateTime.UtcNow > pending.Deadline` **before**
-      calling `pending.Run()`, and nothing interrupts an action once it is running. The game
-      hangs until the process is killed. `save_world` has the same shape on the write side.
-      Reachable by any token holder, which is the agent itself with one bad path.
-      Found by the adversarial pass of the pre-merge review on #56, verified against the
-      dispatcher source. Not fixed there because the honest fix is a threading change:
-      `RequiresMainThread => false`, with only the `loadMapFromBytes` invoke marshalled through
-      `MainThreadDispatcher.RunOnMainThreadAsync`. Nothing before that line touches a Unity
-      API. That path cannot be exercised without the game, so it wants its own PR and a manual
-      check against a running WorldBox.
+- [ ] **Run the live check for #58, the `load_world` fix.** On `main` today, one `load_world`
+      call still wedges the game for good: the command declares `RequiresMainThread => true` and
+      then calls `File.ReadAllBytes` on a caller-supplied path, so a FIFO or a huge file blocks
+      inside a frame until the process is killed. #58 fixes it and is green. What it cannot prove
+      on a bare machine is that a load still works now that the command starts on a different
+      thread. One `load_world` with `path: "save1"`, one with `bytes_b64`. The first also proves
+      `GameSavePaths.Capture` ran, since a save name cannot resolve without it. Optionally point
+      it at a FIFO: it should answer `BAD_ARGS` at once rather than blocking, which is the second
+      half of the fix.
+- [ ] **Two residuals #58 records and does not fix**, both needing the game to verify. There is no
+      cap on in-flight requests, so N parallel loads allocate N saves at once, and a read
+      blocking on a dead network mount still leaks a thread-pool thread with no deadline
+      anywhere. One `SemaphoreSlim` in `HandleClientAsync` bounds both. And `load_world` has no
+      `IsWorldLoading` pre-flight where `save_world` does, so two loads can queue two
+      `loadMapFromBytes` invokes the dispatcher drains in the same frame.
 
 ## 💡 Not committed to
 
-Carried over from the CLAUDE.md roadmap. Read that section for the reasoning behind each.
+Ideas nobody has signed up for. The pointer that used to sit here, to a roadmap section in
+CLAUDE.md, was dead: no such section exists, so the reasoning lives in each line below and in
+the docs each one names.
 
 - Single multi-tenant MCP server, so N agents no longer means N server processes.
-- Auto-resolve `kingdom_claim: "auto:N"` on first world load, which would make PvP scoping real
-  rather than best-effort.
-- The remaining power delegates: `click_brush_action`, `toggle_action`, `click_special_action`.
+- Auto-resolve `kingdom_claim: "auto:N"` on first world load. On its own this buys nothing: #59
+  established that a kingdom claim scopes reads and not writes, and that no Action command a
+  FactionPlayer can reach even names a kingdom. Real PvP write scoping needs both this and a
+  command that takes a kingdom. See the section in [multi-agent.md](docs/multi-agent.md).
 - `get_actor(name_or_id)`, and `terraform(action_id, x, y, radius)`.
 - Opt-in JSONL message log for replay and post-mortem.
+
+The remaining power delegates (`click_brush_action`, `toggle_action`, `click_special_action`)
+have left this list: PR #57 implements the brush and toggle ones. Review it against gotcha 7 in
+[game-api-notes.md](docs/game-api-notes.md), which is where the delegate families are written up.
