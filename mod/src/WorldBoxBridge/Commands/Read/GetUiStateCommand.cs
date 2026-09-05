@@ -17,10 +17,10 @@ namespace WorldBoxBridge.Commands.Read;
 /// </remarks>
 internal sealed class GetUiStateCommand : ICommand
 {
-    private readonly GameUiAccess _ui;
+    private readonly IGameUiAccess _ui;
     private readonly WorldAccess _world;
 
-    public GetUiStateCommand(GameUiAccess ui, WorldAccess world)
+    public GetUiStateCommand(IGameUiAccess ui, WorldAccess world)
     {
         _ui = ui;
         _world = world;
@@ -53,14 +53,15 @@ internal sealed class GetUiStateCommand : ICommand
     {
         // No permission gate: UI state reveals nothing about the world, and every role needs
         // it to understand why the simulation isn't advancing.
+        var report = UiStateReport.From(_ui, _world.IsPaused, _world.IsWorldLoading);
         return Task.FromResult<object?>(
             new
             {
-                window_active = _ui.IsWindowActive() ?? false,
-                current_window = _ui.CurrentWindowId(),
-                config_paused = _ui.ConfigPaused ?? false,
-                effective_paused = _world.IsPaused ?? false,
-                world_loading = _world.IsWorldLoading ?? false,
+                window_active = report.WindowActive,
+                current_window = report.CurrentWindow,
+                config_paused = report.ConfigPaused,
+                effective_paused = report.EffectivePaused,
+                world_loading = report.WorldLoading,
             }
         );
     }

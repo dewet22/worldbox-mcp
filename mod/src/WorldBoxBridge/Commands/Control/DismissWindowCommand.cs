@@ -14,9 +14,9 @@ namespace WorldBoxBridge.Commands.Control;
 /// </summary>
 internal sealed class DismissWindowCommand : ICommand
 {
-    private readonly GameUiAccess _ui;
+    private readonly IGameUiAccess _ui;
 
-    public DismissWindowCommand(GameUiAccess ui) => _ui = ui;
+    public DismissWindowCommand(IGameUiAccess ui) => _ui = ui;
 
     public string Name => "dismiss_window";
     public CommandCategory Category => CommandCategory.Control;
@@ -44,19 +44,16 @@ internal sealed class DismissWindowCommand : ICommand
         // experiences identically, with no griefing potential. Unlike them it is exempt from
         // the turn gate, see TurnGate.AlwaysAllowed for why.
         ctx.Require(Permission.AdvanceTime);
-        var window = _ui.CurrentWindowId();
-        var active = _ui.IsWindowActive() ?? false;
-        if (!active)
-        {
-            return Task.FromResult<object?>(new { dismissed = false, window = (string?)null });
-        }
-        if (!_ui.HideAllWindows())
+        var result = WindowDismissal.Run(_ui);
+        if (result.Unsupported)
         {
             throw new BridgeRejectionException(
                 ErrorCode.GameRejected,
                 "ScrollWindow.hideAllEvent not found in this WorldBox build."
             );
         }
-        return Task.FromResult<object?>(new { dismissed = true, window });
+        return Task.FromResult<object?>(
+            new { dismissed = result.Dismissed, window = result.Window }
+        );
     }
 }
