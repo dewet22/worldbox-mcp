@@ -3,31 +3,34 @@
 > What to do next. This file keeps only the future. Anything done leaves here and lives in the
 > CHANGELOG, which release-please generates from the commits.
 
-## 🔄 Pick up here, 2026-09-05, third session of the day
+## 🔄 Pick up here, 2026-09-05, fourth session of the day
 
-**Where things stand**: `main` is at `c5a1669`, clean, and **`v0.6.0` is out**. PyPI serves it
-and the GitHub release carries `WorldBoxBridge-v0.6.0.zip` with its `.sha256`. Four PRs landed:
-#63 closed the previous session, #60 cut the release, #64 ran the post-release chores, #65 fixed
-an install page that had been telling readers to expect a `mod_version` from a release family
-whose DLLs never load. Only #60 was squashed, because it is release-please's own PR and that is
-the single exception. 213 xUnit and 84 pytest are green here, `gen-docs.py --check` is clean, and
-the tool count is still 29.
+**Where things stand**: `main` is at `8006d5d`, clean, and **`v0.6.0` is out**. PyPI serves it
+and the GitHub release carries `WorldBoxBridge-v0.6.0.zip` with its `.sha256`. One PR is open on
+top of that, #68, which bounds in-flight commands and per-frame jobs. 223 xUnit and 84 pytest are
+green here, `gen-docs.py --check` is clean, and the tool count is still 29.
 
-**Read this before merging #66.** It is release-please proposing 0.6.1, and it exists because a
-commit in #65 was typed `fix(docs)` when it ships no code at all. Merging it would publish a
-release whose only content is a corrected sample response and a check script. The convention in
-[CLAUDE.md](CLAUDE.md) has been widened to say so. Leave #66 open: the next `feat:` or real
-`fix:` will roll into it and it becomes an honest release. Nobody has to merge it for its own
-sake.
+**#68 is the work of this session**, and it closes the last Debt item that needed no running
+game. Two counted bounds over one `ConcurrencyGate`: an admission gate in
+`HttpBridge.ExecuteCommandAsync` capped by `max_concurrent_requests` (default 8), and a cap of 32
+registered per-frame jobs in `MainThreadDispatcher`, the same number of queued actions it already
+drained per frame. Both refuse with the new `503 BUSY`. Its description carries the two placement
+arguments in full, and the section below repeats the short form.
+
+**Read this before merging #66.** It is release-please's own PR. It proposed 0.6.1 only because a
+commit in #65 was typed `fix(docs)` while shipping no code, and merging it in that state would
+have published a release whose only content was a corrected sample response. #68 is a real
+`feat:`, so once it lands #66 becomes 0.7.0 and an honest release. Merge #68 first, let
+release-please refresh #66, then cut the release with its three chores.
 
 **The one thing owed to a running game, and it now costs more**: two releases in a row, 0.5.0 and
-0.6.0, ship on static evidence alone. Every test this repo has is green on this machine and not
-one of them can see the game. The machine these sessions run on has no WorldBox install, so the
-live pass is blocked on hardware, not forgotten. The Debt section leads with what a single live
-run would settle, and the ZIP to install now downloads straight off the 0.6.0 release instead of
-needing a rebuild.
+0.6.0, ship on static evidence alone, and 0.7.0 will make three unless someone runs the live
+pass. Every test this repo has is green on this machine and not one of them can see the game. The
+machine these sessions run on has no WorldBox install, so the live pass is blocked on hardware,
+not forgotten. The Blocked section names the four checks, and the ZIP to install downloads
+straight off the 0.6.0 release instead of needing a rebuild.
 
-**Do not redo these three arguments**, each cost a review round.
+**Do not redo these five arguments**, each cost a review round.
 
 - `load_world` reads off the main thread and marshals only `loadMapFromBytes`. The reason is
   that the dispatcher's 30s deadline is a *queueing* deadline, tested before the action runs,
@@ -44,6 +47,14 @@ needing a rebuild.
   the constructed `circ_<radius>` swaps a value that is correct on stock builds for one whose
   provenance nobody has verified, because `Brush.get(int, string)`'s return type is recorded
   nowhere. It logs disagreement instead. The Debt item says what one live call turns that into.
+- **The admission gate sits after authentication, not around the connection** (#68). Wrapping
+  `HandleClientAsync` would have been simpler and wrong twice: unauthenticated traffic could
+  spend the slots, and a client that dribbles its request in over the 35s read timeout would
+  hold a slot it is not using. Socket reads and writes stay outside the gate.
+- **The per-frame job cap is not left to follow from the request cap** (#68). It would almost
+  hold, since every job is registered by a request that awaits it. But the handler's 60-second
+  backstop can abandon a job that outlives it, and a bound that holds only while `PulseRunBudget`
+  (25s) stays under that backstop (60s), two constants in separate files, is not a bound.
 
 **Know before you touch anything**
 
@@ -52,16 +63,17 @@ needing a rebuild.
   NU1004 until you regenerate with `dotnet restore mod/WorldBoxBridge.sln --force-evaluate`.
 - Merge PRs with a merge commit, never a squash, and give that merge a prose body that is not a
   Conventional Commit. Both halves matter. #60's clean changelog is the evidence.
+- A change that ships no code takes a type that does not bump: `ci:` for workflows, `docs:` for
+  prose, `chore:` for tooling. Reaching for `fix:` is what opened #66 for nothing.
 - Prose, comments and commits are all in English, and the repo is deliberately free of em dashes
   outside code blocks and table notation.
 - Every stated tool count is generated. Run `uv run python ../scripts/gen-docs.py --write` from
   `server/`, never edit a count by hand.
-- Every release owes three chores, all done for 0.6.0 and all worth remembering for 0.7.0: run
-  `uv lock` from `server/` and commit it, write the new row in
-  [compatibility.md](docs/compatibility.md), and bump the `mod_version` shown in the two sample
-  responses under `docs/install/`. Skip any of them and the next ordinary PR fails on the
-  lockfile step or on `gen-docs.py --check`, which is the design. The third one is new: that
-  sample said 0.3.0 for three releases running, which is the family whose DLLs never load.
+- Every release owes three chores, all done for 0.6.0 and all owed again by 0.7.0: run `uv lock`
+  from `server/` and commit it, write the new row in [compatibility.md](docs/compatibility.md),
+  and bump the `mod_version` shown in the two sample responses under `docs/install/`. Skip any of
+  them and the next ordinary PR fails on the lockfile step or on `gen-docs.py --check`, which is
+  the design.
 - `.NET` on this box: `export DOTNET_ROOT=$HOME/.dotnet` and
   `PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"`.
 - There is no `CODEMAP.md` and no `archives/` here, on purpose. A context audit will flag both,
@@ -69,12 +81,12 @@ needing a rebuild.
   `docs/` pages, a PowerShell snippet in `multi-agent.md` read as dead links, and two test
   tokens one of which is literally named `test-token-do-not-use`. All expected, none real.
 
-**Next step**: the live pass, and nothing else is close in value. Install the 0.6.0 ZIP from the
-GitHub release on a machine that has WorldBox and run the four checks the Blocked section names.
-One session there closes four Debt items and turns both 🔵 rows into ✅ or into bug reports. If
-the live pass has to wait for hardware, the `SemaphoreSlim` in `HandleClientAsync` is the item to
-take: it needs no game and closes two Debt entries at once. Do not open #66 as a way of feeling
-productive, see the note above.
+**Next step**: merge #68, then the live pass, and after that nothing else is close in value.
+Install the 0.6.0 ZIP from the GitHub release on a machine that has WorldBox and run the four
+checks the Blocked section names. One session there closes three Debt items and turns both 🔵
+rows into ✅ or into bug reports. If the live pass has to wait for hardware, the two items left
+that need no game are the `GameRefs` cache key and the cancelled request reported as a
+main-thread timeout. Neither is large.
 
 ---
 
@@ -95,10 +107,12 @@ productive, see the note above.
 1. **The live pass on a machine that has the game.** Everything else in this file is either
    blocked behind it or worth less than it. See the Blocked section for the four checks and the
    install recipe.
-2. **Bound the in-flight work**, the one Debt item that needs no game and closes two: a
-   `SemaphoreSlim` in `HttpBridge.HandleClientAsync` caps concurrent requests, and the per-frame
-   job registry wants the same bound or one of its own.
-3. Then the rest of the Debt section, which is the natural queue.
+2. **`GameRefs` caches members without their binding flags.** Needs no game, and the fix is a
+   better cache key plus three warning messages that stop claiming a consequence they cannot
+   know. See the Debt entry.
+3. **A cancelled request is reported as a main-thread timeout.** Also needs no game, also small,
+   and the wrong label lands in the log of whoever is already debugging a hang.
+4. Then the rest of the Debt section, which is the natural queue.
 
 ## 🧹 Debt
 
@@ -114,14 +128,16 @@ productive, see the note above.
       which needs one `load_world` with `path: "save1"` and one with `bytes_b64`. Note also that
       the probe ran on Linux under .NET 8, and the zero-length signal for special files is a
       measurement on the wrong runtime for a plugin that ships against Mono net462.
-- [ ] **No cap on in-flight requests, and no timeout on the read.** `HttpBridge` hands every
-      accepted client to `Task.Run` with nothing bounding concurrency, so N parallel `load_world`
-      calls allocate N saves at once. Worse, a regular file on a dead network mount still blocks
-      in the read with no deadline anywhere: socket timeouts are spent once the request is parsed
-      and the dispatcher's deadline is not on this path. Each such call costs a thread-pool
-      thread, a descriptor and a socket for the life of the process. One `SemaphoreSlim` in
-      `HandleClientAsync` bounds both. The FIFO and character-device cases, which were the easy
-      way to trigger this, are now refused before the open.
+- [ ] **Still no deadline on the save read itself.** #68 bounded how many of these can pile up,
+      which was the larger half, and this is the residual. A regular file on a dead network mount
+      still blocks in `load_world`'s read forever: socket timeouts are spent once the request is
+      parsed, and the dispatcher's deadline is not on this path. What changes is the shape of the
+      damage. Before, each such call cost a thread, a descriptor and a socket for the life of the
+      process, and nothing capped how many there were. Now one of them permanently holds one of
+      `max_concurrent_requests` slots, so eight wedged reads leave the bridge answering `503
+      BUSY` to everything, which is bounded, legible in the log, and still wrong. The fix is a
+      deadline around the read, not a bigger cap. The FIFO and character-device cases, which were
+      the easy way to trigger this, are refused before the open since #58.
 - [ ] **`load_world` has no `IsWorldLoading` pre-flight, where `save_world` does.** Two loads can
       now do their reads in parallel and queue two `loadMapFromBytes` invokes that the dispatcher
       can drain in the same frame, the second landing on a load the game just started. Mirroring
@@ -147,13 +163,6 @@ productive, see the note above.
       Include the flags and a non-null identity in the key. While there, drop "Dependent
       commands disabled." from the three warnings: a missing member sometimes disables nothing,
       and the message is read by whoever is already debugging the wrong thing.
-- [ ] **Per-frame jobs have no cap, where the action queue has one.** `MainThreadDispatcher`
-      drains at most 32 queued actions per frame, but `ActiveJobs` steps every registered
-      per-frame job every frame with nothing bounding how many there are. N concurrent
-      `invoke_power` runs with `pulses` therefore cost N delegate invocations per frame for up to
-      25 seconds each, which is a longer-lived version of the in-flight-request item above and
-      wants the same `SemaphoreSlim` or a cap of its own. Found reviewing #57, not introduced by
-      it: the primitive is new, the missing bound is the same one.
 - [ ] **A cancelled request can be reported as a main-thread timeout.** The 60-second backstop in
       `HttpBridge` builds its timer from a token linked to the request token, so when that token
       is cancelled the timer task completes as cancelled, can win the `Task.WhenAny`, and the
