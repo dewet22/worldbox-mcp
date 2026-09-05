@@ -49,10 +49,12 @@ needing a rebuild.
   outside code blocks and table notation.
 - Every stated tool count is generated. Run `uv run python ../scripts/gen-docs.py --write` from
   `server/`, never edit a count by hand.
-- Every release owes two chores, both done for 0.6.0 and both worth remembering for 0.7.0: run
-  `uv lock` from `server/` and commit it, then write the new row in
-  [compatibility.md](docs/compatibility.md). Skip either and the next ordinary PR fails on the
-  lockfile step or on `gen-docs.py --check`, which is the design.
+- Every release owes three chores, all done for 0.6.0 and all worth remembering for 0.7.0: run
+  `uv lock` from `server/` and commit it, write the new row in
+  [compatibility.md](docs/compatibility.md), and bump the `mod_version` shown in the two sample
+  responses under `docs/install/`. Skip any of them and the next ordinary PR fails on the
+  lockfile step or on `gen-docs.py --check`, which is the design. The third one is new: that
+  sample said 0.3.0 for three releases running, which is the family whose DLLs never load.
 - `.NET` on this box: `export DOTNET_ROOT=$HOME/.dotnet` and
   `PATH="$HOME/.dotnet:$HOME/.dotnet/tools:$PATH"`.
 - There is no `CODEMAP.md` and no `archives/` here, on purpose. A context audit will flag both,

@@ -88,6 +88,10 @@ construction and only kept for history.
 - **Never edit a stated tool count by hand.** Six files state it and it drifted three times.
   `scripts/gen-docs.py --write`, run from `server/`, owns every one of them, and `--check` runs
   in CI. See [development.md](docs/development.md).
+- **A release owes three chores**, and each one fails the next ordinary PR if skipped, on
+  purpose: `uv lock` from `server/`, a new row in [compatibility](docs/compatibility.md), and the
+  `mod_version` in the two sample responses under `docs/install/`. `gen-docs.py --check` enforces
+  the last two.
 
 ## CI choices that look wrong and are not
 

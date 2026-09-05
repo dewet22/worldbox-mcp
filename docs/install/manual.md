@@ -37,7 +37,7 @@ After connecting, the first thing your client should do is call the `capabilitie
 
 ```json
 {
-  "mod_version": "0.3.0",
+  "mod_version": "0.6.0",
   "worldbox_version": "0.x.x",
   "unity_version": "2022.3.60f1",
   "assembly_csharp_sha256": "…",
