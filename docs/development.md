@@ -215,6 +215,18 @@ bumps the minor, `fix:` the patch, `feat!:` the major. Four version files are ke
 so squashing a PR titled `deps: ...` hides the `feat:` commits inside it and release-please skips
 the minor bump.
 
+**Give the merge commit a body that is not a Conventional Commit.** `gh pr merge --merge` puts the
+PR title in the merge commit body by default. When that title is itself a Conventional Commit, and
+PR titles here usually are, release-please counts the work twice: once on the real commit and once
+on the merge. The 0.5.0 release PR was generated with every entry duplicated for exactly this
+reason. Pass `--body` with a short review note, the way #42 and #47 did, or an empty string:
+
+```bash
+gh pr merge <n> --merge --body "Reviewed: 134 tests green, csharpier and ruff clean."
+```
+
+The release-please PR is the one exception to all of this and is squashed.
+
 Merging the release PR tags the version, creates the GitHub Release, and triggers two jobs:
 
 - `publish-pypi` publishes the wheel and sdist through [PyPI trusted publishing](https://docs.pypi.org/trusted-publishers/).
@@ -227,5 +239,19 @@ If `build-and-attach-mod` ever fails, the manual fallback is to build locally, s
 `WorldBoxBridge.dll` with `install-mod.ps1`, `LICENSE` and `README.md` into a `WorldBoxBridge/`
 folder, zip it as `WorldBoxBridge-v<version>.zip`, write the SHA256 next to it, and
 `gh release upload "v<version>" <zip> <zip>.sha256 --clobber`.
+
+After the release lands, refresh the Python lockfile and commit it:
+
+```bash
+cd server && uv lock   # picks up the version release-please just wrote to pyproject.toml
+```
+
+`uv.lock` records the project's own version and release-please cannot update it. Its `generic`
+updater needs an `x-release-please-version` annotation in the file, and `uv lock` rewrites the
+lockfile whole, dropping every comment, so the annotation would survive exactly until the next
+dependency change and then fail silently. `uv sync --frozen` does not revalidate the version
+either, which is how `uv.lock` sat at 0.3.3 against a 0.4.0 `pyproject.toml` with CI green. The
+`Lockfile matches pyproject` step in `ci.yml` is the backstop: it skips release-please's own
+branch, so if this step is forgotten the next ordinary PR fails until someone runs `uv lock`.
 
 `docs/compatibility.md` is still updated by hand after a release.

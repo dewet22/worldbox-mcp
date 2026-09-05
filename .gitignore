@@ -84,6 +84,7 @@ examples/scenarios/output/
 # Local dev tools (not committed)
 actionlint.exe
 actionlint
+actionlint.tar.gz
 
 # Build staging area for release artifacts
 release-stage/

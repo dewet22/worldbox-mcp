@@ -37,6 +37,19 @@ jobs:
       - name: mypy
         working-directory: server
         run: uv run mypy --strict src
+      - name: Lockfile matches pyproject
+        # uv.lock records the project's own version, and `uv sync --frozen` does not
+        # revalidate it, so the two drifted silently from 0.3.3 to 0.4.0 with CI green
+        # throughout. release-please cannot own the file: its `generic` updater needs an
+        # `x-release-please-version` annotation and `uv lock` rewrites the file whole,
+        # dropping any comment. So the lockfile owns itself and this step keeps it honest.
+        #
+        # Skipped on release-please's branch, which bumps pyproject.toml and cannot run uv:
+        # the lockfile is legitimately one version behind until the release lands. The next
+        # ordinary PR fails here until someone runs `uv lock`, which is the point.
+        if: ${{ !startsWith(github.head_ref, 'release-please--') }}
+        working-directory: server
+        run: uv lock --check
 
   test-server:
     name: Test server (py${{ matrix.python }} on ${{ matrix.os }})
@@ -83,6 +96,30 @@ jobs:
       - name: Check formatting
         working-directory: mod
         run: dotnet csharpier --check .
+
+  lint-workflows:
+    name: Lint workflows (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install actionlint
+        # Pinned by version and verified by content hash rather than pulling a third-party
+        # action. This job exists to catch a mangled action ref (Cloudflare email
+        # obfuscation rewrote a real one in this repo once), so it should not introduce one
+        # of its own. The hash is the official checksum for the 1.7.7 linux_amd64 tarball.
+        env:
+          ACTIONLINT_VERSION: 1.7.7
+          ACTIONLINT_SHA256: 023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+        run: |
+          set -euo pipefail
+          curl -sSfL -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  actionlint.tar.gz" | sha256sum -c -
+          tar xzf actionlint.tar.gz actionlint
+      - name: Lint
+        # ubuntu-latest ships shellcheck, so actionlint also lints every `run:` block with
+        # it. Both passes are clean on the four workflows today.
+        run: ./actionlint -color
 
   build-mod:
     name: Build mod

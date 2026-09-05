@@ -52,6 +52,10 @@ construction and only kept for history.
 - **Merge PRs with a merge commit, never a squash.** The repo takes the PR title as the squash
   subject, so squashing a PR titled `deps: ...` hides the `feat:` commits inside it and the minor
   bump is silently skipped. The one exception is release-please's own PR, which is squashed.
+- **Give the merge commit a body that is not a Conventional Commit.** `gh pr merge --merge`
+  defaults the body to the PR title, and PR titles here are usually Conventional Commits, so
+  release-please counts the work twice and the changelog ships duplicated. Pass `--body` with a
+  short review note. See [development.md](docs/development.md).
 - **Everything is written in English**, including prose, comments and commits.
 - **C#**: nullable enabled, warnings as errors, formatted by csharpier.
 - **Python**: ruff for lint and format, `mypy --strict`. Annotate everything, `Any` only at the
@@ -69,8 +73,7 @@ construction and only kept for history.
 - **`packages.lock.json` is committed.** Change a package version and CI fails with NU1004 until
   you regenerate it with `dotnet restore mod/WorldBoxBridge.sln --force-evaluate`.
 - **No `[email protected]` in workflows.** Cloudflare email obfuscation has mangled a real action ref
-  here before. Nothing catches it automatically today, `actionlint` would but nothing runs it.
-  See TODOS.md.
+  here before. The `lint-workflows` CI job runs `actionlint` and catches it now.
 - **Never edit a stated tool count by hand.** Six files state it and it drifted three times.
   `scripts/gen-docs.py --write`, run from `server/`, owns every one of them, and `--check` runs
   in CI. See [development.md](docs/development.md).
@@ -88,6 +91,8 @@ Each of these fixed a real failure. Read the reason before tidying one away.
   `id-token: write`. Only `publish-pypi` gets the PyPI token. Do not hoist these back to the top.
 - **FluentAssertions is capped at 6.x** in dependabot config. v7 moved to a paid commercial
   licence. v6 is the last MIT release.
+- **The lockfile check skips release-please's branch.** That PR bumps `pyproject.toml` and cannot
+  run `uv`, so `uv.lock` is legitimately one version behind until the release lands.
 - **The Pre-commit job does not run csharpier**, because that runner has no .NET SDK. The
   dedicated `lint-mod` job covers it.
 - **The MCP conformance check calls `worldbox-mcp --self-check` directly**, not the MCP Inspector
