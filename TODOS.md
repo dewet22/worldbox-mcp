@@ -65,6 +65,20 @@ Cut 0.5.0. See the header block.
 
 ## 🧹 Debt
 
+- [ ] **One `load_world` call can wedge the game for good.** `LoadWorldCommand` declares
+      `RequiresMainThread => true` and then calls `File.ReadAllBytes`. Absolute paths are
+      accepted by design, so a FIFO, a character device, or a multi-GB file blocks or loops
+      *inside* `MainThreadDispatcher.Tick`. The 30s deadline does not save it:
+      `MainThreadDispatcher.cs:171` tests `DateTime.UtcNow > pending.Deadline` **before**
+      calling `pending.Run()`, and nothing interrupts an action once it is running. The game
+      hangs until the process is killed. `save_world` has the same shape on the write side.
+      Reachable by any token holder, which is the agent itself with one bad path.
+      Found by the adversarial pass of the pre-merge review on #56, verified against the
+      dispatcher source. Not fixed there because the honest fix is a threading change:
+      `RequiresMainThread => false`, with only the `loadMapFromBytes` invoke marshalled through
+      `MainThreadDispatcher.RunOnMainThreadAsync`. Nothing before that line touches a Unity
+      API. That path cannot be exercised without the game, so it wants its own PR and a manual
+      check against a running WorldBox.
 - [ ] Roadmap item 9: `fix(ci):` commits land under "Dependencies" in the generated changelog.
       Cosmetic, but easier to fix before the next minor than after.
 - [ ] `RequestContext.RequireKingdomAccess` has no call site anywhere in the mod. The method is

@@ -201,7 +201,10 @@ MATCHING_PYTHON = {
 }
 
 
-REFERENCE_ROW = "| `worldbox_screenshot` | Args {max_dimension=1280, quality=80}. |\n"
+REFERENCE_ROW = (
+    "| `worldbox_screenshot` | Args {max_dimension=1280, "
+    'format="jpg"(default)|"png", quality=80}. |\n'
+)
 
 
 @pytest.fixture
@@ -340,6 +343,27 @@ def test_run_checks_the_screenshot_defaults_for_the_real_repository(
     calls: list[int] = []
     monkeypatch.setattr(gen_docs, "check_screenshot_defaults", lambda report: calls.append(1))
 
+    # write=False matters: `surface` is a fake two-tool surface, and a write pass against the
+    # real root would rewrite every generated region in the repository from it. Do not copy
+    # this call with write=True.
     gen_docs.run(surface, gen_docs.REPO_ROOT, write=False)
 
     assert calls == [1]
+
+
+def test_command_reference_row_without_a_default_format_is_reported(
+    scaler: Path, tmp_path: Path
+) -> None:
+    # Listing `format="jpg"|"png"` says which values are legal, not which one you get, so the
+    # row could have claimed PNG and nothing would have noticed.
+    vague = tmp_path / "vague.md"
+    vague.write_text(
+        REFERENCE_ROW.replace('format="jpg"(default)', 'format="jpg"'), encoding="utf-8"
+    )
+
+    report = gen_docs.Report()
+    gen_docs.check_screenshot_defaults(
+        report, scaler=scaler, python_values=MATCHING_PYTHON, reference=vague
+    )
+
+    assert any("SCREENSHOT_FORMAT" in p for p in report.problems)

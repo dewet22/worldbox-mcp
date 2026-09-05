@@ -75,11 +75,15 @@ SCREENSHOT_SCALER = (
 COMMAND_REFERENCE = REPO_ROOT / "docs" / "command-reference.md"
 
 # The command reference states the same three values a third time, in the worldbox_screenshot
-# row. Matched by token so a reworded row fails loudly rather than passing silently.
+# row. Matched by token so a reworded row fails loudly rather than passing silently. The
+# format entry needs the "(default)" marker in the row for the same reason: listing
+# `format="jpg"|"png"` says which values are legal but not which one you get, so the row could
+# have claimed PNG and nothing would have noticed.
 SCREENSHOT_ROW = re.compile(r"^\|\s*`worldbox_screenshot`\s*\|.*$", re.MULTILINE)
 SCREENSHOT_ROW_TOKENS: list[tuple[str, str, str]] = [
     ("SCREENSHOT_MAX_DIMENSION", "max_dimension=", r"max_dimension=(\d+)"),
     ("SCREENSHOT_QUALITY", "quality=", r"quality=(\d+)"),
+    ("SCREENSHOT_FORMAT", 'format="', r'format="(\w+)"\(default\)'),
 ]
 
 SCREENSHOT_DEFAULTS: list[tuple[str, str]] = [
