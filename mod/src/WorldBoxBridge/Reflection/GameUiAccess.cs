@@ -125,14 +125,34 @@ internal sealed class GameUiAccess
             return false;
         }
         _disableStartupWindow ??= _refs.Field(t, "disable_startup_window", Static);
-        if (_disableStartupWindow == null || _disableStartupWindow.IsInitOnly)
+        // IsLiteral catches `const` (no storage to write), IsInitOnly catches `readonly`.
+        if (
+            _disableStartupWindow == null
+            || _disableStartupWindow.IsInitOnly
+            || _disableStartupWindow.IsLiteral
+        )
         {
             _log.LogWarning(
                 "[ui] Config.disable_startup_window not writable — startup window can't be suppressed."
             );
             return false;
         }
-        _disableStartupWindow.SetValue(null, value);
+        // This runs from Plugin.Awake, before the HTTP bridge is built, inside the one try/catch
+        // that aborts the whole plugin. A cosmetic default-on convenience must never be able to
+        // take the bridge down, so it stays fail-soft like every other member of this class:
+        // SetValue still throws if the field's type is not bool in some future build.
+        try
+        {
+            _disableStartupWindow.SetValue(null, value);
+        }
+        catch (Exception ex)
+        {
+            _log.LogWarning(
+                $"[ui] Could not set Config.disable_startup_window ({ex.GetType().Name}: {ex.Message}). "
+                    + "Startup window will appear; use dismiss_window to clear it."
+            );
+            return false;
+        }
         return true;
     }
 }

@@ -69,7 +69,7 @@ internal sealed class GameRefs
             {
                 var mi = argTypes is { Length: > 0 }
                     ? owner.GetMethod(name, flags, binder: null, types: argTypes, modifiers: null)
-                    : owner.GetMethod(name, flags);
+                    : ResolveParameterless(owner, name, flags);
                 if (mi == null)
                 {
                     _log.LogWarning(
@@ -79,6 +79,37 @@ internal sealed class GameRefs
                 return mi;
             }
         );
+    }
+
+    /// <summary>
+    /// Resolves a method by name when the caller gave no arg types.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately does NOT call <c>owner.GetMethod(name, flags)</c>: that convenience overload
+    /// throws <see cref="System.Reflection.AmbiguousMatchException"/> the moment the name has
+    /// overloads, which is the trap documented as gotcha #6 in CLAUDE.md and the reason
+    /// <c>WorldAccess.CachedMethod</c> enumerates by hand. Every no-arg-types caller wants the
+    /// parameterless overload, so prefer that; fall back to a lone match, and return null when
+    /// the name is genuinely ambiguous so the caller is told to pass explicit arg types.
+    /// </remarks>
+    private static MethodInfo? ResolveParameterless(Type owner, string name, BindingFlags flags)
+    {
+        MethodInfo? sole = null;
+        var matches = 0;
+        foreach (var candidate in owner.GetMethods(flags))
+        {
+            if (candidate.Name != name)
+            {
+                continue;
+            }
+            if (candidate.GetParameters().Length == 0)
+            {
+                return candidate;
+            }
+            matches++;
+            sole = candidate;
+        }
+        return matches == 1 ? sole : null;
     }
 
     public FieldInfo? Field(
